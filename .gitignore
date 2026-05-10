@@ -5,6 +5,9 @@
 *.dylib
 build/
 bin/
+cmake-build-*/
+compile_commands.json
+.cache/
 
 # MUSA / CUDA artifacts
 *.cubin
@@ -25,3 +28,7 @@ venv/
 
 # Local notes / scratch
 notes/scratch/
+
+# Remote dev (auto-managed by scripts/musa.sh switch)
+scripts/ssh_config
+scripts/.known_hosts*

@@ -21,6 +21,8 @@
 
 ## 编译运行
 
+### 方法 A：Makefile（快速、单目录）
+
 ```bash
 cd code/week1
 make             # 编译全部
@@ -33,6 +35,39 @@ make             # 编译全部
 
 make clean       # 清理
 ```
+
+环境变量可覆盖：`MCC=/path/to/mcc MUSA_PATH=/usr/local/musa-3.1.0 make`。
+
+### 方法 B：CMake（整库统一构建，IDE 友好）
+
+从项目 `code/` 目录：
+
+```bash
+cd code
+cmake -B build -DMUSA_PATH=/usr/local/musa
+cmake --build build -j
+./build/week1/01_hello_world
+```
+
+只编单个目标：
+
+```bash
+cmake --build build --target 01_hello_world
+```
+
+清理：`rm -rf build`。
+
+> CMake 会生成 `compile_commands.json`，CLion / VS Code clangd 可用来索引。
+
+### 方法 C：本地编辑 + 远程跑（Mac 用户）
+
+Mac 上没 mcc，本地编辑、AutoDL 远程编译运行：
+
+```bash
+./scripts/musa.sh run 01_hello_world
+```
+
+完整说明见 [`../../docs/remote-dev.md`](../../docs/remote-dev.md)。
 
 ## 习题（Exercises）
 

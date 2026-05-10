@@ -66,8 +66,22 @@ set(MUSA_LIBS musa musart)
 
 # ── 5. 帮助函数:add_musa_executable(name source...) ──
 #    保证每个示例都自动链上 MUSA runtime + 公共头
+#
+#    .mu 语言识别策略(诊断验证后的最终版):
+#      1) set_source_files_properties LANGUAGE CXX
+#         让 CMake 知道 .mu 走 CXX 编译流程(否则 "Cannot determine link language")
+#         代价:CMake 会自动加 -x c++,这会关掉 mcc 的 MUSA 前端
+#
+#      2) 仅在 mcc 上额外加 -x musa
+#         clang/mcc 里多个 -x 后者覆盖前者,-x musa 重新打开 MUSA 前端
+#         (经 mcc -x musa 测试验证,等价于 nvcc 的 -x cu)
 function(add_musa_executable name)
     add_executable(${name} ${ARGN})
+    set_source_files_properties(${ARGN} PROPERTIES LANGUAGE CXX)
+    set_target_properties(${name} PROPERTIES LINKER_LANGUAGE CXX)
+    if(CMAKE_CXX_COMPILER MATCHES "mcc")
+        target_compile_options(${name} PRIVATE -x musa)
+    endif()
     target_link_libraries(${name} PRIVATE ${MUSA_LIBS})
     target_include_directories(${name}
         PRIVATE ${CMAKE_SOURCE_DIR}/include)
