@@ -1,0 +1,27 @@
+# Build artifacts
+*.o
+*.obj
+*.so
+*.dylib
+build/
+bin/
+
+# MUSA / CUDA artifacts
+*.cubin
+*.fatbin
+*.ptx
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# Python (for any helper scripts)
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# Local notes / scratch
+notes/scratch/
