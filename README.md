@@ -20,6 +20,8 @@
 
 环境配好之后(见 [`docs/setup.md`](docs/setup.md),AutoDL 摩尔线程实例最快):
 
+**方式一 · Makefile(单周快速试)**
+
 ```bash
 cd code/week1
 make
@@ -31,9 +33,39 @@ make
 ./06_async_kernel         # kernel 异步 + launch overhead
 ```
 
+**方式二 · CMake(IDE 友好,推荐)**
+
+```bash
+cd code
+cmake -B build -DMUSA_PATH=/usr/local/musa
+cmake --build build -j
+./build/week1/01_hello_world
+```
+
+CLion / VS Code 直接打开 `code/` 目录,会自动识别 CMakeLists,跳转 / 补全 / 单 target 编译都好用。
+
 每个 `.mu` 文件都是 **三段式注释**:`PART I 知识点 / PART II 代码 / PART III Q&A`,直接当教材读就行。配套 10 道习题在 [`code/week1/exercises.md`](code/week1/exercises.md)。
 
 学习笔记(对应公众号文章): [`docs/articles/01-first-musa-code.md`](docs/articles/01-first-musa-code.md)
+
+## 仓库结构
+
+```
+musa-learning-notes/
+├── README.md
+├── LICENSE
+├── code/
+│   ├── CMakeLists.txt        ← 顶层 CMake,串各 week
+│   ├── include/
+│   │   └── musa_common.h     ← CHECK 宏 + CpuTimer + GpuTimer
+│   └── week1/                ← 6 个示例 + Makefile + exercises.md
+└── docs/
+    ├── setup.md              ← 环境搭建
+    ├── roadmap.md            ← 6 周路线(38 示例,对标 CUDA_Freshman 颗粒度)
+    └── articles/             ← 学习笔记 / 公众号文章
+```
+
+> 路线图设计参考了 [Tony-Tan/CUDA_Freshman](https://github.com/Tony-Tan/CUDA_Freshman),但保留按 week 组织(学习日志的节奏)。
 
 ## 三个原则(给我自己也给读者)
 
