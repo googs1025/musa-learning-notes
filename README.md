@@ -48,6 +48,14 @@ CLion / VS Code 直接打开 `code/` 目录,会自动识别 CMakeLists,跳转 / 
 
 学习笔记(对应公众号文章): [`docs/articles/01-first-musa-code.md`](docs/articles/01-first-musa-code.md)
 
+## 基础知识(读代码前 / 后查)
+
+| 文档 | 何时看 |
+|---|---|
+| [`docs/concepts.md`](docs/concepts.md) | 想搞清 SIMT / 硬件层级 / 内存层级 / 执行模型,跟 week1 代码注释互补 |
+| [`docs/cuda-vs-musa.md`](docs/cuda-vs-musa.md) | 有 CUDA 基础迁移过来,或 API 想不起 MUSA 名 |
+| [`docs/glossary.md`](docs/glossary.md) | 看代码遇到生词速查(warp / occupancy / shfl / pitch ...) |
+
 ## 仓库结构
 
 ```
@@ -62,6 +70,9 @@ musa-learning-notes/
 └── docs/
     ├── setup.md              ← 环境搭建
     ├── roadmap.md            ← 6 周路线(38 示例,对标 CUDA_Freshman 颗粒度)
+    ├── concepts.md           ← 基础概念(SIMT / 硬件 / 内存 / 同步 / 错误)
+    ├── cuda-vs-musa.md       ← CUDA→MUSA 命名映射 + 真正差异
+    ├── glossary.md           ← 术语小词典
     └── articles/             ← 学习笔记 / 公众号文章
 ```
 
