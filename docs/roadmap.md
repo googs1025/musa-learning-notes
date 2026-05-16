@@ -25,21 +25,24 @@
 
 ---
 
-## Week 2 · 编程模型 + Stream + Graph(官方 Ch5)⏳
+## Week 2 · 编程模型 + Stream + Graph(官方 Ch5)🧪
 
-- **学**:GPU 程序 7 步骨架 / Runtime vs Driver API / Stream 并发 / Event 计时 / Graph 重放
+- **学**:GPU 程序 7 步骨架 / Pinned vs Pageable / Stream 并发 / Event 计时 / Graph 重放
 - **做**:8 个示例,粒度参考 Freshman 30–38(Stream 系列)
 
 | # | 文件 | 主题 |
 |---|---|---|
-| 01 | `01_vector_add_runtime.mu` | Runtime API 完整流程 |
-| 02 | `02_vector_add_driver.mu` | Driver API 重写,`muLaunchKernel` |
-| 03 | `03_vector_add_timer.mu` | `musaEvent` 计时 vs CPU 计时 |
-| 04 | `04_vector_add_unified.mu` | `musaMallocManaged` 统一内存版 |
+| 01 | `01_vector_add_runtime.mu` | Runtime API "7 步骨架" 完整流程 |
+| 02 | `02_vector_add_pinned.mu` | `musaMallocHost` vs `malloc`,H2D 加速比 |
+| 03 | `03_vector_add_timer.mu` | `GpuTimer` (musaEvent) vs `CpuTimer` |
+| 04 | `04_vector_add_unified.mu` | `musaMallocManaged` + `musaMemPrefetchAsync` |
 | 05 | `05_multi_stream.mu` | 多流流水线:H2D / Kernel / D2H 三阶段重叠 |
 | 06 | `06_stream_event_dep.mu` | 跨流通过 event 同步 |
 | 07 | `07_musa_graph.mu` | Stream Capture → Graph,量化 launch overhead |
 | 08 | `08_stream_callback.mu` | 在 stream 完成时回调 host 函数 |
+
+> 原 #02 计划做 Driver API,实际改成 pinned memory:Driver API 需要把 kernel
+> 单独编 `.mubin`,不是单文件 .mu 能演示的;pinned 是 #05 多流流水线的前置课。
 
 **产出**:8 示例 + 文章《Stream 与 Graph 把吞吐量挤到极限》
 
@@ -121,7 +124,7 @@
 
 ```
 Week 1 (Ch1-4)   ✅  6 示例  ── 入门
-Week 2 (Ch5)     ⏳  8 示例  ── Stream / Graph
+Week 2 (Ch5)     🧪  8 示例  ── Stream / Graph
 Week 3 (Ch5+9)   ⏳  6 示例  ── Warp / Reduce
 Week 4 (Ch9)     ⏳  6 示例  ── 访存模式
 Week 5 (Ch5+9)   ⏳  7 示例  ── Shared / GEMM
