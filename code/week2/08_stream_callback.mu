@@ -161,7 +161,14 @@ int main() {
 //  ▸ 如果你需要"chunk 0..3 按编号顺序写文件",不要靠 callback 顺序,
 //    而是在 callback 里把 chunk_id 推进一个队列,let main 线程拉队列按号处理。
 //
-//  // TODO: AutoDL 跑通后多跑几次,贴一份 callback 顺序的实测样本
+//  ▸ 实测样本(AutoDL MTT,CHUNKS=4,各跑在独立 stream 上):
+//      [cb] chunk 0 done  (status=0)  total_done=1
+//      [cb] chunk 3 done  (status=0)  total_done=2
+//      [cb] chunk 2 done  (status=0)  total_done=3
+//      [cb] chunk 1 done  (status=0)  total_done=4
+//      all chunks finished. counter=4 (expect 4)  OK ✓
+//    提交顺序是 0/1/2/3,完成顺序却是 0/3/2/1,正好印证"跨流无序"——
+//    counter 是 std::atomic,所以最终值仍然正确,但顺序不可依赖。
 
 // ★ Q2: 把 callback 里换成 musaMemcpy,会怎样?
 // ──────────────────────────────────────────────────────────────────────────

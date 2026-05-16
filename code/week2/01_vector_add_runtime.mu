@@ -156,7 +156,10 @@ int main() {
 //  ▸ 启示:vectorAdd 这种带宽 bound 的 kernel,blocks/threads 调一两档影响不大,
 //          但要养成"对齐 warp size"的习惯,等到 reduce / GEMM 才看得出差距。
 //
-//  // TODO: AutoDL 跑通后回填具体 ms 对比
+//  ▸ 实测(AutoDL MTT,N=1M,threadsPerBlock=256,见 03_vector_add_timer 输出):
+//      kernel 本身 0.119 ms(GpuTimer)
+//      整段 main 包含 H2D + kernel + D2H 几 ms 级别,kernel 占小头
+//    其他 threadsPerBlock 档位扫描留给 E2.1 习题。
 
 // ★ Q2: 把 if (i < N) 删掉,N=1024 时正确吗?N=1023 时呢?
 // ──────────────────────────────────────────────────────────────────────────

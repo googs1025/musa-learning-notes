@@ -207,7 +207,19 @@ int main() {
 //      • 你需要知道 Capture / Instantiate / Launch 这套范式,
 //        免得未来 SDK 优化到位时不会用
 //
-//  // TODO: AutoDL 跑通后回填本仓库实测 ms 和 ratio,把"现状"写清楚
+//  ▸ 实测(AutoDL MTT,MUSA 3.1.0,ITERS=5000,OPS_PER_STEP=5):
+//      [A] direct launch  5000 steps × 5 ops = 25000 launches : 410.232 ms
+//                                                               (16.41 µs/launch)
+//      [B] graph  launch  5000 steps (each = 5 ops in graph)  : 677.012 ms
+//                                                               (135.40 µs/step)
+//      verify x[0] = 25000.0   OK ✓
+//
+//    Graph 比 direct **慢 ~1.65×**——跟 CUDA 上常见的"Graph 加速 N 倍"直觉相反。
+//    可能原因:
+//      • MUSA 当前版本 musaGraphLaunch 自身 driver 路径开销 ~135 µs/次,
+//        远大于 5 次直接 launch 加起来的 ~82 µs;
+//      • 每个 graph 里只有 5 个轻量 kernel,摊不平 graph 的 fixed cost。
+//    习题 E2.7 让你扫 OPS/step,看在多大颗粒度上 graph 才能追平甚至超过 direct。
 
 // ★ Q2: Graph 录制阶段 kernel 不真跑,那 add_one 内部访问的 d_x 不会真被改吧?
 // ──────────────────────────────────────────────────────────────────────────

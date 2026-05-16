@@ -77,11 +77,29 @@ cmake --build build --target 05_multi_stream
 
 留待将来单独写一篇 "Runtime vs Driver" 的对比笔记，本周聚焦更高频用到的 Stream / Graph。
 
+## 实测结果（AutoDL · 2026-05-16）
+
+机器：AutoDL MUSA 容器（`musa-3.1.0`），N=1M（vectorAdd），UM 示例 N=4M。
+
+| 示例 | 关键数字 | 观察 |
+|---|---|---|
+| 02 pinned | pageable 1.966 ms（7.95 GB/s）/ pinned 0.516 ms（30.29 GB/s）→ **×3.81** | 符合预期，PCIe DMA 收益明显 |
+| 03 timer | [A] 不 sync 0.155 ms（只是 launch 入队耗时）/ [B] CPU+sync 0.119 ms / [C] GpuTimer 0.122 ms | [B][C] 一致，证明 GpuTimer 是对的；[A] 没 sync 量到的是假数字 |
+| 04 unified | `musaMemPrefetchAsync` **本设备不支持**（运行时打印 info 跳过）；冷启动 1.75 ms → 热启动 1.53 ms | MUSA 3.1.0 暂未实现 prefetch，UM 退化为普通访问 |
+| 05 multi-stream | 单流串行 5.94 ms / 4-stream 流水线 5.21 ms（×1.14） | 重叠度有限，可能受 copy engine 数量或调度策略限制 |
+| 07 graph | direct launch 25000 次 410 ms（16.4 µs/launch）/ graph 5000 step × 5 op 677 ms（135 µs/step） | **graph 反而比 direct 慢**，跟 CUDA 直觉相反——MUSA 当前 graph 实现 launch 开销没优化到位，或单 step 5 个轻量 op 摊销不出来 |
+| 08 callback | 4 个 chunk 全部回调 fire，乱序完成（0→3→2→1） | 回调由 GPU 完成时间触发，跟提交顺序无关，符合预期 |
+
+> 待跟进：
+> - graph 慢 / prefetch 缺失先记录，不急着提 issue，等 week3/4 实际用到时再回头看；
+> - 重做 05 多流时跑一次 `mprof`（如果有等价工具），看 copy / kernel 是否真的并行。
+
 ## 习题 与 文章
 
-`exercises.md` 和 `docs/articles/02-stream-graph.md` **本轮没写**，等在 AutoDL 上跑通 8 个示例、拿到实测数据后补：
+`exercises.md` 已补（10 道，全部围绕本周实测数字展开，见 [`exercises.md`](exercises.md)）。
 
-- 各示例 PART III Q&A 里凡是涉及 ms 数字的论断都标了 `// TODO: AutoDL 跑通后回填实测数字`
-- 跑完后预期产物：`exercises.md`（10 道左右）+ 公众号文章《Stream 与 Graph 把吞吐量挤到极限》
+各 `.mu` PART III Q&A 里的 `// TODO: AutoDL 跑通后回填实测数字` 标记已全部回填（01~08 共 7 处）。
+
+公众号文章见 [`docs/articles/02-stream-graph.md`](../../docs/articles/02-stream-graph.md) 《Stream 与 Graph 把吞吐量挤到极限》。
 
 > 实测时建议顺序：01 → 03 → 02 → 04 → 05 → 06 → 07 → 08。`01_vector_add_runtime` 先验证整条链路通；`03_vector_add_timer` 先把计时方法学固定下来，后面所有 µs 级实测才有意义。

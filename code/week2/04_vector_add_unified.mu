@@ -176,7 +176,21 @@ int main() {
 //    [run 2] 也是一次新的迁移流程,差距应该跟 [run 1] 接近。
 //    要看到真正的"热启动",得在 musaFree 之前 prefetch 回 device。
 //
-//  // TODO: AutoDL 跑通后回填实测数字,看是否符合预期
+//  ▸ 实测(AutoDL MTT,MUSA 3.1.0,N=4M,16 MB):
+//      ⚠️ musaMemPrefetchAsync **本设备不支持**,程序运行时检测到 ENOSYS 自动
+//         跳过 prefetch 调用(打印 "[info] musaMemPrefetchAsync 不被本设备支持")。
+//      所以"prefetch 那一版"实际上跟"no prefetch"走的是同一条路径。
+//
+//      [run 1] 冷启动:
+//        no  prefetch         kernel 1.7515 ms
+//        want prefetch (n/a)  kernel 1.5135 ms
+//      [run 2] 热启动:
+//        no  prefetch         kernel 1.5338 ms
+//        want prefetch (n/a)  kernel 1.5536 ms
+//
+//    冷启动第一次跑确实更慢(~0.2 ms),page fault → host→device migration 的代价;
+//    热启动后稳定在 1.5 ms 量级。prefetch 缺失意味着你在这台机器上拿不到
+//    "显式 prefetch 提前热身"的收益——这是 MUSA 当前版本的功能缺口,不是你写错了。
 
 // ★ Q2: 为什么训练框架(torch_musa)默认不用统一内存?
 // ──────────────────────────────────────────────────────────────────────────

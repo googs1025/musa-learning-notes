@@ -164,7 +164,11 @@ int main() {
 //  ▸ 启示:GPU race 是"概率不可观察",代码看着对、跑 100 次都对、上线一变
 //    数据规模就崩。生产代码 **任何跨流读 / 写都要显式 event**,不要赌运气。
 //
-//  // TODO: AutoDL 跑通后,把 fill_A 加 dummy 长循环,实测删 wait_event 的失败概率
+//  ▸ 实测(AutoDL MTT,带 wait_event,N=1M):
+//      verify: OK ✓   (bad = 0)
+//    fill_A 在本机太快,即便删 wait_event 多半也"碰巧对",race 测不出来。
+//    要可靠复现,把 fill_A 加 1e6 次空转 loop,再删 wait_event——
+//    那时 square_to_b 几乎必然读到未初始化的 d_a。习题 E2.6 会扩成 3 流 DAG。
 
 // ★ Q2: 为什么不直接 musaStreamSynchronize(s1) 然后跑 s2?
 // ──────────────────────────────────────────────────────────────────────────
