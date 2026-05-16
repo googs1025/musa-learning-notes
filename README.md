@@ -56,6 +56,10 @@ CLion / VS Code 直接打开 `code/` 目录,会自动识别 CMakeLists,跳转 / 
 | [`docs/cuda-vs-musa.md`](docs/cuda-vs-musa.md) | 有 CUDA 基础迁移过来,或 API 想不起 MUSA 名 |
 | [`docs/glossary.md`](docs/glossary.md) | 看代码遇到生词速查(warp / occupancy / shfl / pitch ...) |
 
+## 练习题
+
+- [`docs/leetgpu-easy.md`](docs/leetgpu-easy.md) · [LeetGPU](https://leetgpu.com/challenges) Easy 18 道题,移植成 MUSA。代码在 [`code/leetgpu/easy/`](code/leetgpu/easy/),跟着 roadmap 周次穿插刷。
+
 ## 仓库结构
 
 ```
@@ -63,16 +67,18 @@ musa-learning-notes/
 ├── README.md
 ├── LICENSE
 ├── code/
-│   ├── CMakeLists.txt        ← 顶层 CMake,串各 week
+│   ├── CMakeLists.txt        ← 顶层 CMake,串各 week + leetgpu
 │   ├── include/
 │   │   └── musa_common.h     ← CHECK 宏 + CpuTimer + GpuTimer
-│   └── week1/                ← 6 个示例 + Makefile + exercises.md
+│   ├── week1/                ← 6 个示例 + Makefile + exercises.md
+│   └── leetgpu/easy/         ← LeetGPU Easy 18 题 MUSA 移植
 └── docs/
     ├── setup.md              ← 环境搭建
     ├── roadmap.md            ← 6 周路线(38 示例,对标 CUDA_Freshman 颗粒度)
     ├── concepts.md           ← 基础概念(SIMT / 硬件 / 内存 / 同步 / 错误)
     ├── cuda-vs-musa.md       ← CUDA→MUSA 命名映射 + 真正差异
     ├── glossary.md           ← 术语小词典
+    ├── leetgpu-easy.md       ← 练习题章节索引(对应 LeetGPU Easy)
     └── articles/             ← 学习笔记 / 公众号文章
 ```
 
