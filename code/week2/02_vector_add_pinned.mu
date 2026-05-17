@@ -152,7 +152,12 @@ int main() {
 //        pageable,也是一次额外拷贝,但只涉及 CPU memcpy 不需要锁页流程
 //      • 实测两边收益级别接近,但 H2D 通常更显眼,因为它要先"准备"
 //
-//  // TODO: AutoDL 跑通后回填实测加速比
+//  ▸ 实测(AutoDL MTT,N=1M,16 MB,5 次平均):
+//      pageable H2D :  1.966 ms   7.95 GB/s
+//      pinned   H2D :  0.516 ms  30.29 GB/s
+//      speedup      :  ×3.81
+//    pinned 基本打满了这台机器的 PCIe(理论 ~32 GB/s 量级),
+//    pageable 由于"先 memcpy 到内部 staging 再 DMA",带宽只剩 1/4。
 
 // ★ Q2: 那能不能把整个进程都用 pinned?
 // ──────────────────────────────────────────────────────────────────────────

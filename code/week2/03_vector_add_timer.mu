@@ -182,7 +182,13 @@ int main() {
 //  ▸ 对极小 kernel(< 100 µs),[B] 可能比 [C] 大几倍(sync 开销主导)
 //    这就是为什么基准测试一定要用 musaEvent / GpuTimer。
 //
-//  // TODO: AutoDL 跑通后回填实测差值
+//  ▸ 实测(AutoDL MTT,N=1M,vectorAdd):
+//      [A] CPU clock, NO sync     :  0.1554 ms   ← 量到的是 launch 入队耗时
+//      [B] CPU clock + sync       :  0.1195 ms   (min 0.1180, max 0.1205)
+//      [C] GpuTimer (musaEvent)   :  0.1224 ms   (min 0.1168, max 0.1495)
+//    [B] vs [C] 差 ~3 µs(~2.4%),量级吻合,互相印证可信;
+//    [A] 比真值小 30%(没 sync,只看到 launch 开销那点),典型"假数字"。
+//    > kernel 越小,[B] 的 sync overhead 占比越大;真要测 µs 级 kernel,只能信 [C]。
 
 // ★ Q3 (扩展): GpuTimer 在哪种情况下也会量错?
 // ──────────────────────────────────────────────────────────────────────────

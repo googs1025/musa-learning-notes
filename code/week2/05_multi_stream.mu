@@ -184,7 +184,15 @@ int main() {
 //
 //  ▸ 这就是"Async API 用 pageable 内存等于自欺欺人"这条经验的来源。
 //
-//  // TODO: AutoDL 跑通后实测对比"pinned vs pageable + Async"两版的总耗时
+//  ▸ 实测(AutoDL MTT,pinned host buffer):
+//      [A] single stream serial :  5.938 ms
+//      [B] 4-stream pipeline    :  5.210 ms     ← 加速 ×1.14,远低于理论 ×3
+//    加速比这么小说明 H2D/Kernel/D2H 并没有充分 overlap——可能瓶颈在
+//    copy engine 数量或调度策略上。习题 E2.5/E2.9 让你加 event 拆 timeline
+//    来确认到底是哪一段没并行。
+//
+//    "pinned vs pageable + Async"对照实验留给习题 E2.5;预期 pageable 版的
+//    [B] 会基本退化回 [A] 的耗时,因为 Async 路径会被同步化。
 
 // ★ Q2: CHUNKS 应该选几?太多 / 太少各什么后果?
 // ──────────────────────────────────────────────────────────────────────────
