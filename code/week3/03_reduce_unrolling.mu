@@ -2,6 +2,8 @@
 #include <cstdio>
 #include <cstdlib>
 
+// unroll2：每个线程一次加载两个元素，先在寄存器里合并，再写 shared。
+// 好处是减少 block 数和 shared 归约轮数，通常比 naive 版本更接近带宽上限。
 __global__ void reduce_unroll2(const float* in, float* partial, int n) {
     extern __shared__ float s[];
     int tid = threadIdx.x;
@@ -11,6 +13,8 @@ __global__ void reduce_unroll2(const float* in, float* partial, int n) {
     if (i + blockDim.x < n) v += in[i + blockDim.x];
     s[tid] = v;
     __syncthreads();
+
+    // shared memory 内仍然用折半归约，方便和 02_reduce_naive 做单变量对比。
     for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
         if (tid < stride) s[tid] += s[tid + stride];
         __syncthreads();

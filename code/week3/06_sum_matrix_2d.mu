@@ -2,6 +2,8 @@
 #include <cstdio>
 #include <cstdlib>
 
+// 2D grid 示例：每个线程负责矩阵中的一个元素。
+// 为了让示例短小，按行 atomicAdd 到 rows[y]；高性能版本应先 block 内归约再写出。
 __global__ void matrix_to_row_sums(const float* m, float* rows, int width, int height) {
     int y = blockIdx.y * blockDim.y + threadIdx.y;
     int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -18,6 +20,7 @@ int main() {
     MUSA_CHECK(musaMalloc(&r, H * sizeof(float)));
     MUSA_CHECK(musaMemcpy(d, h, W * H * sizeof(float), musaMemcpyHostToDevice));
     MUSA_CHECK(musaMemset(r, 0, H * sizeof(float)));
+    // 16x16 是 2D kernel 的常见起点：索引直观，线程数 256 也比较稳。
     dim3 block(16, 16), grid((W + 15) / 16, (H + 15) / 16);
     matrix_to_row_sums<<<grid, block>>>(d, r, W, H);
     MUSA_CHECK_KERNEL();

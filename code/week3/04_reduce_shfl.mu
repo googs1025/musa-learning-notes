@@ -4,6 +4,7 @@
 
 __inline__ __device__ float warp_reduce_sum(float v) {
     // MUSA warp size is often 128. Confirm shuffle mask/signature with the local SDK.
+    // shuffle 在 warp 内直接交换寄存器值，不需要 shared memory 和 __syncthreads。
     for (int offset = warpSize / 2; offset > 0; offset >>= 1) {
         v += __shfl_down_sync(0xffffffff, v, offset);
     }
@@ -18,6 +19,8 @@ __global__ void reduce_shfl(const float* in, float* partial, int n) {
     v = warp_reduce_sum(v);
     int lane = tid % warpSize;
     int warp = tid / warpSize;
+
+    // 每个 warp 先产出一个 sum，再把这些 warp sum 放到 shared 里做第二级归约。
     if (lane == 0) warp_sums[warp] = v;
     __syncthreads();
     if (warp == 0) {
