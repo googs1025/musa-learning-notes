@@ -40,7 +40,7 @@ make             # 编全部 8 个
 make clean
 ```
 
-`MCC=/path/to/mcc MUSA_PATH=/usr/local/musa-3.1.0 make` 覆盖默认路径。
+`MTCC=/path/to/mtcc MUSA_PATH=/usr/local/musa-3.1.0 make` 覆盖默认路径。
 
 ### 方法 B：CMake（IDE 友好，推荐）
 

@@ -81,7 +81,7 @@
 
 **Managed Memory / Unified Memory** — `musaMallocManaged` 分配的内存,host / device 都能用同一指针,运行时自动迁移。简单但有性能代价。
 
-**mcc** — MUSA 编译器,对应 NVIDIA 的 `nvcc`。
+**mtcc** — MUSA 编译器,对应 NVIDIA 的 `nvcc`。
 
 **MCCL** — MUSA Collective Communications Library,对应 NCCL。多卡 AllReduce / Broadcast 等。
 

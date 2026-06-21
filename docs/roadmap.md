@@ -111,7 +111,7 @@
 | # | 文件 | 主题 |
 |---|---|---|
 | 01 | `01_mccl_allreduce.mu` | 双卡 AllReduce(如有 2 卡环境) |
-| 02 | `02_musa_gdb_demo.mu` | 故意 illegal address,用 mcc-gdb 单步 |
+| 02 | `02_musa_gdb_demo.mu` | 故意 illegal address,用 mtcc-gdb 单步 |
 | 03 | `03_error_dump.mu` | 解析 MUSA Error Dump 流程 |
 | 04 | `04_torch_musa_minimal.py` | torch_musa 跑 ResNet 推理 |
 | 05 | `05_torch_musa_custom_op.cpp` | 注册一个 torch_musa Custom Op |

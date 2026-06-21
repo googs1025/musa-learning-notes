@@ -7,7 +7,7 @@
 
 ## 一句话总结
 
-> **把 `cuda` 全局替换成 `musa`,把 `nvcc` 替换成 `mcc`,90% 的 CUDA 代码就能编**。
+> **把 `cuda` 全局替换成 `musa`,把 `nvcc` 替换成 `mtcc`,90% 的 CUDA 代码就能编**。
 > 剩下 10% 集中在:`warp = 128` 引发的同步原语、专有库名(muBLAS / muDNN)、特定调优参数。
 
 ---
@@ -16,10 +16,10 @@
 
 | CUDA | MUSA | 说明 |
 |---|---|---|
-| `nvcc` | `mcc` | 编译器 |
+| `nvcc` | `mtcc` | 编译器 |
 | `nvidia-smi` | `mthreads-gmi` | 设备状态查询 |
-| `cuda-gdb` | `mcc-gdb`(部分版本) | kernel 单步调试 |
-| `cuobjdump` | `mcc-objdump` | 反汇编(看 SASS / PTX 对应) |
+| `cuda-gdb` | `mtcc-gdb`(部分版本) | kernel 单步调试 |
+| `cuobjdump` | `mtcc-objdump` | 反汇编(看 SASS / PTX 对应) |
 | `nsys` / `nsight` | 官方 profiler(参考 Ch9 文档) | 性能分析 |
 
 ---
@@ -144,11 +144,11 @@ MUSA  warp = 128 线程  (摩尔线程内部叫 MTT, Multi-Thread-Tile)
 
 ### 2. Compute Capability vs MTT 架构号
 
-CUDA 用 `sm_70` / `sm_80` / `sm_86` 这种字符串指定架构;MUSA 用自己的架构号(具体见官方 mcc --help 输出和发布说明)。**直接搬 CUDA 的 `-arch=sm_xx` 参数是不行的**,要查 mcc 当前版本支持的架构选项。
+CUDA 用 `sm_70` / `sm_80` / `sm_86` 这种字符串指定架构;MUSA 用自己的架构号(具体见官方 mtcc --help 输出和发布说明)。**直接搬 CUDA 的 `-arch=sm_xx` 参数是不行的**,要查 mtcc 当前版本支持的架构选项。
 
 ### 3. PTX → 中间表示
 
-CUDA 的中间表示叫 **PTX**(可读汇编);MUSA 也有自己的中间 IR,具体名字以 SDK 版本为准。`cuobjdump` 和 `mcc-objdump` 看到的输出格式不完全一样。
+CUDA 的中间表示叫 **PTX**(可读汇编);MUSA 也有自己的中间 IR,具体名字以 SDK 版本为准。`cuobjdump` 和 `mtcc-objdump` 看到的输出格式不完全一样。
 
 ### 4. Device 数量与拓扑 API
 
@@ -172,13 +172,13 @@ sed -i 's/\bcuda/musa/g' src/*.cu src/*.h
 for f in src/*.cu; do mv "$f" "${f%.cu}.mu"; done
 
 # 3. 替换工具链
-sed -i 's/nvcc/mcc/g' Makefile CMakeLists.txt
+sed -i 's/nvcc/mtcc/g' Makefile CMakeLists.txt
 
 # 4. 替换库名
 sed -i 's/cublas/mublas/g; s/cudnn/mudnn/g' src/*.h
 
 # 5. 编一遍,看错误信息修剩下的 5%
-mcc -O2 src/main.mu -o main -lmusart
+mtcc -O2 src/main.mu -o main -lmusart
 ```
 
 剩下的会编不过 / 运行报错的,大概率落在:

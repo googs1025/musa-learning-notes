@@ -1,4 +1,4 @@
-MCC       ?= mcc
+MTCC      ?= mtcc
 CXXFLAGS  ?= -O2 -std=c++17
 MUSA_PATH ?= /usr/local/musa-3.1.0
 LDFLAGS   ?= -L$(MUSA_PATH)/lib -lmusa -lmusart
@@ -10,7 +10,7 @@ BINS = 01_hello_world 02_thread_index 03_device_info \
 all: $(BINS)
 
 %: %.mu
-	$(MCC) $(CXXFLAGS) $< -o $@ $(LDFLAGS)
+	$(MTCC) $(CXXFLAGS) $< -o $@ $(LDFLAGS)
 
 clean:
 	rm -f $(BINS)

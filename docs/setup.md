@@ -53,7 +53,7 @@ docker run --rm -it \
 
 ```bash
 # 1. 编译器是否就位
-mcc --version
+mtcc --version
 
 # 2. 设备是否可见（具体命令以官方为准，常见的有：）
 mthreads-gmi          # 类似 nvidia-smi
@@ -83,20 +83,20 @@ GPU: tid=4 Hello world!
 
 ```bash
 # 单文件
-mcc -O2 source.mu -o binary
+mtcc -O2 source.mu -o binary
 
 # 多文件
-mcc -O2 file1.mu file2.cpp -o binary
+mtcc -O2 file1.mu file2.cpp -o binary
 
 # 链接 muBLAS / muDNN 等加速库
-mcc -O2 source.mu -o binary -lmublas -lmudnn
+mtcc -O2 source.mu -o binary -lmublas -lmudnn
 
 # Driver API（需要预先把 kernel 编出 module）
-mcc --fatbin kernel.mu -o kernel.fatbin    # 编 device 端
-mcc -O2 host.cpp -o binary -lmusa          # 编 host 端，运行时加载 .fatbin
+mtcc --fatbin kernel.mu -o kernel.fatbin    # 编 device 端
+mtcc -O2 host.cpp -o binary -lmusa          # 编 host 端，运行时加载 .fatbin
 ```
 
-> `--fatbin` / 链接库名以官方 `mcc --help` 输出为准。
+> `--fatbin` / 链接库名以官方 `mtcc --help` 输出为准。
 
 ---
 
@@ -104,12 +104,12 @@ mcc -O2 host.cpp -o binary -lmusa          # 编 host 端，运行时加载 .fat
 
 | 现象 | 可能原因 | 处理 |
 |---|---|---|
-| `mcc: command not found` | 没 export PATH | `source ~/.bashrc`；检查 `MUSA_HOME` |
+| `mtcc: command not found` | 没 export PATH | `source ~/.bashrc`；检查 `MUSA_HOME` |
 | `cannot find -lmusa` | LD_LIBRARY_PATH 没设 | 同上 |
 | `MUSA_ERROR_NO_DEVICE` | 驱动没装 / 内核版本不匹配 | `dmesg | grep mt` 看驱动加载情况 |
 | `MUSA_ERROR_ILLEGAL_ADDRESS` | kernel 里越界访问 | 用 MUSA GDB 单步定位 |
 | `mthreads-gmi` 看不到卡 | 驱动 / 用户组权限 | `groups` 看是否在 `video` 或 `render` 组 |
-| 编译报头文件找不到 | include path | `mcc -I$MUSA_HOME/include ...` |
+| 编译报头文件找不到 | include path | `mtcc -I$MUSA_HOME/include ...` |
 
 ---
 

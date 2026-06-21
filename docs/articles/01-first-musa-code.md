@@ -32,7 +32,7 @@
 ├─────────────────────────────────────────┤
 │   Driver API   (muLaunchKernel ...)      │  ← 框架/JIT 用的更底层 API
 ├─────────────────────────────────────────┤
-│   MUSA Toolkit (mcc 编译器 + 头文件)     │
+│   MUSA Toolkit (mtcc 编译器 + 头文件)     │
 ├─────────────────────────────────────────┤
 │   驱动 + 内核模块 (mt-driver)            │
 └─────────────────────────────────────────┘
@@ -41,7 +41,7 @@
 我学到的几个关键点:
 
 - **Runtime API 是 99% 应用要打交道的层**,Driver API 主要是 JIT、动态加载 kernel 模块的场景才用。第一周完全不用碰 Driver API。
-- 跟 CUDA 几乎是一对一映射:`cuda*` 改 `musa*`,`nvcc` 改 `mcc`,`nvidia-smi` 改 `mthreads-gmi`,基本就完成大半翻译。
+- 跟 CUDA 几乎是一对一映射:`cuda*` 改 `musa*`,`nvcc` 改 `mtcc`,`nvidia-smi` 改 `mthreads-gmi`,基本就完成大半翻译。
 - **有一个坑容易踩**:CUDA 的 warp 是 32 线程,MUSA 是 **128 线程**(摩尔线程内部叫 MTT, Multi-Thread-Tile)。涉及 warp-level 操作时坐标系会变,我标记下来,等到 Week 4 性能优化再回头看。
 
 ---
@@ -53,7 +53,7 @@
 1. <https://www.autodl.com/> 注册;
 2. 算力市场筛 GPU = MTT S4000;
 3. 镜像选预装 MUSA Toolkit + torch_musa 的版本;
-4. SSH 进去,`mcc --version` + `mthreads-gmi` 验证。
+4. SSH 进去,`mtcc --version` + `mthreads-gmi` 验证。
 
 整个流程没踩坑,镜像里啥都有。后续如果要本地装驱动,参考[官方安装指导](https://docs.mthreads.com/musa-sdk/musa-sdk-doc-online/install_guide/),坑应该不少,先不折腾。
 
@@ -226,7 +226,7 @@ cudaStreamCreate      →  musaStreamCreate
 cudaEventCreate       →  musaEventCreate
 cudaEventElapsedTime  →  musaEventElapsedTime
 cudaMallocManaged     →  musaMallocManaged
-nvcc                  →  mcc
+nvcc                  →  mtcc
 nvidia-smi            →  mthreads-gmi
 ```
 
@@ -241,7 +241,7 @@ nvidia-smi            →  mthreads-gmi
 1. **MTT (warp) = 128 在 occupancy 计算里是怎么影响 block size 选择的?** —— Week 3 看 Ch9 的时候应该会清楚。
 2. **musaMallocManaged(统一内存)和普通 musaMalloc 的真实代价差多少?** —— 准备拿同一个 vectorAdd 跑两版对比。
 3. **Driver API 到底什么场景才值得用?** —— 下周用 Driver API 重写一遍 vectorAdd,看代码量差异。
-4. **MUSA 的 mcc 编译流程跟 nvcc 是不是一样分 host/device 两路?** —— 想 dump 中间产物看一下。
+4. **MUSA 的 mtcc 编译流程跟 nvcc 是不是一样分 host/device 两路?** —— 想 dump 中间产物看一下。
 
 ---
 
