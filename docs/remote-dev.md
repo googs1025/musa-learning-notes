@@ -3,7 +3,7 @@
 Mac 本地编辑 + AutoDL 远程编译跑。**适配每次都是新机器的场景**——
 两条命令切换到新机，之后全程 0 密码。
 
-> **为什么这样**：Mac 上没 mtcc，本地 clang 不认识 `<<<>>>`/`threadIdx`，IDE 跳转
+> **为什么这样**：Mac 上没 mcc，本地 clang 不认识 `<<<>>>`/`threadIdx`，IDE 跳转
 > 只能覆盖纯 host 代码。完整索引/编译/运行必须放到远程。
 > 编辑器里 Find Usages、文件内符号跳转不受影响，平时改代码够用。
 
@@ -67,7 +67,7 @@ ssh-add --apple-use-keychain ~/.ssh/id_ed25519
 ```
 ┌──────────────┐  rsync   ┌──────────────┐
 │  Mac CLion   │ ───────→ │   AutoDL     │
-│  (编辑)      │          │   mtcc 编译    │
+│  (编辑)      │          │   mcc 编译    │
 │  Find Usages │ ←─stdout │   ./binary   │
 └──────────────┘          └──────────────┘
         │                        ▲
@@ -85,7 +85,7 @@ ssh-add --apple-use-keychain ~/.ssh/id_ed25519
 
 `bootstrap` 会做这些事，幂等（再跑一次不会重复污染）：
 
-1. 检查 `/usr/local/musa/bin/mtcc` 在不在
+1. 检查 `/usr/local/musa/bin/mcc` 在不在
 2. 没 cmake 的话 `apt-get install`
 3. 写远程 `~/.musa_env`（含 `MUSA_PATH` / `PATH` / `LD_LIBRARY_PATH`）
 4. 在 `~/.bashrc` 和 `~/.profile` 里加一行 `source ~/.musa_env`
@@ -123,7 +123,7 @@ MUSA_PATH=/usr/local/musa-3.1.0 ./scripts/musa.sh run 01_hello_world
 | 反复弹 `Enter passphrase for key …` | 私钥有 passphrase 但没进 agent | `ssh-add --apple-use-keychain ~/.ssh/id_ed25519` 一次永逸 |
 | `Permission denied (publickey,password)` | hostname/port 错或 AutoDL 改密码了 | 重新 `switch <host> <port>` |
 | `unix_listener: path "..." too long` | ControlPath 路径超 macOS 104 字节上限 | 脚本默认 `/tmp/musa-%C` 已规避;如手改过 `scripts/ssh_config` 把它改回去 |
-| `bootstrap: 找不到 mtcc` | SDK 路径不对 | `MUSA_PATH=...` 覆盖再跑 |
+| `bootstrap: 找不到 mcc` | SDK 路径不对 | `MUSA_PATH=...` 覆盖再跑 |
 | `cannot open shared object file: libmusart.so` | 非交互 ssh 没 source `.musa_env` | 已自动 source；如仍报，用 `./scripts/musa.sh shell` 进去 `source ~/.musa_env` 跑 |
 | `Host key verification failed` | 同 host:port 上次用过别的机器 | `switch` 会自动清，再跑一次即可 |
 | `ssh_config 不存在` | 还没 switch 过 | `./scripts/musa.sh switch <host> <port>` |

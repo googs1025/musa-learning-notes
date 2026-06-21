@@ -1,4 +1,4 @@
-MTCC      ?= mtcc
+MCC      ?= mcc
 CXX       ?= g++
 CXXFLAGS  ?= -O2 -std=c++17
 MUSA_PATH ?= /usr/local/musa
@@ -11,7 +11,7 @@ BINS = 02_musa_gdb_demo 03_error_dump
 all: $(BINS)
 
 %: %.mu
-	$(MTCC) $(CXXFLAGS) $(INCLUDES) $< -o $@ $(LDFLAGS)
+	$(MCC) $(CXXFLAGS) $(INCLUDES) $< -o $@ $(LDFLAGS)
 
 mccl: 01_mccl_allreduce
 01_mccl_allreduce: 01_mccl_allreduce.cpp

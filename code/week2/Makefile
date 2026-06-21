@@ -1,4 +1,4 @@
-MTCC      ?= mtcc
+MCC      ?= mcc
 CXXFLAGS  ?= -O2 -std=c++17
 MUSA_PATH ?= /usr/local/musa
 INCLUDES  ?= -I$(MUSA_PATH)/include -I../include
@@ -12,7 +12,7 @@ BINS = 01_vector_add_runtime 02_vector_add_pinned 03_vector_add_timer \
 all: $(BINS)
 
 %: %.mu
-	$(MTCC) $(CXXFLAGS) $(INCLUDES) $< -o $@ $(LDFLAGS)
+	$(MCC) $(CXXFLAGS) $(INCLUDES) $< -o $@ $(LDFLAGS)
 
 clean:
 	rm -f $(BINS)

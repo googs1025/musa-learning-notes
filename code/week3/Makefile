@@ -1,4 +1,4 @@
-MTCC      ?= mtcc
+MCC      ?= mcc
 CXXFLAGS  ?= -O2 -std=c++17
 MUSA_PATH ?= /usr/local/musa
 INCLUDES  ?= -I$(MUSA_PATH)/include -I../include
@@ -11,7 +11,7 @@ BINS = 01_warp_divergence 02_reduce_naive 03_reduce_unrolling \
 all: $(BINS)
 
 %: %.mu
-	$(MTCC) $(CXXFLAGS) $(INCLUDES) $< -o $@ $(LDFLAGS)
+	$(MCC) $(CXXFLAGS) $(INCLUDES) $< -o $@ $(LDFLAGS)
 
 clean:
 	rm -f $(BINS)

@@ -1,4 +1,4 @@
-MTCC      ?= mtcc
+MCC      ?= mcc
 CXXFLAGS  ?= -O2 -std=c++17
 MUSA_PATH ?= /usr/local/musa
 INCLUDES  ?= -I$(MUSA_PATH)/include -I../include
@@ -13,10 +13,10 @@ all: $(BINS)
 optional: $(OPTIONAL_BINS)
 
 %: %.mu
-	$(MTCC) $(CXXFLAGS) $(INCLUDES) $< -o $@ $(LDFLAGS)
+	$(MCC) $(CXXFLAGS) $(INCLUDES) $< -o $@ $(LDFLAGS)
 
 07_mublas_sgemm: 07_mublas_sgemm.mu
-	$(MTCC) $(CXXFLAGS) $(INCLUDES) $< -o $@ $(LDFLAGS) -lmublas
+	$(MCC) $(CXXFLAGS) $(INCLUDES) $< -o $@ $(LDFLAGS) -lmublas
 
 clean:
 	rm -f $(BINS) $(OPTIONAL_BINS)

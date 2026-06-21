@@ -49,7 +49,7 @@ gy = blockIdx.y * blockDim.y + threadIdx.y
 | cudaMemcpy | musaMemcpy |
 | cudaMemcpyHostToDevice | musaMemcpyHostToDevice |
 | ... | ... |
-| nvcc | mtcc |
+| nvcc | mcc |
 | nvidia-smi | mthreads-gmi |
 
 完成后你应该能"盲翻译" CUDA 教程的代码到 MUSA。

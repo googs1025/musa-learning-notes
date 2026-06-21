@@ -2,7 +2,7 @@
 
 | Topic | Command / Setup | Result | Log path |
 |---|---|---|---|
-| mtcc-gdb | | | |
+| MUSA SDK 调试器 | | | |
 | Error Dump | | | |
 | MCCL AllReduce | | | |
 | torch_musa minimal | | | |

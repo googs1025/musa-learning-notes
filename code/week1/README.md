@@ -36,7 +36,7 @@ make             # 编译全部
 make clean       # 清理
 ```
 
-环境变量可覆盖：`MTCC=/path/to/mtcc MUSA_PATH=/usr/local/musa-3.1.0 make`。
+环境变量可覆盖：`MCC=/path/to/mcc MUSA_PATH=/usr/local/musa-3.1.0 make`。
 
 ### 方法 B：CMake（整库统一构建，IDE 友好）
 
@@ -61,7 +61,7 @@ cmake --build build --target 01_hello_world
 
 ### 方法 C：本地编辑 + 远程跑（Mac 用户）
 
-Mac 上没 mtcc，本地编辑、AutoDL 远程编译运行：
+Mac 上没 mcc，本地编辑、AutoDL 远程编译运行：
 
 ```bash
 ./scripts/musa.sh run 01_hello_world

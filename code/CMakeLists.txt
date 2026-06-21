@@ -16,14 +16,14 @@
 
 cmake_minimum_required(VERSION 3.20)
 
-# ── 1. 必须在 project() 之前指定 mtcc 为 CXX 编译器 ──
-#    .mu 本质是带 __global__ 扩展的 C++,直接走 mtcc 就行
+# ── 1. 必须在 project() 之前指定 mcc 为 CXX 编译器 ──
+#    .mu 本质是带 __global__ 扩展的 C++,直接走 mcc 就行
 if(NOT CMAKE_CXX_COMPILER)
     if(DEFINED ENV{MUSA_PATH})
-        set(CMAKE_CXX_COMPILER "$ENV{MUSA_PATH}/bin/mtcc"
+        set(CMAKE_CXX_COMPILER "$ENV{MUSA_PATH}/bin/mcc"
             CACHE FILEPATH "MUSA C++ compiler" FORCE)
     else()
-        set(CMAKE_CXX_COMPILER "/usr/local/musa/bin/mtcc"
+        set(CMAKE_CXX_COMPILER "/usr/local/musa/bin/mcc"
             CACHE FILEPATH "MUSA C++ compiler" FORCE)
     endif()
 endif()
@@ -40,7 +40,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 # ── 3. .mu 扩展名当 C++ 处理 ──
-#    让 add_executable(foo foo.mu) 自动按 CXX 走 mtcc
+#    让 add_executable(foo foo.mu) 自动按 CXX 走 mcc
 list(APPEND CMAKE_CXX_SOURCE_FILE_EXTENSIONS mu)
 
 # ── 4. MUSA SDK 路径 + include + lib ──
@@ -53,7 +53,7 @@ if(NOT DEFINED MUSA_PATH)
 endif()
 
 message(STATUS "MUSA_PATH        = ${MUSA_PATH}")
-message(STATUS "CXX (mtcc)        = ${CMAKE_CXX_COMPILER}")
+message(STATUS "CXX (mcc)        = ${CMAKE_CXX_COMPILER}")
 
 include_directories(
     ${MUSA_PATH}/include
@@ -70,16 +70,16 @@ set(MUSA_LIBS musa musart)
 #    .mu 语言识别策略(诊断验证后的最终版):
 #      1) set_source_files_properties LANGUAGE CXX
 #         让 CMake 知道 .mu 走 CXX 编译流程(否则 "Cannot determine link language")
-#         代价:CMake 会自动加 -x c++,这会关掉 mtcc 的 MUSA 前端
+#         代价:CMake 会自动加 -x c++,这会关掉 mcc 的 MUSA 前端
 #
-#      2) 仅在 mtcc 上额外加 -x musa
-#         clang/mtcc 里多个 -x 后者覆盖前者,-x musa 重新打开 MUSA 前端
-#         (经 mtcc -x musa 测试验证,等价于 nvcc 的 -x cu)
+#      2) 仅在 mcc 上额外加 -x musa
+#         clang/mcc 里多个 -x 后者覆盖前者,-x musa 重新打开 MUSA 前端
+#         (经 mcc -x musa 测试验证,等价于 nvcc 的 -x cu)
 function(add_musa_executable name)
     add_executable(${name} ${ARGN})
     set_source_files_properties(${ARGN} PROPERTIES LANGUAGE CXX)
     set_target_properties(${name} PROPERTIES LINKER_LANGUAGE CXX)
-    if(CMAKE_CXX_COMPILER MATCHES "mtcc")
+    if(CMAKE_CXX_COMPILER MATCHES "mcc")
         target_compile_options(${name} PRIVATE -x musa)
     endif()
     target_link_libraries(${name} PRIVATE ${MUSA_LIBS})

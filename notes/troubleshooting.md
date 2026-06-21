@@ -5,7 +5,7 @@
 1. 找到第一个失败的 MUSA API。
 2. 区分同步错误和异步错误。
 3. 每个 kernel 后加 `MUSA_CHECK_KERNEL()`。
-4. 用 printf / mtcc-gdb / Error Dump 缩小到具体 kernel 和线程。
+4. 用 printf / MUSA SDK 调试器 / Error Dump 缩小到具体 kernel 和线程。
 
 ## 常见错误
 

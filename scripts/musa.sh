@@ -157,13 +157,13 @@ cmd_bootstrap() {
 
   c "→ [1/4] 探测 MUSA SDK"
   _ssh "$ALIAS" "set -e
-    if [[ ! -x $MUSA_PATH/bin/mtcc ]]; then
-      echo '  ✗ 找不到 $MUSA_PATH/bin/mtcc' >&2
+    if [[ ! -x $MUSA_PATH/bin/mcc ]]; then
+      echo '  ✗ 找不到 $MUSA_PATH/bin/mcc' >&2
       echo '    试试: ls /usr/local | grep musa  ' >&2
       echo '    然后: MUSA_PATH=<对的路径> ./scripts/musa.sh bootstrap' >&2
       exit 1
     fi
-    echo \"  ✓ \$($MUSA_PATH/bin/mtcc --version 2>&1 | head -1)\""
+    echo \"  ✓ \$($MUSA_PATH/bin/mcc --version 2>&1 | head -1)\""
 
   c "→ [2/4] 探测 cmake / rsync"
   _ssh "$ALIAS" "
