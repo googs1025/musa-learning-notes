@@ -1,4 +1,4 @@
-MCC       ?= mcc
+MCC      ?= mcc
 CXXFLAGS  ?= -O2 -std=c++17
 MUSA_PATH ?= /usr/local/musa-3.1.0
 LDFLAGS   ?= -L$(MUSA_PATH)/lib -lmusa -lmusart
