@@ -70,7 +70,12 @@ musa-learning-notes/
 │   ├── CMakeLists.txt        ← 顶层 CMake,串各 week + leetgpu
 │   ├── include/
 │   │   └── musa_common.h     ← CHECK 宏 + CpuTimer + GpuTimer
-│   ├── week1/                ← 6 个示例 + Makefile + exercises.md
+│   ├── week1/                ← 入门 6 示例
+│   ├── week2/                ← Stream / Event / Graph 8 示例
+│   ├── week3/                ← 执行模型 / Reduce 6 示例
+│   ├── week4/                ← 全局内存与访存 6 示例
+│   ├── week5/                ← Shared / Constant / GEMM 7 示例
+│   ├── week6/                ← 调试 / MCCL / torch_musa 5 示例
 │   └── leetgpu/easy/         ← LeetGPU Easy 18 题 MUSA 移植
 └── docs/
     ├── setup.md              ← 环境搭建

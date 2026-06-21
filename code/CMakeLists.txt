@@ -90,7 +90,10 @@ endfunction()
 # ── 6. 各周子目录 ──
 add_subdirectory(week1)
 add_subdirectory(week2)
-# add_subdirectory(week3)   # 待添加
+add_subdirectory(week3)
+add_subdirectory(week4)
+add_subdirectory(week5)
+add_subdirectory(week6)
 
 # ── 7. 练习题:LeetGPU 移植 ──
 add_subdirectory(leetgpu/easy)

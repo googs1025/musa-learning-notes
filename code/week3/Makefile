@@ -4,9 +4,8 @@ MUSA_PATH ?= /usr/local/musa
 INCLUDES  ?= -I$(MUSA_PATH)/include -I../include
 LDFLAGS   ?= -L$(MUSA_PATH)/lib -lmusa -lmusart
 
-BINS = 01_vector_add_runtime 02_vector_add_pinned 03_vector_add_timer \
-       04_vector_add_unified 05_multi_stream 06_stream_event_dep \
-       07_musa_graph 08_stream_callback
+BINS = 01_warp_divergence 02_reduce_naive 03_reduce_unrolling \
+       04_reduce_shfl 05_nested_hello 06_sum_matrix_2d
 
 .PHONY: all clean
 all: $(BINS)
