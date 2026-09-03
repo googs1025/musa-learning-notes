@@ -16,6 +16,10 @@
 
 完整 6 周路线见 [`docs/roadmap.md`](docs/roadmap.md)。
 
+项目级学习检测页见 [`docs/index.html`](docs/index.html)。发布到 GitHub Pages 时，
+在仓库 Settings 里选择 `Pages -> Source -> GitHub Actions`，然后由
+`.github/workflows/pages.yml` 自动发布 `docs/`。
+
 ## Week 1 快速入门
 
 环境配好之后(见 [`docs/setup.md`](docs/setup.md),AutoDL 摩尔线程实例最快):
@@ -55,6 +59,12 @@ CLion / VS Code 直接打开 `code/` 目录,会自动识别 CMakeLists,跳转 / 
 | [`docs/concepts.md`](docs/concepts.md) | 想搞清 SIMT / 硬件层级 / 内存层级 / 执行模型,跟 week1 代码注释互补 |
 | [`docs/cuda-vs-musa.md`](docs/cuda-vs-musa.md) | 有 CUDA 基础迁移过来,或 API 想不起 MUSA 名 |
 | [`docs/glossary.md`](docs/glossary.md) | 看代码遇到生词速查(warp / occupancy / shfl / pitch ...) |
+
+## 学习检测
+
+[`docs/index.html`](docs/index.html) 是纯静态题库测试页，覆盖 Week 1-6 和
+Attention / Flash kernel case。它支持题库筛选、随机练习、错题复习、标记复习，
+答题记录保存在浏览器 `localStorage`，适合直接用 GitHub Pages 发出去。
 
 ## 练习题
 

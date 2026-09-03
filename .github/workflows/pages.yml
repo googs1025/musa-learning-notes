@@ -1,0 +1,58 @@
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - docs/**
+      - .github/workflows/pages.yml
+  pull_request:
+    paths:
+      - docs/**
+      - .github/workflows/pages.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Validate quiz data
+        run: |
+          node -e "const fs=require('fs'); const html=fs.readFileSync('docs/index.html','utf8'); const m=html.match(/const QUESTIONS = ([\s\S]*?\n    \];)/); if(!m) throw new Error('QUESTIONS not found'); const arr=Function('return '+m[1].replace(/;$/,''))(); const ids=new Set(arr.map(q=>q.id)); if(ids.size!==arr.length) throw new Error('duplicate question ids'); for (const q of arr) { for (const k of ['id','deck','type','question','answer','pitfall','source']) if(!q[k]) throw new Error('missing '+k+' in '+q.id); if(q.type==='choice') { if(!Array.isArray(q.choices) || q.choices.length < 2) throw new Error('bad choices '+q.id); if(typeof q.answerIndex!=='number' || !q.choices[q.answerIndex]) throw new Error('bad answerIndex '+q.id); } } console.log('questions', arr.length);"
+
+      - name: Upload artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: docs
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
