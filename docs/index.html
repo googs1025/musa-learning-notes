@@ -1,0 +1,1490 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MUSA Learning Quiz</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --panel: #ffffff;
+      --ink: #17202a;
+      --muted: #637083;
+      --line: #dce2ea;
+      --accent: #0f766e;
+      --accent-strong: #115e59;
+      --warn: #b45309;
+      --bad: #b91c1c;
+      --good: #15803d;
+      --shadow: 0 10px 28px rgba(23, 32, 42, 0.08);
+      color-scheme: light;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--bg);
+    }
+
+    button, select, input, textarea {
+      font: inherit;
+    }
+
+    button {
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+      cursor: pointer;
+    }
+
+    button:hover { border-color: #aab7c7; }
+    button:disabled { cursor: not-allowed; opacity: 0.5; }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 300px minmax(0, 1fr);
+    }
+
+    .sidebar {
+      border-right: 1px solid var(--line);
+      background: #101820;
+      color: #f8fafc;
+      padding: 24px 20px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .chip-diagram {
+      width: 48px;
+      height: 48px;
+      flex: 0 0 auto;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.15;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin: 4px 0 0;
+      color: #b8c3d1;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .control-group {
+      margin: 18px 0;
+    }
+
+    .control-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: #c8d2df;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    select, input[type="search"] {
+      width: 100%;
+      min-height: 40px;
+      border: 1px solid #344256;
+      border-radius: 8px;
+      padding: 8px 10px;
+      color: #f8fafc;
+      background: #182332;
+    }
+
+    .mode-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .mode-grid button {
+      background: #182332;
+      color: #dbeafe;
+      border-color: #344256;
+    }
+
+    .mode-grid button.active {
+      color: #fff;
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 20px;
+    }
+
+    .stat {
+      padding: 12px;
+      border: 1px solid #344256;
+      border-radius: 8px;
+      background: #182332;
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 22px;
+      line-height: 1.1;
+    }
+
+    .stat span {
+      display: block;
+      margin-top: 4px;
+      color: #b8c3d1;
+      font-size: 12px;
+    }
+
+    .main {
+      padding: 28px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .topbar h2 {
+      margin: 0;
+      font-size: 20px;
+      letter-spacing: 0;
+    }
+
+    .progress-wrap {
+      min-width: 220px;
+      max-width: 340px;
+      flex: 1;
+    }
+
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 7px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .progress {
+      height: 8px;
+      border-radius: 999px;
+      background: #e5eaf1;
+      overflow: hidden;
+    }
+
+    .progress div {
+      height: 100%;
+      width: 0;
+      background: var(--accent);
+      transition: width 160ms ease;
+    }
+
+    .question-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 340px;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .question-panel {
+      min-height: 520px;
+      padding: 24px;
+    }
+
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 26px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      color: #233044;
+      background: #eef2f7;
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .pill.good { color: var(--good); background: #dcfce7; }
+    .pill.warn { color: var(--warn); background: #fef3c7; }
+    .pill.bad { color: var(--bad); background: #fee2e2; }
+
+    .question-text {
+      margin: 0 0 18px;
+      font-size: 24px;
+      line-height: 1.35;
+      letter-spacing: 0;
+    }
+
+    .choices {
+      display: grid;
+      gap: 10px;
+      margin: 18px 0;
+    }
+
+    .choice {
+      width: 100%;
+      min-height: 48px;
+      padding: 12px 14px;
+      text-align: left;
+      line-height: 1.45;
+      background: #fff;
+    }
+
+    .choice.selected {
+      border-color: var(--accent);
+      outline: 2px solid rgba(15, 118, 110, 0.15);
+    }
+
+    .choice.correct { border-color: var(--good); background: #f0fdf4; }
+    .choice.wrong { border-color: var(--bad); background: #fef2f2; }
+
+    textarea {
+      width: 100%;
+      min-height: 120px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      resize: vertical;
+      line-height: 1.5;
+      background: #fff;
+      color: var(--ink);
+    }
+
+    .answer {
+      display: none;
+      margin-top: 18px;
+      padding: 16px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      background: #f8fafc;
+      line-height: 1.65;
+    }
+
+    .answer.show { display: block; }
+
+    .answer h3 {
+      margin: 0 0 8px;
+      font-size: 15px;
+      letter-spacing: 0;
+    }
+
+    .answer p {
+      margin: 8px 0;
+    }
+
+    code {
+      padding: 1px 5px;
+      border-radius: 5px;
+      background: #e8eef6;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: 0.92em;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 22px;
+    }
+
+    .primary {
+      color: #fff;
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .primary:hover {
+      background: var(--accent-strong);
+      border-color: var(--accent-strong);
+    }
+
+    .danger {
+      color: var(--bad);
+      border-color: #fecaca;
+      background: #fff7f7;
+    }
+
+    .side-panel {
+      padding: 18px;
+    }
+
+    .side-panel h3 {
+      margin: 0 0 12px;
+      font-size: 15px;
+      letter-spacing: 0;
+    }
+
+    .list {
+      display: grid;
+      gap: 8px;
+      max-height: 360px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .question-link {
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr) 20px;
+      gap: 8px;
+      align-items: center;
+      width: 100%;
+      min-height: 44px;
+      padding: 8px 10px;
+      text-align: left;
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .question-link.active {
+      border-color: var(--accent);
+      background: #ecfdf5;
+    }
+
+    .question-link small {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      color: var(--muted);
+    }
+
+    .mark {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #cbd5e1;
+    }
+
+    .mark.done { background: var(--good); }
+    .mark.review { background: var(--warn); }
+    .mark.wrong { background: var(--bad); }
+
+    .empty {
+      padding: 28px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .footer-note {
+      margin-top: 18px;
+      color: #b8c3d1;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    @media (max-width: 980px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar {
+        position: static;
+        height: auto;
+      }
+      .question-layout { grid-template-columns: 1fr; }
+      .topbar {
+        align-items: stretch;
+        flex-direction: column;
+      }
+      .progress-wrap {
+        max-width: none;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .main { padding: 16px; }
+      .question-panel { padding: 18px; min-height: auto; }
+      .question-text { font-size: 20px; }
+      .actions { display: grid; grid-template-columns: 1fr; }
+      .mode-grid { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <svg class="chip-diagram" viewBox="0 0 64 64" role="img" aria-label="GPU tile diagram">
+          <rect x="10" y="10" width="44" height="44" rx="6" fill="#0f766e"></rect>
+          <rect x="18" y="18" width="10" height="10" fill="#d9f99d"></rect>
+          <rect x="36" y="18" width="10" height="10" fill="#bae6fd"></rect>
+          <rect x="18" y="36" width="10" height="10" fill="#fde68a"></rect>
+          <rect x="36" y="36" width="10" height="10" fill="#fecaca"></rect>
+          <path d="M4 20h6M4 32h6M4 44h6M54 20h6M54 32h6M54 44h6M20 4v6M32 4v6M44 4v6M20 54v6M32 54v6M44 54v6" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"></path>
+        </svg>
+        <div>
+          <h1>MUSA Quiz</h1>
+          <p class="subtitle">项目级学习检测</p>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label for="deckSelect">题库</label>
+        <select id="deckSelect"></select>
+      </div>
+
+      <div class="control-group">
+        <label>模式</label>
+        <div class="mode-grid">
+          <button id="modeAll" class="active" type="button">全部</button>
+          <button id="modeReview" type="button">复习</button>
+          <button id="modeWrong" type="button">错题</button>
+          <button id="modeShuffle" type="button">随机</button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label for="searchInput">搜索</label>
+        <input id="searchInput" type="search" placeholder="kernel / softmax / stream">
+      </div>
+
+      <div class="stats">
+        <div class="stat"><strong id="statDone">0</strong><span>已完成</span></div>
+        <div class="stat"><strong id="statReview">0</strong><span>待复习</span></div>
+        <div class="stat"><strong id="statWrong">0</strong><span>错题</span></div>
+        <div class="stat"><strong id="statTotal">0</strong><span>当前题数</span></div>
+      </div>
+
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <h2 id="deckTitle">学习检测</h2>
+        <div class="progress-wrap">
+          <div class="progress-label">
+            <span id="progressText">0 / 0</span>
+            <span id="progressPct">0%</span>
+          </div>
+          <div class="progress"><div id="progressBar"></div></div>
+        </div>
+      </div>
+
+      <div class="question-layout">
+        <section class="panel question-panel" id="questionPanel"></section>
+        <aside class="panel side-panel">
+          <h3>题目列表</h3>
+          <div class="list" id="questionList"></div>
+        </aside>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "musa-learning-quiz-v1";
+
+    const QUESTIONS = [
+      {
+        id: "w1-q1",
+        deck: "Week 1",
+        type: "choice",
+        level: "基础",
+        source: "code/week1/concept-review.md",
+        question: "`kernel<<<grid, block>>>` 里的 `grid` 和 `block` 分别控制什么？",
+        choices: [
+          "grid 控制 block 数量，block 控制每个 block 的 thread 数量",
+          "grid 控制 thread 数量，block 控制 SM 数量",
+          "grid 只控制 x 维度，block 只控制 y 维度",
+          "它们只影响编译，不影响运行"
+        ],
+        answerIndex: 0,
+        answer: "`grid` 决定启动多少个 block，`block` 决定每个 block 里有多少个 thread。",
+        pitfall: "`<<<2, 4>>>` 是 2 个 block、每个 block 4 个线程，总共 8 个线程。"
+      },
+      {
+        id: "w1-q2",
+        deck: "Week 1",
+        type: "choice",
+        level: "基础",
+        source: "code/week1/concept-review.md",
+        question: "一维全局线程索引的标准写法是什么？",
+        choices: [
+          "`blockIdx.x * blockDim.x + threadIdx.x`",
+          "`threadIdx.x * gridDim.x + blockIdx.x`",
+          "`blockIdx.x + threadIdx.x`",
+          "`gridDim.x * blockDim.x`"
+        ],
+        answerIndex: 0,
+        answer: "`int idx = blockIdx.x * blockDim.x + threadIdx.x;`",
+        pitfall: "只用 `threadIdx.x` 会让不同 block 的线程写同一批位置。"
+      },
+      {
+        id: "w1-q3",
+        deck: "Week 1",
+        type: "choice",
+        level: "基础",
+        source: "code/week1/concept-review.md",
+        question: "为什么常见 kernel 都要写 `if (idx < N)`？",
+        choices: [
+          "因为 block 数向上取整后，最后一个 block 可能有多余线程",
+          "因为 GPU 不支持数组越界检查",
+          "因为所有线程必须只执行一次",
+          "因为 `idx` 默认可能是负数"
+        ],
+        answerIndex: 0,
+        answer: "`blocks = (N + threads - 1) / threads` 保证线程数不少于 N，但不保证刚好等于 N。",
+        pitfall: "多出来的线程必须主动退出，否则可能越界读写。"
+      },
+      {
+        id: "w1-q4",
+        deck: "Week 1",
+        type: "choice",
+        level: "基础",
+        source: "code/week1/concept-review.md",
+        question: "GPU 上 `printf` 的输出顺序能代表 thread 执行顺序吗？",
+        choices: ["不能", "能", "只在单个 block 内能", "只在 Release 模式能"],
+        answerIndex: 0,
+        answer: "不能。block 和 thread 的调度顺序由硬件决定，输出可能交错。",
+        pitfall: "验证逻辑要看索引值和计算结果，不要依赖打印顺序。"
+      },
+      {
+        id: "w1-q5",
+        deck: "Week 1",
+        type: "choice",
+        level: "基础",
+        source: "code/week1/concept-review.md",
+        question: "host 代码能直接用 `d_ptr[0]` 读取 device pointer 的内容吗？",
+        choices: ["不能，要通过 D2H 拷回 host", "能，device pointer 也是普通指针", "只要同步后就能", "只在统一内存中永远能"],
+        answerIndex: 0,
+        answer: "device pointer 指向 GPU 显存，host 不能把它当普通数组解引用。",
+        pitfall: "常规路径是 `musaMemcpy(h_ptr, d_ptr, bytes, musaMemcpyDeviceToHost)` 后读 host 数组。"
+      },
+      {
+        id: "w1-q6",
+        deck: "Week 1",
+        type: "choice",
+        level: "基础",
+        source: "code/week1/concept-review.md",
+        question: "`musaMemset(d, 1, bytes)` 能把 float 数组设成 `1.0f` 吗？",
+        choices: ["不能，它按字节填充", "能，它按 float 元素填充", "只在 aligned 内存上能", "只对第一个元素有效"],
+        answerIndex: 0,
+        answer: "`musaMemset` 是按字节填充，不是按元素赋值。",
+        pitfall: "`1.0f` 的二进制不是每个字节都等于 `0x01`。"
+      },
+      {
+        id: "w1-q7",
+        deck: "Week 1",
+        type: "short",
+        level: "基础",
+        source: "code/week1/concept-review.md",
+        question: "`musaGetLastError()` 和 `musaDeviceSynchronize()` 分别主要抓什么错误？",
+        answer: "`musaGetLastError()` 常用于抓 launch 配置错误；`musaDeviceSynchronize()` 等待 kernel 完成，并暴露异步执行中的错误。",
+        pitfall: "调试期推荐 launch 后做两步检查，避免漏掉运行期 illegal address 等异步错误。"
+      },
+      {
+        id: "w1-q8",
+        deck: "Week 1",
+        type: "choice",
+        level: "基础",
+        source: "code/week1/concept-review.md",
+        question: "kernel launch 为什么说是异步的？",
+        choices: [
+          "host 提交 kernel 后通常立刻返回，不等 GPU 算完",
+          "GPU 不会真正执行 kernel",
+          "kernel 只在另一个 CPU 线程执行",
+          "所有 kernel 都自动并行到多个 GPU"
+        ],
+        answerIndex: 0,
+        answer: "host 线程把 kernel 提交给 GPU 后通常立刻返回。",
+        pitfall: "CPU 计时如果只包住 launch，量到的大多是提交开销。"
+      },
+      {
+        id: "w2-q1",
+        deck: "Week 2",
+        type: "choice",
+        level: "进阶",
+        source: "code/week2/README.md",
+        question: "Pinned memory 相比普通 pageable host memory，主要优化哪段？",
+        choices: ["Host 到 Device / Device 到 Host 拷贝", "kernel 内寄存器访问", "shared memory bank conflict", "warp divergence"],
+        answerIndex: 0,
+        answer: "Pinned host memory 更利于 DMA，通常能提升 H2D/D2H 拷贝带宽。",
+        pitfall: "它不是让 kernel 算得更快，而是优化主机和设备之间的数据搬运。"
+      },
+      {
+        id: "w2-q2",
+        deck: "Week 2",
+        type: "choice",
+        level: "进阶",
+        source: "code/week2/README.md",
+        question: "用 `GpuTimer` 量 kernel 时间时，为什么通常比只用 CPU wall clock 包 launch 更可靠？",
+        choices: [
+          "event 在 GPU 时间线上记录，能避开只量到 launch 入队的问题",
+          "GpuTimer 会自动提升 kernel 性能",
+          "GpuTimer 会跳过所有内存访问",
+          "CPU wall clock 完全不能用于任何 GPU 程序"
+        ],
+        answerIndex: 0,
+        answer: "GPU event 记录的是设备时间线上的开始和结束，更贴近 kernel 实际执行时间。",
+        pitfall: "CPU 计时可以用，但要包含正确同步点。"
+      },
+      {
+        id: "w2-q3",
+        deck: "Week 2",
+        type: "short",
+        level: "进阶",
+        source: "code/week2/README.md",
+        question: "多 stream 流水线通常想重叠哪三个阶段？",
+        answer: "H2D 拷贝、kernel 计算、D2H 拷贝。",
+        pitfall: "乱加 `musaDeviceSynchronize()` 会把本来可能重叠的阶段重新串行化。"
+      },
+      {
+        id: "w2-q4",
+        deck: "Week 2",
+        type: "choice",
+        level: "进阶",
+        source: "code/week2/README.md",
+        question: "跨 stream 建立依赖时，更适合用什么机制？",
+        choices: ["event", "global variable", "host sleep", "device printf"],
+        answerIndex: 0,
+        answer: "event 可以在一个 stream 记录完成点，在另一个 stream 等待它。",
+        pitfall: "用 host sleep 猜时间不可靠，也会破坏调度。"
+      },
+      {
+        id: "w3-q1",
+        deck: "Week 3",
+        type: "choice",
+        level: "进阶",
+        source: "code/week3/README.md",
+        question: "Warp divergence 的核心问题是什么？",
+        choices: [
+          "同一个 warp 内线程走不同分支，执行会被拆开",
+          "不同 block 不能同时运行",
+          "global memory 不能被读取",
+          "threadIdx 计算错误"
+        ],
+        answerIndex: 0,
+        answer: "SIMT 执行中，同一 warp 内分支不一致会让路径被分段执行，降低有效并行度。",
+        pitfall: "不是所有 if 都严重，关键看同一 warp 内是否分歧。"
+      },
+      {
+        id: "w3-q2",
+        deck: "Week 3",
+        type: "short",
+        level: "进阶",
+        source: "code/week3/README.md",
+        question: "MUSA 做 warp-level shuffle/reduce 时，为什么不能照搬 CUDA 的 warp=32 假设？",
+        answer: "MUSA warp size 通常按 128 理解，shuffle mask、warp 数量、reduction tree 深度都要重新算。",
+        pitfall: "代码语法接近 CUDA，不代表调优参数可以机械照搬。"
+      },
+      {
+        id: "w4-q1",
+        deck: "Week 4",
+        type: "choice",
+        level: "进阶",
+        source: "code/week4/README.md",
+        question: "Coalesced access 主要影响什么？",
+        choices: ["global memory 访问吞吐", "host 编译速度", "printf 顺序", "CMake target 数量"],
+        answerIndex: 0,
+        answer: "相邻线程访问连续地址时，硬件更容易合并内存事务，提高 global memory 吞吐。",
+        pitfall: "数学计算少的 kernel 往往先被访存模式限制。"
+      },
+      {
+        id: "w4-q2",
+        deck: "Week 4",
+        type: "short",
+        level: "进阶",
+        source: "code/week4/README.md",
+        question: "Shared memory transpose 为什么常用 padding？",
+        answer: "padding 改变 shared memory 行跨度，降低多个线程访问同一 bank 的概率。",
+        pitfall: "padding 多一个元素看似浪费一点空间，但常能换来更少 bank conflict。"
+      },
+      {
+        id: "w5-q1",
+        deck: "Week 5",
+        type: "choice",
+        level: "核心",
+        source: "code/week5/README.md",
+        question: "Tiled GEMM 使用 shared memory 的核心收益是什么？",
+        choices: [
+          "复用 A/B tile，降低 global memory 读取次数",
+          "完全消除所有乘法",
+          "让所有 block 共享同一个 tile",
+          "让 CPU 参与矩阵乘法"
+        ],
+        answerIndex: 0,
+        answer: "一个 block 协同加载 A/B tile 到 shared memory，tile 内元素被多个线程重复使用。",
+        pitfall: "shared memory 作用域是 block，不能跨 block 共享。"
+      },
+      {
+        id: "w5-q2",
+        deck: "Week 5",
+        type: "short",
+        level: "核心",
+        source: "code/week5/06_tiled_gemm.mu",
+        question: "Tiled GEMM 中两次 `__syncthreads()` 分别保护什么？",
+        answer: "第一次等所有线程把 tile 装进 shared；第二次等本轮计算读完 shared，再允许下一轮覆盖 tile。",
+        pitfall: "漏掉任意一个同步点都可能产生数据竞态和偶发错误。"
+      },
+      {
+        id: "w6-q1",
+        deck: "Week 6",
+        type: "choice",
+        level: "工程",
+        source: "code/week6/README.md",
+        question: "torch_musa custom op 示例的主要学习价值是什么？",
+        choices: [
+          "把底层 MUSA kernel 接到框架调用路径",
+          "替代所有 muBLAS 调用",
+          "自动生成所有 kernel",
+          "让 Python 不需要安装 torch"
+        ],
+        answerIndex: 0,
+        answer: "custom op 是从手写 kernel 进入框架集成的桥。",
+        pitfall: "kernel 正确只是第一步，还要处理 tensor shape、dtype、device 和注册入口。"
+      },
+      {
+        id: "case-q1",
+        deck: "Attention Case",
+        type: "choice",
+        level: "核心",
+        source: "code/case/01_row_softmax.mu",
+        question: "稳定 softmax 为什么要先减去 row max？",
+        choices: [
+          "防止 `exp(x)` 在大值时溢出",
+          "让所有概率都变成 0",
+          "减少输出维度",
+          "避免使用 shared memory"
+        ],
+        answerIndex: 0,
+        answer: "`exp(x - max)` 的最大输入是 0，最大输出是 1，可以显著降低溢出风险。",
+        pitfall: "减 max 不改变 softmax 结果，因为分子分母同时缩放。"
+      },
+      {
+        id: "case-q2",
+        deck: "Attention Case",
+        type: "short",
+        level: "核心",
+        source: "code/case/02_online_softmax.mu",
+        question: "Online softmax 合并两个片段时，为什么不能直接把两个 `l` 相加？",
+        answer: "两个片段的 `l` 各自基于不同的 max，需要先缩放到共同的新 max 坐标系再相加。",
+        pitfall: "正确公式是 `l_new = l_old * exp(m_old - m_new) + l_tile * exp(m_tile - m_new)`。"
+      },
+      {
+        id: "case-q3",
+        deck: "Attention Case",
+        type: "choice",
+        level: "核心",
+        source: "code/case/03_naive_attention.mu",
+        question: "Naive attention 的三个主要阶段是什么？",
+        choices: [
+          "`QK^T -> softmax -> PV`",
+          "`QV^T -> ReLU -> KP`",
+          "`transpose -> memset -> printf`",
+          "`H2D -> CMake -> D2H`"
+        ],
+        answerIndex: 0,
+        answer: "先算 scores = `QK^T / sqrt(D)`，再做 row softmax，最后乘 V 得到输出。",
+        pitfall: "Naive 版本会落下 `scores[S,S]` 和 `prob[S,S]`，这是显存痛点。"
+      },
+      {
+        id: "case-q4",
+        deck: "Attention Case",
+        type: "short",
+        level: "核心",
+        source: "code/case/04_fused_attention_small_d.mu",
+        question: "Fused attention 相比 naive attention，最直接减少了什么？",
+        answer: "减少了 scores/probability 中间矩阵对 global memory 的写入和读取。",
+        pitfall: "fusion 提升了数据局部性，但中间状态不落盘后 debug 难度会上升。"
+      },
+      {
+        id: "case-q5",
+        deck: "Attention Case",
+        type: "short",
+        level: "核心",
+        source: "code/case/05_flash_attention_mini.mu",
+        question: "Mini FlashAttention 中 `m`、`l`、`acc` 分别表示什么？",
+        answer: "`m` 是已扫描 score 的最大值；`l` 是当前 max 坐标系下的 softmax 分母；`acc` 是当前已归一化的输出向量。",
+        pitfall: "每扫一个 K/V tile，都要把旧状态和 tile 状态缩放到同一个 `m_new`。"
+      },
+      {
+        id: "case-q6",
+        deck: "Attention Case",
+        type: "choice",
+        level: "核心",
+        source: "code/case/05_flash_attention_mini.mu",
+        question: "FlashAttention 的核心目标是什么？",
+        choices: [
+          "不保存完整 `S x S` attention 矩阵，按 tile 流式计算输出",
+          "把 softmax 删除掉",
+          "只在 CPU 上计算 attention",
+          "强制所有维度等于 1"
+        ],
+        answerIndex: 0,
+        answer: "通过按 tile 扫描 K/V，并在线更新 softmax 状态和输出累加器，避免落完整 attention 矩阵。",
+        pitfall: "教学版可以牺牲并行度，但数学状态必须和真实 flash 思路一致。"
+      },
+      {
+        id: "w1-q9",
+        deck: "Week 1",
+        type: "choice",
+        level: "基础",
+        source: "code/week1/concept-review.md",
+        question: "block 和 warp 的关系里，哪一句更准确？",
+        choices: [
+          "block 是调度和协作边界，warp 是硬件执行边界",
+          "warp 可以跨多个 block 共享 shared memory",
+          "block 和 warp 是同一个概念",
+          "threadIdx 决定一个 block 被放到哪个 SM"
+        ],
+        answerIndex: 0,
+        answer: "block 是调度和协作边界；warp 是硬件实际执行的一组线程。",
+        pitfall: "MUSA warp size 通常按 128 理解，CUDA 常见是 32。"
+      },
+      {
+        id: "w1-q10",
+        deck: "Week 1",
+        type: "choice",
+        level: "基础",
+        source: "docs/concepts.md",
+        question: "一个 block 会不会跨多个 SM 执行？",
+        choices: ["不会", "会", "只在 shared memory 很小时会", "只在多 stream 时会"],
+        answerIndex: 0,
+        answer: "一个 block 会被调度到同一个 SM 上执行。",
+        pitfall: "block 内可以用 shared memory 和 `__syncthreads()` 协作，不同 block 不能直接这样同步。"
+      },
+      {
+        id: "w1-q11",
+        deck: "Week 1",
+        type: "short",
+        level: "基础",
+        source: "docs/concepts.md",
+        question: "二维矩阵 row-major 存储下，`matrix[y, x]` 的一维偏移怎么写？",
+        answer: "`matrix[y * width + x]`。",
+        pitfall: "把 width 写成 height 会在非方阵时暴露错误。"
+      },
+      {
+        id: "w1-q12",
+        deck: "Week 1",
+        type: "choice",
+        level: "基础",
+        source: "docs/concepts.md",
+        question: "为什么 GPU 适合大量 elementwise kernel？",
+        choices: [
+          "大量线程执行相似操作，数据并行度高",
+          "GPU 的单线程控制流比 CPU 强",
+          "GPU 不需要内存访问",
+          "GPU 会自动理解所有 C++ 循环"
+        ],
+        answerIndex: 0,
+        answer: "GPU SIMT 模型适合大量线程执行同类小操作。",
+        pitfall: "控制流复杂、分支多的任务不一定适合 GPU。"
+      },
+      {
+        id: "w1-q13",
+        deck: "Week 1",
+        type: "choice",
+        level: "基础",
+        source: "docs/concepts.md",
+        question: "Global memory 优化最常见的第一原则是什么？",
+        choices: [
+          "让相邻线程访问相邻地址，形成 coalesced access",
+          "让每个线程访问随机地址",
+          "把所有数据都放进 local memory",
+          "用 printf 检查每次访存"
+        ],
+        answerIndex: 0,
+        answer: "同 warp 相邻线程访问连续地址时，硬件更容易合并内存事务。",
+        pitfall: "访存型 kernel 往往先被带宽和访问模式限制。"
+      },
+      {
+        id: "w1-q14",
+        deck: "Week 1",
+        type: "short",
+        level: "基础",
+        source: "code/week1/concept-review.md",
+        question: "如何口述一个最小 GPU 程序的执行流程？",
+        answer: "host 准备数据，分配 device memory，H2D 拷贝，launch kernel，检查错误并同步，D2H 拷回结果，释放资源。",
+        pitfall: "不要漏掉错误检查和同步语义，kernel launch 不是普通函数调用。"
+      },
+      {
+        id: "w1-q15",
+        deck: "Week 1",
+        type: "choice",
+        level: "基础",
+        source: "docs/cuda-vs-musa.md",
+        question: "CUDA Runtime API 迁移到 MUSA，最常见的替换模式是什么？",
+        choices: [
+          "`cuda*` 替换成 `musa*`，`nvcc` 替换成 `mcc`",
+          "`cuda*` 替换成 `mu*`，`nvcc` 不变",
+          "所有 kernel 都要改写成 Python",
+          "只改文件名，不改 API"
+        ],
+        answerIndex: 0,
+        answer: "多数 Runtime API 是 `cuda` 到 `musa` 的近似一对一映射。",
+        pitfall: "Driver API 是 `mu*` 前缀，不能和 Runtime API 混淆。"
+      },
+      {
+        id: "w2-q5",
+        deck: "Week 2",
+        type: "choice",
+        level: "进阶",
+        source: "docs/concepts.md",
+        question: "默认 stream 上提交的任务通常是什么执行关系？",
+        choices: ["串行执行", "随机执行", "必然跨 GPU 执行", "自动反向执行"],
+        answerIndex: 0,
+        answer: "默认 stream 上的任务按提交顺序串行执行。",
+        pitfall: "想重叠 H2D/kernel/D2H，需要设计多个 stream 和依赖。"
+      },
+      {
+        id: "w2-q6",
+        deck: "Week 2",
+        type: "short",
+        level: "进阶",
+        source: "code/week2/README.md",
+        question: "为什么小 kernel 重复 launch 很多次时，Graph 可能是一个优化方向？",
+        answer: "Graph 可以把重复的操作图捕获并重放，理论上减少反复提交 kernel 的固定开销。",
+        pitfall: "具体收益取决于实现和 workload，仓库实测里 MUSA 当前 graph 未必比 direct launch 快。"
+      },
+      {
+        id: "w2-q7",
+        deck: "Week 2",
+        type: "choice",
+        level: "进阶",
+        source: "code/week2/README.md",
+        question: "`musaMemcpy(DeviceToHost)` 经常让结果看起来正确，是因为它通常还做了什么？",
+        choices: ["隐式等待相关 GPU 工作完成", "自动修复越界写", "自动重算 kernel", "跳过 device memory"],
+        answerIndex: 0,
+        answer: "D2H 拷贝为了拿到结果，会隐式等待相关 GPU 工作完成。",
+        pitfall: "结果正确不代表你理解了同步；性能代码里仍要明确同步边界。"
+      },
+      {
+        id: "w3-q3",
+        deck: "Week 3",
+        type: "choice",
+        level: "进阶",
+        source: "code/week3/README.md",
+        question: "Reduce 优化里，每线程处理 2 个元素的 unrolling 主要想减少什么？",
+        choices: [
+          "kernel 内循环/同步开销和部分 global memory 读写压力",
+          "所有浮点加法",
+          "device memory 分配次数",
+          "CMake 配置时间"
+        ],
+        answerIndex: 0,
+        answer: "unrolling 让每个线程先在寄存器里合并更多数据，再进入 block reduction。",
+        pitfall: "展开不是越多越好，会受寄存器、occupancy 和访存模式影响。"
+      },
+      {
+        id: "w3-q4",
+        deck: "Week 3",
+        type: "short",
+        level: "进阶",
+        source: "docs/concepts.md",
+        question: "GPU 为什么能隐藏 global memory 的高延迟？",
+        answer: "当一个 warp 等内存时，SM 可以切到另一个已就绪 warp 执行，靠高 occupancy 隐藏延迟。",
+        pitfall: "这不是单个线程变快，而是用大量并发线程填满等待空隙。"
+      },
+      {
+        id: "w4-q3",
+        deck: "Week 4",
+        type: "choice",
+        level: "进阶",
+        source: "code/week4/README.md",
+        question: "AoS vs SoA 主要是在比较什么？",
+        choices: [
+          "数据布局对相邻线程访存连续性的影响",
+          "CMake 和 Makefile 的区别",
+          "host 和 device 指针命名",
+          "printf 输出格式"
+        ],
+        answerIndex: 0,
+        answer: "AoS/SoA 会改变线程读取字段时的地址分布，从而影响 coalescing。",
+        pitfall: "面向 CPU 直觉舒服的数据布局，不一定适合 GPU。"
+      },
+      {
+        id: "w4-q4",
+        deck: "Week 4",
+        type: "short",
+        level: "进阶",
+        source: "docs/concepts.md",
+        question: "Shared memory bank conflict 是什么？",
+        answer: "同一 warp 内多个线程访问同一个 bank 的不同地址时，访问可能被串行化。",
+        pitfall: "shared memory 很快，但不是随便访问都快。"
+      },
+      {
+        id: "w5-q3",
+        deck: "Week 5",
+        type: "choice",
+        level: "核心",
+        source: "docs/concepts.md",
+        question: "Constant memory 什么时候最容易发挥优势？",
+        choices: [
+          "同一 warp 多个线程读取同一个只读地址",
+          "每个线程随机写不同地址",
+          "保存大规模可变数组",
+          "替代所有 global memory"
+        ],
+        answerIndex: 0,
+        answer: "constant memory 有专门 cache，适合同一地址广播式读取。",
+        pitfall: "每个线程读不同地址时，优势会明显下降。"
+      },
+      {
+        id: "w5-q4",
+        deck: "Week 5",
+        type: "short",
+        level: "核心",
+        source: "code/week5/06_tiled_gemm.mu",
+        question: "Tiled GEMM 里 tile size 过大可能带来哪些问题？",
+        answer: "block 线程数可能超过上限，shared memory 占用变大，导致 occupancy 下降或 launch 失败。",
+        pitfall: "`TS^2 <= maxThreadsPerBlock` 是最基本的合法性检查之一。"
+      },
+      {
+        id: "w6-q2",
+        deck: "Week 6",
+        type: "short",
+        level: "工程",
+        source: "code/week6/README.md",
+        question: "为什么调试 illegal address 时，错误经常不是在 kernel launch 这一行立刻报出？",
+        answer: "kernel 执行是异步的，运行期错误通常要到后续同步点才暴露。",
+        pitfall: "这就是 launch 后同时检查 `musaGetLastError()` 和 `musaDeviceSynchronize()` 的原因。"
+      },
+      {
+        id: "w6-q3",
+        deck: "Week 6",
+        type: "choice",
+        level: "工程",
+        source: "docs/cuda-vs-musa.md",
+        question: "NCCL 在 MUSA 生态中大致对应哪个库？",
+        choices: ["MCCL", "muBLAS", "muDNN", "muFFT"],
+        answerIndex: 0,
+        answer: "MCCL 对应多卡通信场景，例如 AllReduce/Broadcast。",
+        pitfall: "muBLAS 是线性代数库，不负责多卡通信。"
+      },
+      {
+        id: "api-q1",
+        deck: "CUDA -> MUSA",
+        type: "choice",
+        level: "迁移",
+        source: "docs/cuda-vs-musa.md",
+        question: "`cudaMallocHost` 在 MUSA Runtime 中对应什么？",
+        choices: ["`musaMallocHost`", "`muMallocHost`", "`mublasMallocHost`", "`musaMallocManagedOnly`"],
+        answerIndex: 0,
+        answer: "`cudaMallocHost` / `cudaHostAlloc` 对应 `musaMallocHost` / `musaHostAlloc`。",
+        pitfall: "Runtime API 是 `musa` 前缀，不是 Driver API 的 `mu` 前缀。"
+      },
+      {
+        id: "api-q2",
+        deck: "CUDA -> MUSA",
+        type: "choice",
+        level: "迁移",
+        source: "docs/cuda-vs-musa.md",
+        question: "CUDA 的 cuBLAS 在 MUSA 生态中对应什么？",
+        choices: ["muBLAS", "MCCL", "muRAND", "muSparse"],
+        answerIndex: 0,
+        answer: "cuBLAS 对应 muBLAS，用于 GEMM、AXPY 等线性代数操作。",
+        pitfall: "库名迁移不是简单 `cuda` 到 `musa`，要按库族映射。"
+      },
+      {
+        id: "api-q3",
+        deck: "CUDA -> MUSA",
+        type: "short",
+        level: "迁移",
+        source: "docs/cuda-vs-musa.md",
+        question: "为什么不能把 CUDA 的 `-arch=sm_80` 直接搬到 MUSA 编译命令里？",
+        answer: "MUSA 使用自己的架构号和 mcc 参数，NVIDIA 的 `sm_xx` 字符串不适用。",
+        pitfall: "架构参数必须查当前 MUSA SDK 的 `mcc --help` 或发布说明。"
+      },
+      {
+        id: "api-q4",
+        deck: "CUDA -> MUSA",
+        type: "choice",
+        level: "迁移",
+        source: "docs/cuda-vs-musa.md",
+        question: "MUSA Driver API 的前缀是什么？",
+        choices: ["`mu`", "`musa`", "`cuda`", "`mublas`"],
+        answerIndex: 0,
+        answer: "Driver API 使用 `mu` 前缀，例如 `muLaunchKernel`、`muModuleLoad`。",
+        pitfall: "Runtime API 才是 `musaMalloc`、`musaMemcpy` 这种 `musa` 前缀。"
+      },
+      {
+        id: "leet-q1",
+        deck: "LeetGPU",
+        type: "choice",
+        level: "练习",
+        source: "docs/leetgpu-easy.md",
+        question: "LeetGPU Easy 路线里，最适合第一批练手的是哪类题？",
+        choices: ["elementwise 基本功", "多卡 AllReduce", "完整 FlashAttention", "反汇编分析"],
+        answerIndex: 0,
+        answer: "先刷 Vector Add、ReLU、Sigmoid、Leaky ReLU、Clipping、SiLU 这类 elementwise。",
+        pitfall: "先把 1D 索引、边界保护、H2D/D2H 跑顺，再上复杂访存。"
+      },
+      {
+        id: "leet-q2",
+        deck: "LeetGPU",
+        type: "short",
+        level: "练习",
+        source: "docs/leetgpu-easy.md",
+        question: "SwiGLU 的核心计算是什么？",
+        answer: "把输入切成两半，计算 `SiLU(x1) * x2`。",
+        pitfall: "索引要注意 `x1=i`，`x2=i+halfN`。"
+      },
+      {
+        id: "leet-q3",
+        deck: "LeetGPU",
+        type: "choice",
+        level: "练习",
+        source: "docs/leetgpu-easy.md",
+        question: "Matrix Transpose 作为练习题，最适合训练哪种直觉？",
+        choices: ["2D 索引和读写 stride 对 coalescing 的影响", "多卡通信协议", "host malloc 速度", "GitHub Pages 部署"],
+        answerIndex: 0,
+        answer: "transpose 会让读写方向的连续性不对称，很适合观察访存模式。",
+        pitfall: "朴素 transpose 往往不是计算慢，而是访存模式差。"
+      },
+      {
+        id: "leet-q4",
+        deck: "LeetGPU",
+        type: "short",
+        level: "练习",
+        source: "docs/leetgpu-easy.md",
+        question: "1D Convolution naive 版本为什么适合后续改 shared memory tile？",
+        answer: "相邻输出窗口会重复读取大量输入元素，shared memory 可以缓存重叠区域减少 global 读。",
+        pitfall: "题面常叫 convolution，但很多实现实际是 cross-correlation，不翻转 kernel。"
+      },
+      {
+        id: "case-q7",
+        deck: "Attention Case",
+        type: "choice",
+        level: "核心",
+        source: "code/case/01_row_softmax.mu",
+        question: "Case 01 中一个 block 负责什么粒度？",
+        choices: ["矩阵的一行", "矩阵的一个元素", "整个矩阵", "一个 device pointer"],
+        answerIndex: 0,
+        answer: "一个 block 负责一行，block 内线程协作做 max/sum reduction 和写回。",
+        pitfall: "这种映射适合 row-wise softmax，但不同 cols 大小时要重新考虑 block size。"
+      },
+      {
+        id: "case-q8",
+        deck: "Attention Case",
+        type: "short",
+        level: "核心",
+        source: "code/case/03_naive_attention.mu",
+        question: "为什么 naive attention 适合作为 fused/flash 版本的 reference？",
+        answer: "它显式落下 scores 和 probability 中间矩阵，便于逐阶段检查 `QK^T`、softmax 和 `PV`。",
+        pitfall: "可 debug 不等于高性能，`S x S` 中间矩阵会很快吃掉显存和带宽。"
+      },
+      {
+        id: "case-q9",
+        deck: "Attention Case",
+        type: "choice",
+        level: "核心",
+        source: "code/case/05_flash_attention_mini.mu",
+        question: "Mini FlashAttention 教学版为什么让一个线程处理一个 query row？",
+        choices: [
+          "为了让 online softmax 的数学状态和更新公式更清楚",
+          "因为真实实现也必须这么写",
+          "因为这样一定最快",
+          "因为不能使用 block"
+        ],
+        answerIndex: 0,
+        answer: "教学版牺牲并行度，换取 `m/l/acc` 状态更新一眼能对上公式。",
+        pitfall: "性能版会把 tile 内 dot 和累加分给更多线程，但数学递推不变。"
+      }
+    ];
+
+    const decks = ["全部", ...Array.from(new Set(QUESTIONS.map(q => q.deck)))];
+    let state = loadState();
+    let mode = "all";
+    let currentIndex = 0;
+    let filtered = [];
+    let answerVisible = false;
+    let selectedChoice = null;
+
+    const deckSelect = document.getElementById("deckSelect");
+    const searchInput = document.getElementById("searchInput");
+    const questionPanel = document.getElementById("questionPanel");
+    const questionList = document.getElementById("questionList");
+    const deckTitle = document.getElementById("deckTitle");
+    const progressText = document.getElementById("progressText");
+    const progressPct = document.getElementById("progressPct");
+    const progressBar = document.getElementById("progressBar");
+    const statDone = document.getElementById("statDone");
+    const statReview = document.getElementById("statReview");
+    const statWrong = document.getElementById("statWrong");
+    const statTotal = document.getElementById("statTotal");
+
+    function loadState() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+      } catch {
+        return {};
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function questionState(id) {
+      if (!state[id]) state[id] = { status: "new", attempts: 0 };
+      return state[id];
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function inlineCode(value) {
+      return escapeHtml(value).replace(/`([^`]+)`/g, "<code>$1</code>");
+    }
+
+    function setupDecks() {
+      deckSelect.innerHTML = decks.map(deck => `<option value="${escapeHtml(deck)}">${escapeHtml(deck)}</option>`).join("");
+    }
+
+    function setMode(nextMode) {
+      mode = nextMode;
+      document.querySelectorAll(".mode-grid button").forEach(btn => btn.classList.remove("active"));
+      document.getElementById(`mode${nextMode[0].toUpperCase()}${nextMode.slice(1)}`).classList.add("active");
+      currentIndex = 0;
+      applyFilters();
+    }
+
+    function applyFilters() {
+      const deck = deckSelect.value;
+      const term = searchInput.value.trim().toLowerCase();
+      filtered = QUESTIONS.filter(q => {
+        const s = questionState(q.id);
+        const deckOk = deck === "全部" || q.deck === deck;
+        const text = `${q.question} ${q.answer} ${q.pitfall} ${q.source} ${q.deck}`.toLowerCase();
+        const searchOk = !term || text.includes(term);
+        const modeOk =
+          mode === "all" ||
+          mode === "shuffle" ||
+          (mode === "review" && s.status === "review") ||
+          (mode === "wrong" && s.status === "wrong");
+        return deckOk && searchOk && modeOk;
+      });
+
+      if (mode === "shuffle") {
+        filtered = [...filtered].sort(() => Math.random() - 0.5);
+      }
+
+      currentIndex = Math.min(currentIndex, Math.max(filtered.length - 1, 0));
+      answerVisible = false;
+      selectedChoice = null;
+      render();
+    }
+
+    function render() {
+      renderStats();
+      renderQuestion();
+      renderList();
+    }
+
+    function renderStats() {
+      const visibleDone = filtered.filter(q => questionState(q.id).status === "done").length;
+      const allReview = QUESTIONS.filter(q => questionState(q.id).status === "review").length;
+      const allWrong = QUESTIONS.filter(q => questionState(q.id).status === "wrong").length;
+      const total = filtered.length;
+      const pct = total ? Math.round((visibleDone / total) * 100) : 0;
+
+      deckTitle.textContent = `${deckSelect.value} · ${modeLabel(mode)}`;
+      progressText.textContent = `${visibleDone} / ${total}`;
+      progressPct.textContent = `${pct}%`;
+      progressBar.style.width = `${pct}%`;
+      statDone.textContent = String(visibleDone);
+      statReview.textContent = String(allReview);
+      statWrong.textContent = String(allWrong);
+      statTotal.textContent = String(total);
+    }
+
+    function modeLabel(value) {
+      return ({ all: "全部", review: "复习", wrong: "错题", shuffle: "随机" })[value];
+    }
+
+    function statusLabel(status) {
+      return ({ new: "未答", done: "会了", review: "复习", wrong: "错题" })[status] || "未答";
+    }
+
+    function statusClass(status) {
+      return ({ done: "good", review: "warn", wrong: "bad" })[status] || "";
+    }
+
+    function renderQuestion() {
+      if (!filtered.length) {
+        questionPanel.innerHTML = `<div class="empty">当前筛选没有题目。</div>`;
+        return;
+      }
+
+      const q = filtered[currentIndex];
+      const s = questionState(q.id);
+      const choiceHtml = q.type === "choice" ? `
+        <div class="choices">
+          ${q.choices.map((choice, idx) => {
+            let klass = "choice";
+            if (selectedChoice === idx) klass += " selected";
+            if (answerVisible && idx === q.answerIndex) klass += " correct";
+            if (answerVisible && selectedChoice === idx && idx !== q.answerIndex) klass += " wrong";
+            return `<button class="${klass}" type="button" data-choice="${idx}">${inlineCode(choice)}</button>`;
+          }).join("")}
+        </div>
+      ` : `
+        <textarea id="shortAnswer" placeholder="先写下自己的答案，再展开参考答案。"></textarea>
+      `;
+
+      questionPanel.innerHTML = `
+        <div class="meta-row">
+          <span class="pill">${escapeHtml(q.deck)}</span>
+          <span class="pill">${escapeHtml(q.level)}</span>
+          <span class="pill ${statusClass(s.status)}">${statusLabel(s.status)}</span>
+          <span class="pill">${currentIndex + 1} / ${filtered.length}</span>
+        </div>
+        <h2 class="question-text">${inlineCode(q.question)}</h2>
+        ${choiceHtml}
+        <div class="answer ${answerVisible ? "show" : ""}">
+          <h3>参考答案</h3>
+          <p>${inlineCode(q.answer)}</p>
+          <h3>易错点</h3>
+          <p>${inlineCode(q.pitfall)}</p>
+          <p><strong>来源:</strong> <code>${escapeHtml(q.source)}</code></p>
+        </div>
+        <div class="actions">
+          <button class="primary" type="button" id="toggleAnswer">${answerVisible ? "隐藏答案" : "显示答案"}</button>
+          <button type="button" id="markDone">会了</button>
+          <button type="button" id="markReview">标记复习</button>
+          <button type="button" id="markWrong">不会</button>
+          <button type="button" id="prevQuestion">上一题</button>
+          <button type="button" id="nextQuestion">下一题</button>
+        </div>
+      `;
+
+      questionPanel.querySelectorAll("[data-choice]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          selectedChoice = Number(btn.dataset.choice);
+          if (q.type === "choice") answerVisible = true;
+          const qs = questionState(q.id);
+          qs.attempts += 1;
+          qs.status = selectedChoice === q.answerIndex ? "done" : "wrong";
+          saveState();
+          render();
+        });
+      });
+
+      document.getElementById("toggleAnswer").addEventListener("click", () => {
+        answerVisible = !answerVisible;
+        renderQuestion();
+      });
+      document.getElementById("markDone").addEventListener("click", () => mark("done"));
+      document.getElementById("markReview").addEventListener("click", () => mark("review"));
+      document.getElementById("markWrong").addEventListener("click", () => mark("wrong"));
+      document.getElementById("prevQuestion").addEventListener("click", prevQuestion);
+      document.getElementById("nextQuestion").addEventListener("click", nextQuestion);
+    }
+
+    function renderList() {
+      if (!filtered.length) {
+        questionList.innerHTML = "";
+        return;
+      }
+
+      questionList.innerHTML = filtered.map((q, idx) => {
+        const s = questionState(q.id);
+        const active = idx === currentIndex ? " active" : "";
+        return `
+          <button class="question-link${active}" type="button" data-go="${idx}">
+            <strong>${escapeHtml(q.id.toUpperCase().replace("-", " "))}</strong>
+            <small>${escapeHtml(q.question.replaceAll("`", ""))}</small>
+            <span class="mark ${escapeHtml(s.status)}"></span>
+          </button>
+        `;
+      }).join("");
+
+      questionList.querySelectorAll("[data-go]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          currentIndex = Number(btn.dataset.go);
+          answerVisible = false;
+          selectedChoice = null;
+          render();
+        });
+      });
+    }
+
+    function mark(status) {
+      if (!filtered.length) return;
+      const q = filtered[currentIndex];
+      const s = questionState(q.id);
+      s.status = status;
+      s.attempts += 1;
+      saveState();
+      render();
+    }
+
+    function nextQuestion() {
+      if (!filtered.length) return;
+      currentIndex = (currentIndex + 1) % filtered.length;
+      answerVisible = false;
+      selectedChoice = null;
+      render();
+    }
+
+    function prevQuestion() {
+      if (!filtered.length) return;
+      currentIndex = (currentIndex - 1 + filtered.length) % filtered.length;
+      answerVisible = false;
+      selectedChoice = null;
+      render();
+    }
+
+    function resetProgress() {
+      if (!confirm("确认清空本浏览器里的答题记录？")) return;
+      state = {};
+      saveState();
+      applyFilters();
+    }
+
+    setupDecks();
+    document.getElementById("modeAll").addEventListener("click", () => setMode("all"));
+    document.getElementById("modeReview").addEventListener("click", () => setMode("review"));
+    document.getElementById("modeWrong").addEventListener("click", () => setMode("wrong"));
+    document.getElementById("modeShuffle").addEventListener("click", () => setMode("shuffle"));
+    deckSelect.addEventListener("change", applyFilters);
+    searchInput.addEventListener("input", applyFilters);
+
+    const resetButton = document.createElement("button");
+    resetButton.className = "danger";
+    resetButton.type = "button";
+    resetButton.textContent = "重置进度";
+    resetButton.addEventListener("click", resetProgress);
+    document.querySelector(".sidebar").appendChild(resetButton);
+
+    applyFilters();
+  </script>
+</body>
+</html>

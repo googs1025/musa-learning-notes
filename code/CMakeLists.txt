@@ -95,5 +95,8 @@ add_subdirectory(week4)
 add_subdirectory(week5)
 add_subdirectory(week6)
 
-# ── 7. 练习题:LeetGPU 移植 ──
+# ── 7. 手撸 case:attention / flash kernel ──
+add_subdirectory(case)
+
+# ── 8. 练习题:LeetGPU 移植 ──
 add_subdirectory(leetgpu/easy)
