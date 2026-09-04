@@ -1,3 +1,10 @@
+// 预计输出：
+//   offset= 0 unroll4=... ms
+//   offset= 1 unroll4=... ms
+//   offset= 8 unroll4=... ms
+//   offset=31 unroll4=... ms
+// 注意：unroll4 可降低部分循环开销，但不能根治非对齐访存。
+
 #include "musa_common.h"
 #include <cstdio>
 

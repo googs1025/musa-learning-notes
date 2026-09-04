@@ -88,6 +88,10 @@
 // ╚══════════════════════════════════════════════════════════════════════════╝
 //
 //  编译：make          运行：./02_tiled_gemm
+//
+//  预计输出：
+//      Tiled GEMM  M=N=K=1024  TS=16  time=... ms  perf=... GFLOPS  C[0]=2048
+//  注意：通常应明显快于 naive GEMM，具体 GFLOPS 随设备变化。
 
 #include <musa_runtime.h>
 #include <cstdio>

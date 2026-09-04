@@ -62,6 +62,15 @@
 // ╚══════════════════════════════════════════════════════════════════════════╝
 //
 //  编译：make          运行：./01_hello_world
+//
+//  预计输出：
+//      CPU: Hello world!
+//      GPU: tid=0 Hello world!
+//      GPU: tid=1 Hello world!
+//      GPU: tid=2 Hello world!
+//      GPU: tid=3 Hello world!
+//      GPU: tid=4 Hello world!
+//  注意：GPU 行顺序不保证固定。
 
 #include <musa_runtime.h>
 #include <cstdio>

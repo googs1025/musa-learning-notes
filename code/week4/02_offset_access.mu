@@ -1,3 +1,13 @@
+// 预计输出：
+//   offset= 0 time=... ms
+//   offset= 1 time=... ms
+//   offset= 2 time=... ms
+//   offset= 4 time=... ms
+//   offset= 8 time=... ms
+//   offset=16 time=... ms
+//   offset=31 time=... ms
+// 注意：offset=0 通常最友好，非 0 offset 可能因对齐破坏变慢。
+
 #include "musa_common.h"
 #include <cstdio>
 

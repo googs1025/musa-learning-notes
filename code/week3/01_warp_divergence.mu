@@ -1,3 +1,7 @@
+// 预计输出：
+//   coherent=... ms divergent=... ms slowdown=...x
+// 注意：divergent 通常慢于 coherent，具体 slowdown 随硬件和编译优化变化。
+
 #include "musa_common.h"
 #include <cstdio>
 

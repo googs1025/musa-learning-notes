@@ -69,6 +69,12 @@
 //    • printf "chunk X done"
 //
 //  main 线程等所有 stream 都 sync,然后看计数器是不是 4。
+//
+//  预计输出:
+//      [cb] chunk ... done  (status=0)  total_done=...
+//      ...
+//      all chunks finished. counter=4 (expect 4)  OK ✓
+//  注意：callback 顺序不保证等于提交顺序。
 
 
 // ╔══════════════════════════════════════════════════════════════════════════╗

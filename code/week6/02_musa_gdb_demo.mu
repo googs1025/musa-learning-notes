@@ -6,6 +6,11 @@
 //
 //  编译：make          运行：./02_musa_gdb_demo
 //
+//  预计输出：
+//      Launching intentionally broken kernel: allocated=1024 floats, launched=2048 threads
+//      MUSA error ... at 02_musa_gdb_demo.mu:...
+//  注意：这是故意失败的调试样例，错误通常在 musaDeviceSynchronize 暴露。
+//
 //  注意：本程序在真实 MUSA 硬件上预期失败。它故意删除边界检查，让
 //  kernel 写出已分配数组范围，用于观察错误码和调试工具输出。
 

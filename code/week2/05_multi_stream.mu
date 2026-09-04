@@ -66,6 +66,12 @@
 //  总耗时理论下降到 ≈ max(总 H2D, 总 K, 总 D2H),而不是三者之和。
 //
 //  本例切 4 chunk,4 个 stream 轮转,对照单流串行版,看总时间差距。
+//
+//  预计输出:
+//      [A] single stream serial :   ... ms
+//      [B] 4-stream pipeline    :   ... ms
+//      verify: OK ✓
+//  注意：4-stream 不一定大幅加速，是否重叠取决于 pinned memory、copy engine 和 kernel 占用。
 
 
 // ╔══════════════════════════════════════════════════════════════════════════╗

@@ -1,3 +1,7 @@
+// 预计输出：
+//   sum=4194304 expected=4194304 kernel=... ms partial_blocks=8192
+// 注意：相对 naive reduce，unroll2 通常减少 block 数并改善耗时。
+
 #include "musa_common.h"
 #include <cstdio>
 #include <cstdlib>

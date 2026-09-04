@@ -1,3 +1,7 @@
+// 预计输出：
+//   transpose shared padded ... ms
+// 注意：这是 shared memory padded transpose，通常快于朴素转置。
+
 #include "musa_common.h"
 #include <cstdio>
 constexpr int TILE=32;

@@ -1,3 +1,7 @@
+// 预计输出：
+//   row0=1024 expected=1024 row_last=1024
+// 注意：这里每行全是 1.0，按行 atomicAdd 后每行和都应等于 W。
+
 #include "musa_common.h"
 #include <cstdio>
 #include <cstdlib>

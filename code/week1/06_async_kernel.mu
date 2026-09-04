@@ -82,6 +82,16 @@
 // ╚══════════════════════════════════════════════════════════════════════════╝
 //
 //  编译：make          运行：./06_async_kernel
+//
+//  预计输出：
+//      kernel launch (返回时):  ... ms
+//      等 GPU 跑完(sync 阶段):  ... ms
+//      总耗时:                  ... ms
+//
+//      观察：t_launch 通常是几十到几百微秒，
+//            t_wait 才是 kernel 真正在 GPU 上的执行时间，
+//            两者差距越大 = launch 异步性越明显。
+//  注意：具体耗时随硬件和 LOOPS 变化。
 
 #include <musa_runtime.h>
 #include <chrono>

@@ -1,3 +1,7 @@
+// 预计输出：
+//   sum=4194304 expected=4194304 kernel=... ms partial_blocks=16384
+// 注意：sum 必须正确；kernel 时间随设备变化。
+
 #include "musa_common.h"
 #include <cstdio>
 #include <cstdlib>
