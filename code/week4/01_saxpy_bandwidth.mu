@@ -1,3 +1,7 @@
+// 预计输出：
+//   SAXPY ... ms ... GB/s
+// 注意：性能数字随设备变化，应低于理论带宽峰值。
+
 #include "musa_common.h"
 #include <cstdio>
 #include <cstdlib>

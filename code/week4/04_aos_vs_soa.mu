@@ -1,3 +1,7 @@
+// 预计输出：
+//   AoS=... ms SoA=... ms speedup=...x
+// 注意：SoA 通常更适合 GPU 合并访存，因此常快于 AoS。
+
 #include "musa_common.h"
 #include <cstdio>
 

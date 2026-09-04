@@ -1,3 +1,7 @@
+// 预计输出：
+//   shared basics done
+// 注意：该文件只做 shared memory 语义 smoke test，不打印数组内容。
+
 #include "musa_common.h"
 #include <cstdio>
 

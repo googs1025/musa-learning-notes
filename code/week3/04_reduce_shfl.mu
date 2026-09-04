@@ -1,3 +1,7 @@
+// 预计输出：
+//   sum=1048576 expected=1048576 warpSize=128
+// 注意：如果当前 SDK 的 shuffle mask / warpSize 语义不同，可能需要调整实现。
+
 #include "musa_common.h"
 #include <cstdio>
 #include <cstdlib>

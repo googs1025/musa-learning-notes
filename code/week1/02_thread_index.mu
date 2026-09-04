@@ -66,6 +66,13 @@
 // ╚══════════════════════════════════════════════════════════════════════════╝
 //
 //  编译：make          运行：./02_thread_index
+//
+//  预计输出：
+//      block=0 thread=0 (blockDim=4) -> global=0
+//      block=0 thread=1 (blockDim=4) -> global=1
+//      ...
+//      block=1 thread=3 (blockDim=4) -> global=7
+//  注意：GPU printf 行顺序不保证固定，但 global=0..7 都应出现一次。
 
 #include <musa_runtime.h>
 #include <cstdio>

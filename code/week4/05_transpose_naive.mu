@@ -1,3 +1,7 @@
+// 预计输出：
+//   transpose naive ... ms
+// 注意：朴素转置的写入是跨步访问，通常明显慢于 shared padded 版本。
+
 #include "musa_common.h"
 #include <cstdio>
 

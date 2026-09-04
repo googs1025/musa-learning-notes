@@ -61,6 +61,18 @@
 // ╚══════════════════════════════════════════════════════════════════════════╝
 //
 //  编译：make          运行：./03_device_info
+//
+//  预计输出：
+//      Detected <count> MUSA device(s)
+//
+//      Device 0: <device name>
+//        SM count                 : ...
+//        Warp size                : 128
+//        Max threads per block    : ...
+//        Shared memory per block  : ... KB
+//        Total global memory      : ... MB
+//        Compute capability       : ...
+//  注意：设备名、SM 数、显存大小等随机器变化。
 
 #include <musa_runtime.h>
 #include <cstdio>

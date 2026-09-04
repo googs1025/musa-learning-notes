@@ -1,3 +1,7 @@
+// 预计输出：
+//   constant stencil done
+// 注意：该示例验证 constant memory 权重拷贝和 kernel 启动链路。
+
 #include "musa_common.h"
 #include <cstdio>
 #include <cstdlib>

@@ -89,6 +89,12 @@
 //
 //  注意:Graph 的实际收益 **强烈依赖驱动 / SDK 版本和 DAG 复杂度**。
 //        如果你这次跑出来 B 比 A 慢,看 PART III Q1 的"实测可能反直觉"那段。
+//
+//  预计输出:
+//      [A] direct launch  5000 steps × 5 ops = 25000 launches : ... ms  (... µs/launch)
+//      [B] graph  launch  5000 steps (each = 5 ops in graph)  : ... ms  (... µs/step)
+//      verify x[0] = 25000.0   (expect 25000)   OK ✓
+//  注意：MUSA 当前实测可能 Graph 反而慢于 direct launch，以本机数字为准。
 
 
 // ╔══════════════════════════════════════════════════════════════════════════╗

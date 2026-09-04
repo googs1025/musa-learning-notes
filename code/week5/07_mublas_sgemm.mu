@@ -6,6 +6,13 @@
 //
 //  编译（可选）：make mublas
 //
+//  预计输出：
+//      Week 5 muBLAS SGEMM comparison skeleton
+//      Shape: M=1024 N=1024 K=1024
+//      muBLAS header not found.
+//      ...
+//  如果本机 SDK 提供 mublas.h，则会打印 "muBLAS header found." 和待补齐调用提示。
+//
 //  本文件故意保守：不同 MUSA SDK 的 muBLAS 头文件和函数签名可能变化。
 //  先用本地官方 API 参考补齐 handle/create/sgemm/destroy，再记录真实性能。
 

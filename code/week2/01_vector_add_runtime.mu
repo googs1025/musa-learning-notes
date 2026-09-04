@@ -67,6 +67,11 @@
 // ╚══════════════════════════════════════════════════════════════════════════╝
 //
 //  编译:make 01_vector_add_runtime     运行:./01_vector_add_runtime
+//
+//  预计输出:
+//      vector_add N=1048576  threadsPerBlock=256  blocksPerGrid=4096
+//      OK ✓
+//  如果出现 mismatch,会先打印最多 5 行 mismatch 再输出 FAILED ✗。
 
 #include "musa_common.h"
 #include <cstdio>

@@ -68,6 +68,16 @@
 //    • 性能关键路径:迁移开销可控性差,profile 难
 //    • 训练框架(torch_musa):全部 musaMalloc + 显式 H2D,把行为变成确定的
 //    • 多 GPU 强一致场景:多设备共享一份 managed 内存的开销很高
+//
+//  预计输出:
+//      Unified memory, N = 4194304 (16.0 MB per buffer)
+//      [run 1] 冷启动:
+//        no  prefetch         kernel ... ms  (verify ✓)
+//        [info] musaMemPrefetchAsync 不被本设备支持,跳过 prefetch
+//        want prefetch (n/a)  kernel ... ms  (verify ✓)
+//      [run 2] 热启动:
+//        ...
+//  注意：prefetch 是否支持、冷热启动差距随 SDK 和设备变化。
 
 
 // ╔══════════════════════════════════════════════════════════════════════════╗

@@ -1,3 +1,7 @@
+// 预计输出：
+//   transpose padded ... ms
+// 注意：shared tile + padding 通常快于朴素转置，具体收益随设备变化。
+
 #include "musa_common.h"
 #include <cstdio>
 constexpr int TILE=32;

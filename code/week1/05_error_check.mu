@@ -88,6 +88,24 @@
 //  用同一套 CHECK 把它们都抓出来。
 //
 //  编译：make          运行：./05_error_check
+//
+//  预计输出：
+//      === 1) 正常 launch（应当 ok）===
+//        ↳ ok
+//        ↳ ok
+//
+//      === 2) 配置非法：block 超过 maxThreadsPerBlock ===
+//        ↳ MUSA error ... at ...
+//
+//      === 3) 异步错误：kernel 写 null 指针 ===
+//        ↳ ok
+//        ↳ MUSA error ... at ...
+//
+//      === 4) 显存分配失败：申请 100 TB ===
+//        ↳ musaMalloc failed as expected, code=...
+//
+//      === done ===
+//  注意：具体错误码随 SDK/设备变化。
 
 #include <musa_runtime.h>
 #include <cstdio>

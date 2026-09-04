@@ -6,6 +6,11 @@
 //
 //  编译：make          运行：./03_error_dump
 //
+//  预计输出：
+//      Launching intentionally broken kernel: allocated=1024 floats, launched=2048 threads
+//      MUSA error ... at 03_error_dump.mu:...
+//  注意：开启 Error Dump 后还应看到 SDK 生成的 dump/log 文件。
+//
 //  注意：本程序在真实 MUSA 硬件上预期失败。它故意删除边界检查，让
 //  kernel 写出已分配数组范围，用于观察错误码和调试工具输出。
 

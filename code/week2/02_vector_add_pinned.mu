@@ -72,6 +72,13 @@
 //  用 GpuTimer 包 musaMemcpy(GpuTimer 比 wall clock 更准、且不受 sync 影响),
 //  跑 ITERS 次取后 ITERS-1 次的均值(丢首次冷启动)。
 //  打印两组耗时 + 加速比。
+//
+//  预计输出:
+//      bytes        = 4.0 MB   iters = 6 (avg of last 5)
+//      pageable H2D :   ... ms   ... GB/s
+//      pinned   H2D :   ... ms   ... GB/s
+//      speedup      : ×...
+//  注意：时间和带宽随 PCIe、驱动、负载变化；pinned 通常明显快于 pageable。
 
 
 // ╔══════════════════════════════════════════════════════════════════════════╗

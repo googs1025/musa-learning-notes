@@ -74,6 +74,10 @@
 // ╚══════════════════════════════════════════════════════════════════════════╝
 //
 //  编译：make          运行：./01_naive_gemm
+//
+//  预计输出：
+//      Naive GEMM  M=N=K=1024  time=... ms  perf=... GFLOPS  C[0]=2048 (expect 2048)
+//  注意：time/perf 随设备变化；C[0] 必须等于 K*2。
 
 #include <musa_runtime.h>
 #include <cstdio>
