@@ -1,0 +1,48 @@
+name: Docs Check
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - README.md
+      - docs/**
+      - code/**/*.md
+      - code/**/*.mu
+      - scripts/check-docs.js
+      - .github/workflows/docs-check.yml
+  pull_request:
+    paths:
+      - README.md
+      - docs/**
+      - code/**/*.md
+      - code/**/*.mu
+      - scripts/check-docs.js
+      - .github/workflows/docs-check.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  docs-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Check whitespace
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            git diff --check "${{ github.event.pull_request.base.sha }}...HEAD"
+          elif [[ "${{ github.event_name }}" == "push" && "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]]; then
+            git diff --check "${{ github.event.before }}...${{ github.sha }}"
+          else
+            git diff --check
+          fi
+
+      - name: Check docs structure and quiz data
+        run: node scripts/check-docs.js
