@@ -2,6 +2,8 @@
 
 对应官方指南 Ch5 + Ch7 + Ch9。用 shared memory、constant memory 和 GEMM 建立性能优化主线。
 
+本周教材见 [`learning-notes.md`](learning-notes.md)：从 shared memory 基础一路读到 tiled GEMM 和 muBLAS 对比。
+
 | 文件 | 主题 |
 |---|---|
 | `01_shared_basics.mu` | 静态 / 动态 shared memory |
@@ -13,3 +15,5 @@
 | `07_mublas_sgemm.mu` | muBLAS SGEMM 对比骨架 |
 
 `07_mublas_sgemm` 需要 SDK 提供 muBLAS 头文件和库，使用 `make optional` 构建。
+
+CUDA_Freshman 对照案例和迁移计划见 [`../../docs/cuda-example-map.md`](../../docs/cuda-example-map.md)。

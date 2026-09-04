@@ -2,6 +2,8 @@
 
 对应官方指南 Ch6 + Ch8 + Ch10。本周示例偏环境相关，默认只构建调试 `.mu` 示例。
 
+本周教材见 [`learning-notes.md`](learning-notes.md)：聚焦多卡、调试、error dump 和 torch_musa 的可复现记录。
+
 | 文件 | 主题 |
 |---|---|
 | `01_mccl_allreduce.cpp` | MCCL AllReduce 骨架，`make mccl` |
@@ -11,3 +13,5 @@
 | `05_torch_musa_custom_op.cpp` | custom op 注册骨架 |
 
 真实错误码、MCCL 带宽、GDB 截图记录到 `../../notes/week6.md` 和 `../../notes/troubleshooting.md`。
+
+CUDA / MUSA 调试和多卡对照案例计划见 [`../../docs/cuda-example-map.md`](../../docs/cuda-example-map.md)。

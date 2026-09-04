@@ -96,6 +96,8 @@ cmake --build build --target 05_multi_stream
 
 ## 习题 与 文章
 
+本周教材见 [`learning-notes.md`](learning-notes.md)：它把 vectorAdd、pinned memory、timer、stream、event、graph 串成一条学习路径。
+
 `exercises.md` 已补（10 道，全部围绕本周实测数字展开，见 [`exercises.md`](exercises.md)）。
 
 各 `.mu` PART III Q&A 里的 `// TODO: AutoDL 跑通后回填实测数字` 标记已全部回填（01~08 共 7 处）。
@@ -103,3 +105,5 @@ cmake --build build --target 05_multi_stream
 公众号文章见 [`docs/articles/02-stream-graph.md`](../../docs/articles/02-stream-graph.md) 《Stream 与 Graph 把吞吐量挤到极限》。
 
 > 实测时建议顺序：01 → 03 → 02 → 04 → 05 → 06 → 07 → 08。`01_vector_add_runtime` 先验证整条链路通；`03_vector_add_timer` 先把计时方法学固定下来，后面所有 µs 级实测才有意义。
+
+CUDA_Freshman 对照案例和迁移计划见 [`../../docs/cuda-example-map.md`](../../docs/cuda-example-map.md)。

@@ -50,6 +50,8 @@ CLion / VS Code 直接打开 `code/` 目录,会自动识别 CMakeLists,跳转 / 
 
 每个 `.mu` 文件都是 **三段式注释**:`PART I 知识点 / PART II 代码 / PART III Q&A`,直接当教材读就行。配套 10 道习题在 [`code/week1/exercises.md`](code/week1/exercises.md)。
 
+每周独立教材见对应目录的 `learning-notes.md`，例如 [`code/week1/learning-notes.md`](code/week1/learning-notes.md)。
+
 学习笔记(对应公众号文章): [`docs/articles/01-first-musa-code.md`](docs/articles/01-first-musa-code.md)
 
 ## 基础知识(读代码前 / 后查)
@@ -69,6 +71,7 @@ Attention / Flash kernel case。它支持题库筛选、随机练习、错题复
 ## 练习题
 
 - [`docs/leetgpu-easy.md`](docs/leetgpu-easy.md) · [LeetGPU](https://leetgpu.com/challenges) Easy 18 道题,移植成 MUSA。代码在 [`code/leetgpu/easy/`](code/leetgpu/easy/),跟着 roadmap 周次穿插刷。
+- [`docs/cuda-example-map.md`](docs/cuda-example-map.md) · CUDA_Freshman / CUDA samples 到本仓库 week 路线的迁移映射。CUDA 对照区见 [`code/cuda-freshman/`](code/cuda-freshman/)。
 
 ## 仓库结构
 
@@ -86,6 +89,7 @@ musa-learning-notes/
 │   ├── week4/                ← 全局内存与访存 6 示例
 │   ├── week5/                ← Shared / Constant / GEMM 7 示例
 │   ├── week6/                ← 调试 / MCCL / torch_musa 5 示例
+│   ├── cuda-freshman/        ← 外部 CUDA 例子对照区
 │   └── leetgpu/easy/         ← LeetGPU Easy 18 题 MUSA 移植
 └── docs/
     ├── setup.md              ← 环境搭建
@@ -94,6 +98,7 @@ musa-learning-notes/
     ├── cuda-vs-musa.md       ← CUDA→MUSA 命名映射 + 真正差异
     ├── glossary.md           ← 术语小词典
     ├── leetgpu-easy.md       ← 练习题章节索引(对应 LeetGPU Easy)
+    ├── cuda-example-map.md   ← CUDA 例子到 MUSA week 路线的映射
     └── articles/             ← 学习笔记 / 公众号文章
 ```
 

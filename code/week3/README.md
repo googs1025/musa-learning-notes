@@ -2,6 +2,8 @@
 
 对应官方指南 Ch5 + Ch9。本周用 reduce 串起 warp divergence、循环展开、warp shuffle、动态并行和 2D grid。
 
+本周教材见 [`learning-notes.md`](learning-notes.md)：先建立 reduce 基线，再对比 unrolling 和 shuffle。
+
 | 文件 | 主题 |
 |---|---|
 | `01_warp_divergence.mu` | coherent vs divergent 分支耗时对比 |
@@ -23,3 +25,5 @@ make
 ```
 
 结果记录到 `../../notes/week3.md`。
+
+CUDA_Freshman 对照案例和迁移计划见 [`../../docs/cuda-example-map.md`](../../docs/cuda-example-map.md)。

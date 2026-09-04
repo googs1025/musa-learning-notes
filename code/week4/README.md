@@ -2,6 +2,8 @@
 
 对应官方指南 Ch9。本周所有示例都围绕一个问题：线程访问地址是否连续，决定吞吐上限。
 
+本周教材见 [`learning-notes.md`](learning-notes.md)：重点看 offset、AoS/SoA 和 transpose 如何改变访存模式。
+
 | 文件 | 主题 |
 |---|---|
 | `01_saxpy_bandwidth.mu` | SAXPY 带宽利用率 |
@@ -12,3 +14,5 @@
 | `06_transpose_padded.mu` | shared tile + padding 转置 |
 
 结果记录到 `../../notes/week4.md`。
+
+CUDA_Freshman 对照案例和迁移计划见 [`../../docs/cuda-example-map.md`](../../docs/cuda-example-map.md)。
