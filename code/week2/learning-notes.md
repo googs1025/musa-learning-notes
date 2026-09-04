@@ -35,6 +35,14 @@ Week 2 把 Week 1 的单个 kernel 扩展成完整 GPU 程序：准备输入、�
 - kernel 和 memcpy 是否在同一个 stream。
 - 是否有 event 或 device sync 把本来能并发的工作串行化。
 
+## 高频混淆点
+
+- **异步入队 != 已经完成**: `kernel<<<...>>>` 和 `musaMemcpyAsync` 通常只是把任务提交到队列。host 继续往下走, 直到 stream/event/device 同步或 D2H 拷贝才真正等待结果。
+- **默认 stream 会串行化**: 都放在默认 stream 里, 代码看起来用了 async, 实际仍可能按顺序执行。要观察重叠, 先确认任务是否在不同 stream。
+- **pinned memory 不是免费午餐**: `musaMallocHost` 有利于 DMA 和异步拷贝, 但 pinned 内存占多了会影响系统内存管理。小数据也可能看不出收益。
+- **Event 不是普通 CPU 时间戳**: `musaEventRecord` 记录的是 GPU stream 时间线上的点。计 kernel 时间时要把 start/end event 放到正确 stream。
+- **`musaDeviceSynchronize()` 会一刀切**: 调试期好用, 但多 stream 代码里乱加它会把 H2D/kernel/D2H 的重叠全部冲掉。
+
 ## CUDA_Freshman 对照
 
 - `3_sum_arrays`: vector add 主流程。

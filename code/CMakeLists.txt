@@ -100,3 +100,8 @@ add_subdirectory(case)
 
 # ── 8. 练习题:LeetGPU 移植 ──
 add_subdirectory(leetgpu/easy)
+
+# ── 9. 外部实践案例集 ──
+# gpu-architecture-practice/ 保留了按 Chapter 组织的 MUSA 示例，覆盖
+# muBLAS / muDNN / muSOLVER / MCCL / 虚拟内存等主题。它们依赖的库和运行环境
+# 不完全一致，因此默认不加入全量构建；需要时按目录内 README 单独迁移或编译。

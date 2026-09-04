@@ -36,7 +36,7 @@
 //
 //  正确写法：
 //      kernel<<<>>>(d_out, ...);
-//      musaMemcpy(h_out, d_out, ..., D2H);  // ← 这一行内部会等 kernel 跑完
+//      musaMemcpy(h_out, d_out, ..., D2H);  // ← 这一行内部会等 kernel 跑完把 d_out -> 映射到 h_out
 //      printf("%f\n", h_out[0]);
 //
 //  → 所以日常代码里有时不用显式 musaDeviceSynchronize，

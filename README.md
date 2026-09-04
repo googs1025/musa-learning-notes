@@ -60,6 +60,7 @@ CLion / VS Code 直接打开 `code/` 目录,会自动识别 CMakeLists,跳转 / 
 |---|---|
 | [`docs/concepts.md`](docs/concepts.md) | 想搞清 SIMT / 硬件层级 / 内存层级 / 执行模型,跟 week1 代码注释互补 |
 | [`docs/cuda-vs-musa.md`](docs/cuda-vs-musa.md) | 有 CUDA 基础迁移过来,或 API 想不起 MUSA 名 |
+| [`docs/musa-cuda-pitfalls.md`](docs/musa-cuda-pitfalls.md) | 写 MUSA / CUDA 时最容易混淆的索引、内存、同步、warp、库调用清单 |
 | [`docs/glossary.md`](docs/glossary.md) | 看代码遇到生词速查(warp / occupancy / shfl / pitch ...) |
 
 ## 学习检测
@@ -72,6 +73,7 @@ Attention / Flash kernel case。它支持题库筛选、随机练习、错题复
 
 - [`docs/leetgpu-easy.md`](docs/leetgpu-easy.md) · [LeetGPU](https://leetgpu.com/challenges) Easy 18 道题,移植成 MUSA。代码在 [`code/leetgpu/easy/`](code/leetgpu/easy/),跟着 roadmap 周次穿插刷。
 - [`docs/cuda-example-map.md`](docs/cuda-example-map.md) · CUDA_Freshman / CUDA samples 到本仓库 week 路线的迁移映射。CUDA 对照区见 [`code/cuda-freshman/`](code/cuda-freshman/)。
+- [`code/gpu-architecture-practice/`](code/gpu-architecture-practice/) · GPU Architecture and Programming Practice 外部案例集,覆盖 Stream、muBLAS、muDNN、muSOLVER、MCCL、虚拟内存、GEMV/GEMM 等主题,目录内 README 已补知识点索引。
 
 ## 仓库结构
 
@@ -90,6 +92,7 @@ musa-learning-notes/
 │   ├── week5/                ← Shared / Constant / GEMM 7 示例
 │   ├── week6/                ← 调试 / MCCL / torch_musa 5 示例
 │   ├── cuda-freshman/        ← 外部 CUDA 例子对照区
+│   ├── gpu-architecture-practice/ ← 外部 MUSA 实践案例集 + 知识点索引
 │   └── leetgpu/easy/         ← LeetGPU Easy 18 题 MUSA 移植
 └── docs/
     ├── setup.md              ← 环境搭建

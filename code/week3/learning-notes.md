@@ -32,6 +32,14 @@ Reduce 代码重点看三个边界：
 
 MUSA 的 warp size 和 CUDA 常见值不同，所有 shuffle 或 warp reduce 都必须先确认设备能力和 SDK intrinsic 行为。
 
+## 高频混淆点
+
+- **block 同步不等于 grid 同步**: `__syncthreads()` 只管同一个 block。不同 block 的 partial sum 要靠另一个 kernel、host final reduce 或专门的全局同步机制处理。
+- **分支数量不等于分支代价**: warp divergence 的关键是同一个 warp 内线程是否走不同路径。所有线程都走同一分支时, 分支本身不一定是主要问题。
+- **reduce 的最后一段最容易错**: N 不是 block size 或 unroll 粒度整数倍时, 尾部元素必须有边界保护。
+- **shuffle 不是 shared memory 的简单替代**: shuffle 只在 warp/group 内传值, 不能跨 block, 也不能替代需要全 block 协作的同步。
+- **CUDA 的 32-wide 直觉要重审**: 看到 `32`、`0xffffffff`、`warpSize`、`lane`、`mask` 时, 都要问这段逻辑在 MUSA warp size 下是否仍成立。
+
 ## CUDA_Freshman 对照
 
 - `8_divergence`: 分支分化。

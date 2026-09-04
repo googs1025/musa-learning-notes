@@ -32,6 +32,14 @@ Week 6 是 MUSA 特色收尾：多卡通信、调试、错误 dump、torch_musa 
 
 Week 6 的价值不只是跑通代码，而是形成可复现的调试记录。
 
+## 高频混淆点
+
+- **rank 不是 device id**: 分布式/多卡代码里 global rank、local rank、device id 是三件事。单机多卡常用 local rank 选择本机 device。
+- **当前 device 是线程局部状态**: 多线程或一个线程管理多卡时, 每次分配、拷贝、建 stream 前都要确认 `musaSetDevice`。
+- **communicator、stream、buffer 要按卡配套**: A 卡的 buffer 不能拿到 B 卡 stream 上随便用。AllReduce 这类 collective 还要求每个 rank 参与顺序一致。
+- **只看 import 不算框架链路跑通**: `import torch_musa` 成功只能说明 Python 包能加载; 还要实际创建 MUSA tensor、跑算子、同步检查结果。
+- **调试记录比猜错误码更重要**: 多卡/框架问题必须记录 SDK、驱动、容器、GPU 数、rank 映射、命令和完整错误输出, 否则很难复现。
+
 ## CUDA 对照
 
 CUDA_Freshman 基本不覆盖本周主题。可以只把 NVIDIA cuda-samples 的多卡、调试、profiling 示例作为概念对照，MUSA 实现以官方文档和本仓库代码为准。
