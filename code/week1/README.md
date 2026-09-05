@@ -75,6 +75,9 @@ Mac 上没 mcc，本地编辑、AutoDL 远程编译运行：
 
 见 [`exercises.md`](exercises.md)。本周共 10 题，从修改启动配置、到主动触发各类错误、到测 launch overhead。
 
+Grid / block / thread 的层级、索引换算和边界判断容易混淆，先看
+[`learning-notes.md`](learning-notes.md) 里的 “Grid / Block / Thread 容易混淆点”。
+跨章节易混点总表见 [`../../docs/musa-cuda-pitfalls.md`](../../docs/musa-cuda-pitfalls.md)。
 快速复习易错概念和面试基础题，见 [`concept-review.md`](concept-review.md)。
 
 如果想继续刷基础 kernel，见 [`question-bank/`](question-bank/)：里面整理了适合 Week 1 的

@@ -33,6 +33,15 @@ GEMM 阅读重点：
 - `__syncthreads()` 放在 tile 加载后和下一轮覆盖 shared 前。
 - 边界判断是否覆盖非 16/32 整除的矩阵尺寸。
 
+## 高频混淆点
+
+- **shared memory 是手动管理的缓存**: 数据不会自动进 shared, 必须显式从 global load, 用完前还要保证线程同步。
+- **`__syncthreads()` 放错位置比不写还危险**: tile 加载后要同步, 下一轮覆盖 shared 前也要确认上一轮计算用完。分支里调用 `__syncthreads()` 要保证 block 内所有线程都能走到。
+- **shared 也可能慢**: bank conflict 会让 shared memory 访问串行化。transpose 里 padding 的目的就是改变 bank 映射。
+- **constant memory 适合广播, 不适合大数组乱读**: 所有线程读同一个常量很快; 每个线程读不同地址时, 常量缓存优势会下降。
+- **GEMM 的 row/col 和库布局容易混**: 手写 kernel 常按 row-major 想, BLAS 接口常按 column-major 语义解释 `lda/ldb/ldc`。对拍小矩阵是最直接的排错方式。
+- **入门 tiled GEMM 不该和库硬比**: muBLAS 是高度优化实现。手写版本先用来理解 tile、复用和同步边界。
+
 ## CUDA_Freshman 对照
 
 - `24_shared_memory_read_data`: shared memory 基础。

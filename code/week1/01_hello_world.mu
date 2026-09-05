@@ -77,7 +77,9 @@
 
 // ── Kernel 函数：在 GPU 上执行 ──
 __global__ void hello_from_gpu() {
-    int tid = threadIdx.x;          // block 内线程编号 (0 ~ blockDim.x-1)
+    // block 内线程编号 (0 ~ blockDim.x-1)
+    int tid = threadIdx.x;
+    // kernal 不会立即打印，要写入缓冲区才会
     printf("GPU: tid=%d Hello world!\n", tid);
 }
 
