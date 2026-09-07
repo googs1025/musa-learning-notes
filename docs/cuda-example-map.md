@@ -14,6 +14,9 @@
 - Tony-Tan/CUDA_Freshman: <https://github.com/Tony-Tan/CUDA_Freshman>
 - NVIDIA cuda-samples: <https://github.com/NVIDIA/cuda-samples>
 - SGEMM_CUDA: <https://github.com/siboehm/SGEMM_CUDA>
+- alexngng/CUDA-Learn-Note: <https://github.com/alexngng/CUDA-Learn-Note>
+
+`CUDA-Learn-Note` 更适合作为 kernel 复习和性能思路参考，而不是本仓库的逐例迁移源。它覆盖 SGEMM/SGEMV、warp/block reduce、dot product、elementwise、histogram、softmax、LayerNorm/RMSNorm 等小型 kernel，适合按 Week 3–5 的主题交叉阅读。阅读时要特别检查其中对 CUDA warp size、shuffle intrinsic、向量化类型和同步语义的假设，再决定如何映射到 MUSA。
 
 Tony-Tan/CUDA_Freshman 的根目录没有看到明确 LICENSE 文件，因此本仓库默认只引用主题和链接，MUSA 代码采用重新实现。
 
