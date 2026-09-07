@@ -9,6 +9,9 @@
 //  注意:
 //    如果指数固定为 2, 真实性能敏感代码里通常优先写 a[idx] * a[idx]。这里使用
 //    powi/powif 是为了演示 MUSA 数学函数调用。
+//
+//  阅读顺序:
+//    先看 USE_FP32 对 powt/MUSA_POW 的选择, 再看线程索引、边界条件和 host/device 数据流。
 // ============================================================================
 #ifndef USE_FP32
 #define MUSA_POW(x, y) powi(x, y)
@@ -19,6 +22,7 @@ typedef float powt;
 #endif
 
 __global__ void VectorPow(powt *a, uint32_t *b) {
+    // 一个线程负责一个数组元素; 当前示例的 launch 参数正好覆盖数据, 通用写法仍应增加 idx < n 边界保护。
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     a[idx] = MUSA_POW(a[idx], 2) + b[idx];
 }
@@ -49,6 +53,7 @@ int main() {
     checkMusaErrors(musaMemcpy(dA, hA, sizeBytesA, musaMemcpyHostToDevice));
     checkMusaErrors(musaMemcpy(dB, hB, sizeBytesB, musaMemcpyHostToDevice));
 
+    // kernel launch 本身通常是异步入队, 后面的 synchronize 才是观察结果前的等待点。
     VectorPow<<<blocksPerGrid, threadsPerBlock>>>(dA, dB);
 
     checkMusaErrors(musaDeviceSynchronize());

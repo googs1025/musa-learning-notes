@@ -6,6 +6,9 @@
 //    2. 区分全局内存、shared memory、寄存器、线程块上限、grid 上限等约束。
 //    3. 把这些字段和 kernel launch 参数、occupancy、访存优化联系起来。
 //
+//  阅读顺序:
+//    先看内存和线程限制, 再看 warp/SM、grid 维度和 peer access 等字段。
+//
 //  注意:
 //    这是结构体字段参考, 不是完整程序。实际查询示例见
 //    6_2_getDeviceBasicProperties.cpp.cpp。

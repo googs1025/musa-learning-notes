@@ -6,6 +6,9 @@
 //    2. 每个线程只操作自己的 device, 降低频繁 musaSetDevice 的复杂度。
 //    3. 通过 MCCL communicator 在多个 GPU/rank 之间执行 collective。
 //
+//  阅读顺序:
+//    先确认 MPI rank 到 local device 的映射, 再看 communicator、buffer 和 stream 的归属。
+//
 //  注意:
 //    这个模型更接近分布式训练常见写法; 排错时要同时看 MPI rank、local rank
 //    和 device id 的映射是否一致。

@@ -14,6 +14,8 @@
 
 // 假设 A 为 m × n 的稀疏矩阵 (CSR), x 为 n × 1，y 为 m × 1 向量
 
+// 阅读顺序: 先看 CSR rowPtr/colInd/value 三数组如何描述 A, 再看 SpMV 的临时 buffer 生命周期。
+
 // 1. 创建 musparse 句柄
 musparseHandle_t handle;
 musparseCreate(&handle);

@@ -6,6 +6,9 @@
 //    2. 理解 communicator、stream、buffer 都需要按 device 维度组织。
 //    3. 对比 4_12 和 4-13, 观察控制流复杂度如何随 device/thread 映射变化。
 //
+//  阅读顺序:
+//    先分清 MPI rank、host thread 和 local device 三个维度, 再追踪每个 device 的资源数组。
+//
 //  注意:
 //    多 device per thread 写法灵活, 但最容易出现上下文切错、buffer 归属混乱、
 //    stream 同步遗漏等问题。

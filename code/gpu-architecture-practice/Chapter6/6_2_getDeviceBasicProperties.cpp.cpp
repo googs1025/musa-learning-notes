@@ -6,6 +6,9 @@
 //    2. 观察每张卡的 SM 数、线程上限、shared memory、寄存器、纹理尺寸等字段。
 //    3. 用 musaDeviceCanAccessPeer 判断设备之间是否支持 peer access。
 //
+//  阅读顺序:
+//    先看设备枚举, 再把打印出的属性和 6_1 的结构体字段逐一对应。
+//
 //  注意:
 //    设备属性决定 kernel 配置上限, 但不等于性能最优参数。调优仍需要结合实际
 //    kernel 的寄存器、shared memory 和访存模式。

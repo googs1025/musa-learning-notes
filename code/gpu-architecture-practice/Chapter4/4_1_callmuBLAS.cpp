@@ -9,6 +9,9 @@
 //  数据流:
 //    ha/hb/hc(host) -> da/db/dc(device) -> mublasDgemm -> hc(host)
 //
+//  阅读顺序:
+//    先确认 m/n/k 与 lda/ldb/ldc, 再看 device 拷贝、GEMM 调用和结果拷回。
+//
 //  注意:
 //    这个文件只展示库调用骨架, 没有做 hc_gold 正确性对比。用于学习时建议补
 //    CPU reference 或打印小矩阵结果。

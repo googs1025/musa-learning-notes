@@ -9,6 +9,9 @@
 //  注意:
 //    文件名是 GEMM, 但代码中包含省略号和占位函数, 属于优化结构草图, 不能直接编译。
 //    读它时关注流水线顺序, 不要把它当完整 kernel。
+//
+//  阅读顺序:
+//    先看 shared tile 的双缓冲, 再看 global/shared/register 三层数据搬运和寄存器累加。
 // ============================================================================
 __global__ void mat_mul_pseudo(float *output, const float *input_a, const float *input_b, int m,
                                int n, int k) {

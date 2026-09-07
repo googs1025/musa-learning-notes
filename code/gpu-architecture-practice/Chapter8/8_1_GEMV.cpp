@@ -9,6 +9,9 @@
 //  注意:
 //    这个文件偏 kernel 优化片段, 不是最小入门示例。建议先读 week5 的 naive GEMM
 //    和 reduction 示例, 再回来看这里的 shuffle 规约。
+//
+//  阅读顺序:
+//    先看 shuffle 的 width/mask, 再看 warp reduction, 最后看 GEMV 的 tile 和向量化加载。
 // ============================================================================
 #define WARP_THREADS 32
 // SHFL_MASK
@@ -20,6 +23,7 @@
 
 template <typename T, int width>
 __device__ __forceinline__ T shfl_down_sync(T val, unsigned int delta) {
+    // shuffle 直接在线程之间交换寄存器值, 不需要经过 shared memory。
     int ret = 0;
     int tmp = *(reinterpret_cast<int32_t *>(&val));
     if constexpr (width == 32) {
@@ -54,6 +58,7 @@ template <typename T, int width> __device__ __forceinline__ T shfl_idx_sync(T va
 }
 
 template <typename T, int blockSize> __device__ __forceinline__ void WarpReduce(T &rv1) {
+    // 每轮把更高 lane 的部分和搬到当前线程, 最终 lane 0 持有小组总和。
     T rv2;
     if constexpr (blockSize >= 32) {
         rv2 = shfl_down_sync<float, 32>(rv1, 16);
@@ -89,7 +94,7 @@ __global__ void sgemv_kernel(float *o, const float *mat, const float *v, const i
 
     constexpr int BLOCK_K_DIV_VLEN = BLOCK_K / Vlen;
 
-    // load mat using B128
+    // 每个线程处理一个向量化加载位置; slice_id 标识输出行, lane_id 标识行内片段。
     int slice_id = tid / (BLOCK_K_DIV_VLEN);
     int lane_id = tid % (BLOCK_K_DIV_VLEN);
 
@@ -109,6 +114,7 @@ __global__ void sgemv_kernel(float *o, const float *mat, const float *v, const i
             int v_offset = i * TILE_V + j;
             smem_v[j] = v_offset < k ? v[v_offset] : float(0);
         }
+        // 确保整个 block 都完成 v tile 加载后, 才允许线程读取 shared memory。
         __syncthreads();
 
         int s_v_id = lane_id * Vlen;
@@ -143,6 +149,7 @@ __global__ void sgemv_kernel(float *o, const float *mat, const float *v, const i
     int warp_id = tid % BLOCK_K_DIV_VLEN / WARP_THREADS;
     constexpr int REDUCE_BLOCK = BLOCK_K_DIV_VLEN > WARP_THREADS ? WARP_THREADS : BLOCK_K_DIV_VLEN;
 
+    // 先做 warp 内规约; 如果一个输出行跨多个 warp, 后面再用 shared memory 合并。
     WarpReduce<float, REDUCE_BLOCK>(cur_thread_sum);
     float sum = shfl_idx_sync<float, REDUCE_BLOCK>(cur_thread_sum, 0);
 

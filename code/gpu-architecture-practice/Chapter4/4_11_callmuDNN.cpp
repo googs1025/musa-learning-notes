@@ -6,6 +6,9 @@
 //    2. 区分输入输出数据、权重、workspace 和算法选择。
 //    3. 用统一 CHECK 宏尽早暴露 runtime 与 muDNN 错误。
 //
+//  阅读顺序:
+//    先看 descriptor 的创建和 shape 配置, 再看 workspace、算法选择和执行调用。
+//
 //  注意:
 //    descriptor 的 shape、layout、dtype 必须和真实内存一致, 否则问题通常不会在
 //    编译期暴露, 只能在运行期或结果校验时发现。

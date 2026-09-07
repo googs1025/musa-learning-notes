@@ -9,6 +9,9 @@
 //  数据流:
 //    h_input[i] --H2D async--> d_input[i] --process--> d_output[i] --D2H async--> h_output[i]
 //
+//  阅读顺序:
+//    先看两个 chunk 的内存布局, 再沿 stream 0/1 追踪当前 chunk 和下一 chunk 的交错提交。
+//
 //  注意:
 //    真正的拷贝/计算重叠依赖 pinned host memory、硬件 copy engine 和 stream 使用方式。
 // ============================================================================
@@ -49,11 +52,14 @@ int main() {
     }
 
     // 双缓冲执行：计算与传输重叠
+    // grid/block 描述每个 chunk 的 kernel 工作量, stream 则描述该 chunk 的提交顺序。
     dim3 grid((chunkSize + blockSize - 1) / blockSize);
     dim3 block(blockSize);
 
     for (int i = 0; i < numStreams; i++) {
         int offset = i * chunkSize;
+
+        // offset 把第 i 个 stream 映射到独立的输入/输出区间, 避免多个 stream 写同一段数据。
 
         // 异步传输: 第 i 个 stream 只处理自己的 chunk。
         // h_input 使用 musaMallocHost 分配, 满足异步 H2D 更常见的前提。
