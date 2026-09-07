@@ -92,6 +92,7 @@ cmake --build build -j
 - 每周学习材料：`code/weekN/learning-notes.md`
 - LeetGPU MUSA 练习：[`docs/leetgpu-easy.md`](docs/leetgpu-easy.md)
 - CUDA 对照案例：[`code/cuda-freshman/`](code/cuda-freshman/)
+- CUDA Kernel / 面试复习参考：[`alexngng/CUDA-Learn-Note`](https://github.com/alexngng/CUDA-Learn-Note)，适合补充阅读 SGEMM、SGEMV、warp/block reduce、dot product、elementwise、softmax、LayerNorm/RMSNorm、histogram 等 kernel。
 - GPU 架构与库调用案例：[`code/gpu-architecture-practice/`](code/gpu-architecture-practice/)
 - 学习记录和实测结果：[`notes/`](notes/)
 - 在线自测题库：[`docs/index.html`](docs/index.html)
@@ -116,6 +117,7 @@ musa-learning-notes/
 - [MUSA SDK 安装指南](https://docs.mthreads.com/musa-sdk/version-5.2.0/)
 - [CUDA C++ Programming Guide](https://docs.nvidia.com/cuda/cuda-c-programming-guide/)
 - [CUDA_Freshman](https://github.com/Tony-Tan/CUDA_Freshman)
+- [CUDA-Learn-Note](https://github.com/alexngng/CUDA-Learn-Note)：CUDA kernel 和高频面试题复习参考
 
 ## 原则
 
