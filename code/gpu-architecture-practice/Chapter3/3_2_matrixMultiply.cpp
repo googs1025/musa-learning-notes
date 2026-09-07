@@ -6,6 +6,9 @@
 //    2. 理解一个线程计算 C[row, col] 的完整 dot product。
 //    3. 建立 naive GEMM 的最小数据流: A/B 从 host 拷到 device, C 再拷回 host。
 //
+//  阅读顺序:
+//    先确认 row/col 映射, 再沿着 k 循环理解一个输出元素的点积。
+//
 //  注意:
 //    这个示例为了清楚只使用一个 block 和 3x3 线程, 不是高性能 GEMM 写法。
 //    后续可和 week5 的 tiled GEMM / muBLAS 示例对照。

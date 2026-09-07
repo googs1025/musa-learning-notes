@@ -14,6 +14,8 @@
 
 // 假设 A 为 n×n 稀疏三角矩阵 (CSR), x, y 为 n×1 稠密向量
 
+// 阅读顺序: 先确认 matA/vecX/vecY 的 shape, 再看 SpSV 的 bufferSize、analysis 和 solve 阶段。
+
 // 1. 创建 musparse 句柄
 musparseHandle_t handle;
 musparseCreate(&handle);

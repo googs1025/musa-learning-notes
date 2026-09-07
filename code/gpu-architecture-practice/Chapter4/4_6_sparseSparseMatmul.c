@@ -14,6 +14,8 @@
 
 // 假设 A, B, D, C 都为 CSR 格式稀疏矩阵
 
+// 阅读顺序: SpGEMM 不是一次调用完成, 要依次观察 work estimation、compute 和 copy 三阶段。
+
 // 1. 创建 musparse 句柄
 musparseHandle_t handle;
 musparseCreate(&handle);

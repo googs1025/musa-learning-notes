@@ -6,6 +6,9 @@
 //    2. 创建 MCCL communicator, 在多卡之间执行 collective。
 //    3. 理解每次操作前的 musaSetDevice 对当前线程上下文的影响。
 //
+//  阅读顺序:
+//    先看 device 循环和 musaSetDevice, 再看每张卡的 stream、buffer 与 MCCL communicator。
+//
 //  注意:
 //    单线程写法简单, 但所有 device 的提交逻辑串在一个控制流里; 多卡数量增加后,
 //    代码容易变长, 也更依赖正确的设备上下文切换。

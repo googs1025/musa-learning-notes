@@ -6,6 +6,9 @@
 //    2. 通过 muMemAddressReserve 预留虚拟地址, 再用 muMemCreate 创建物理内存。
 //    3. 用 muMemMap / muMemSetAccess 建立映射和访问权限。
 //
+//  阅读顺序:
+//    按 reserve -> create -> map -> set access -> 使用 -> unmap/release 的生命周期阅读。
+//
 //  注意:
 //    虚拟内存 API 更底层, 适合大内存池、稀疏映射或自定义 allocator。普通示例
 //    优先使用 musaMalloc, 更容易写对。

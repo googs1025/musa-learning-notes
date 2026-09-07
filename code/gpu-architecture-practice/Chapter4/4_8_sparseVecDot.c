@@ -14,6 +14,8 @@
 
 // 假设 x 是 n 维稀疏向量（如 COO 格式），y 是 n 维稠密向量
 
+// 阅读顺序: 对比 sparse vector 和 dense vector descriptor, 再看结果指针和临时 buffer 的位置。
+
 // 1. 创建 musparse 句柄
 musparseHandle_t handle;
 musparseCreate(&handle);

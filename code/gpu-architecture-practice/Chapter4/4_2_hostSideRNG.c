@@ -9,6 +9,9 @@
  * 注意:
  *   host-side API 适合一次性批量生成随机数; 如果每个 GPU 线程需要独立采样,
  *   参考 4_3_deviceSideRNG.c 的 device-side state 写法。
+ *
+ * 阅读顺序:
+ *   先看 generator/seed, 再看 device buffer、生成调用和 D2H 拷贝。
  */
 #include <stdio.h>
 #include <stdlib.h>

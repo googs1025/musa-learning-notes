@@ -9,6 +9,9 @@
 //  数据流:
 //    setup_kernel 初始化 devStates -> generate_*_kernel 写 devResults -> host 汇总比例
 //
+//  阅读顺序:
+//    先看每个线程如何取得自己的 state, 再看 state 是否在 kernel 结束后写回 global memory。
+//
 //  注意:
 //    state 要回写到 global memory, 否则下一次 kernel 仍会从旧状态继续。
 // ============================================================================
@@ -25,6 +28,7 @@
     } while (0)
 
 __global__ void setup_kernel(murandState *states) {
+    // 每个线程拥有独立的 state; id 同时决定它在 states 中的槽位和随机序列号。
     int id = threadIdx.x + blockIdx.x * blockDim.x;
 
     /* 各个线程对随机数生成器进行初始化，使用相同的种子，不同的序列号，不设置偏置量 */
@@ -35,6 +39,7 @@ __global__ void generate_kernel(murandState *states, int n, unsigned int *result
     int id = threadIdx.x + blockIdx.x * blockDim.x;
     int count = 0;
     unsigned int x;
+    // 先把 state 拷到寄存器/局部变量中, 循环结束后再写回, 减少反复访问 global memory。
     murandState localState = states[id];
     /* 生成无符号整型伪随机数序列 */
     for (int i = 0; i < n; i++) {
@@ -46,6 +51,7 @@ __global__ void generate_kernel(murandState *states, int n, unsigned int *result
     }
 
     states[id] = localState;
+    // 每个线程只写自己的 result[id], 因此这里不需要原子加。
     result[id] += count;
 }
 
@@ -101,6 +107,7 @@ int main() {
     MUSA_CALL(musaMalloc((void **)&devStates, totalThreads * sizeof(murandState)));
 
     /* 设置生成器状态 */
+    // 64 个 block × 64 个线程, 总计 totalThreads 个独立 RNG state。
     setup_kernel<<<64, 64>>>(devStates);
 
     /* 生成伪随机数 */

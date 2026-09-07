@@ -9,6 +9,9 @@
 //  数据流:
 //    h_a/h_b --H2D--> d_a/d_b --kernel--> d_c --D2H--> h_c
 //
+//  阅读顺序:
+//    先看 chunk 和 stream 的创建, 再看每条 stream 上 H2D -> kernel -> D2H 的提交顺序。
+//
 //  注意:
 //    musaStreamSynchronize(stream) 是观察结果前的同步边界; 只包 kernel launch 计时
 //    会低估真实计算时间。
