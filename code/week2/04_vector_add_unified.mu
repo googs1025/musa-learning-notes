@@ -90,6 +90,7 @@
 
 __global__ void vector_add(const float* A, const float* B, float* C, int N) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
+    // 同样要做边界判断：grid 按向上取整后，最后一个 block 可能会多出线程。
     if (i < N) C[i] = A[i] + B[i];
 }
 
@@ -125,7 +126,13 @@ static float run_unified(bool do_prefetch, int N, size_t bytes) {
         }
     }
 
+    // 256 是常见的 block 大小经验值：既是 warp(32) 的整数倍，
+    // 又通常能给出比较稳定的调度和占用率表现。
     const int threadsPerBlock = 256;
+    // blocksPerGrid 按元素总数向上取整，确保所有元素都被覆盖。
+    // 例如 N = 1000, blockSize = 256 时：
+    //   blocksPerGrid = (1000 + 256 - 1) / 256 = 4
+    //   总线程数 = 1024，最后 24 个线程会被 if (i < N) 拦住。
     const int blocksPerGrid   = (N + threadsPerBlock - 1) / threadsPerBlock;
 
     GpuTimer t;

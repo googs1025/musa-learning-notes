@@ -80,7 +80,10 @@
 
 // ── Kernel:逐元素 C = A + B ───────────────────────────────────────────────
 __global__ void vector_add(const float* A, const float* B, float* C, int N) {
+    // 一个线程处理一个元素：先把全局线程号映射到数组下标。
     int i = blockIdx.x * blockDim.x + threadIdx.x;
+    // grid 往上取整后，最后一个 block 往往会“多出”一些线程，
+    // 所以这里必须做边界判断，防止访问越界。
     if (i < N) {
         C[i] = A[i] + B[i];
     }
@@ -111,7 +114,16 @@ int main() {
     MUSA_CHECK(musaMemcpy(d_B, h_B, bytes, musaMemcpyHostToDevice));
 
     // ── 步 5:kernel ──
+    // threadsPerBlock 是人为选的 launch 参数：256 是常见经验值，
+    // 既能让线程数是 warp(32) 的整数倍，又通常有比较稳妥的调度效率。
     const int threadsPerBlock = 256;
+    // blocksPerGrid 需要把 N 个元素全部覆盖到，所以用“向上取整”：
+    // (N + blockSize - 1) / blockSize
+    // 这样当 N 不是 blockSize 的整数倍时，最后一个 block 也能补齐。
+    // 例如 N = 1000，blockSize = 256：
+    //   blocksPerGrid = (1000 + 256 - 1) / 256 = 4
+    //   总线程数 = 4 * 256 = 1024
+    //   其中前 1000 个线程处理有效元素，后 24 个线程会被 if (i < N) 拦住。
     const int blocksPerGrid   = (N + threadsPerBlock - 1) / threadsPerBlock;
     vector_add<<<blocksPerGrid, threadsPerBlock>>>(d_A, d_B, d_C, N);
     MUSA_CHECK_KERNEL();        // 同步 + 异步错误一次抓
