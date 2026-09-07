@@ -1,43 +1,49 @@
 # MUSA Learning Notes
 
-> 我学摩尔线程 [MUSA SDK](https://docs.mthreads.com/musa-sdk/musa-sdk-doc-online/programming_guide/) 的学习记录。
-> 不是教程,是公开的学习日志 —— 跟着官方编程指南一周一章,边学边写。
+这是一个以“读官方文档 → 写最小示例 → 在 GPU 上验证 → 记录问题”为主线的 MUSA 学习仓库。
 
-## 当前进度
+如果你刚开始接触 GPU 编程，建议按 Week 1 → Week 6 顺序学习；如果已经有 CUDA 基础，可以直接从 CUDA/MUSA 对照和对应周次的 `learning-notes.md` 开始。
 
-| 周 | 主题 | 官方章节 | 状态 |
-|---|---|---|---|
-| Week 1 | Hello World / 线程索引 / 显存 / 错误处理 / 异步 | Ch1–4 | ✅ |
-| Week 2 | vectorAdd · Stream · MUSA Graph | Ch5 | ⏳ |
-| Week 3 | Tiled GEMM · 显存层级 | Ch5 + Ch9 | ⏳ |
-| Week 4 | 性能优化(coalesced / bank conflict / occupancy) | Ch9 | ⏳ |
-| Week 5 | muBLAS / muDNN / torch_musa | Ch7 + Ch10 | ⏳ |
-| Week 6 | 调试 + 集群视角 | Ch6 + Ch11 | ⏳ |
+## 六周学习地图
 
-完整 6 周路线见 [`docs/roadmap.md`](docs/roadmap.md)。
+| 周次 | 要回答的问题 | 重点知识 | 入口 | 状态 |
+|---|---|---|---|---|
+| Week 1 | 一个 kernel 是怎样启动和完成的？ | `grid/block/thread`、索引、Host/Device、显存、错误、异步 | [`code/week1/README.md`](code/week1/README.md) | ✅ |
+| Week 2 | 多个 GPU 操作怎样排队、计时和重放？ | pinned memory、统一内存、stream、event、graph、callback | [`code/week2/README.md`](code/week2/README.md) | 🧪 |
+| Week 3 | 线程如何协作完成一个归约？ | warp divergence、reduce、unroll、shuffle、2D grid、动态并行 | [`code/week3/README.md`](code/week3/README.md) | ⏳ |
+| Week 4 | 为什么结果正确但带宽利用率很低？ | coalesced access、offset、AoS/SoA、transpose、bank conflict | [`code/week4/README.md`](code/week4/README.md) | ⏳ |
+| Week 5 | 怎样让数据在片上重复利用？ | shared/constant memory、naive GEMM、tiled GEMM、muBLAS | [`code/week5/README.md`](code/week5/README.md) | ⏳ |
+| Week 6 | 怎样定位错误并扩展到多卡和框架？ | MUSA GDB、error dump、MCCL、torch_musa、自定义算子 | [`code/week6/README.md`](code/week6/README.md) | ⏳ |
 
-项目级学习检测页见 [`docs/index.html`](docs/index.html)。发布到 GitHub Pages 时，
-在仓库 Settings 里选择 `Pages -> Source -> GitHub Actions`，然后由
-`.github/workflows/pages.yml` 自动发布 `docs/`。
+完整路线和每周文件清单见 [`docs/roadmap.md`](docs/roadmap.md)。
 
-## Week 1 快速入门
+## 推荐学习方法
 
-环境配好之后(见 [`docs/setup.md`](docs/setup.md),AutoDL 摩尔线程实例最快):
+每个周次都按下面的循环走：
 
-**方式一 · Makefile(单周快速试)**
+1. 先读该周 `README.md`，了解主题和示例顺序。
+2. 再读 `learning-notes.md`，搞清楚概念、数据流和常见误区。
+3. 运行最小示例，确认环境和编译链路没有问题。
+4. 修改一个参数或故意制造一个错误，观察结果和错误检查位置。
+5. 把真实运行结果、截图和疑问记录到 `notes/` 对应文件。
+
+Mac 用户可以在本地用 CLion 编辑，通过远程 Linux MUSA 环境编译运行，参见 [`docs/remote-dev.md`](docs/remote-dev.md)。
+
+## 从哪里开始
+
+### 1. 准备环境
+
+先看 [`docs/setup.md`](docs/setup.md)。MUSA 编译器、运行库和 GPU 驱动需要在 Linux/MUSA 环境中准备好；Mac 更适合作为编辑端。
+
+### 2. 跑通第一个 kernel
 
 ```bash
 cd code/week1
 make
-./01_hello_world          # GPU printf
-./02_thread_index         # threadIdx / blockIdx
-./03_device_info          # 设备查询
-./04_memory_basics        # 显存四件套
-./05_error_check          # 错误检测两个时机
-./06_async_kernel         # kernel 异步 + launch overhead
+./01_hello_world
 ```
 
-**方式二 · CMake(IDE 友好,推荐)**
+也可以使用统一 CMake：
 
 ```bash
 cd code
@@ -46,79 +52,77 @@ cmake --build build -j
 ./build/week1/01_hello_world
 ```
 
-CLion / VS Code 直接打开 `code/` 目录,会自动识别 CMakeLists,跳转 / 补全 / 单 target 编译都好用。
+### 3. 先掌握这些概念
 
-每个 `.mu` 文件都是 **三段式注释**:`PART I 知识点 / PART II 代码 / PART III Q&A`,直接当教材读就行。配套 10 道习题在 [`code/week1/exercises.md`](code/week1/exercises.md)。
+- [`docs/concepts.md`](docs/concepts.md)：SIMT、SM、grid/block/thread、内存层次、同步。
+- [`docs/musa-runtime-api.md`](docs/musa-runtime-api.md)：Runtime API 速查。
+- [`docs/musa-cuda-pitfalls.md`](docs/musa-cuda-pitfalls.md)：最容易写错的索引、内存、同步和 warp 问题。
+- [`docs/cuda-vs-musa.md`](docs/cuda-vs-musa.md)：CUDA 迁移到 MUSA 时哪些地方不能机械替换。
+- [`notes/musa-sdk-5.2.0.md`](notes/musa-sdk-5.2.0.md)：MUSA SDK 5.2.0 官方编程指南的重点摘录。
 
-每周独立教材见对应目录的 `learning-notes.md`，例如 [`code/week1/learning-notes.md`](code/week1/learning-notes.md)。
+## 各周真正要抓住的重点
 
-学习笔记(对应公众号文章): [`docs/articles/01-first-musa-code.md`](docs/articles/01-first-musa-code.md)
+### Week 1：建立执行模型
 
-## 基础知识(读代码前 / 后查)
+不要只记 API 名字。重点是理解：一次 kernel launch 产生一个 grid，grid 由可独立调度的 block 组成，线程通过 `blockIdx`、`blockDim`、`threadIdx` 计算全局位置；Host 和 Device 有不同的内存空间，kernel launch 通常是异步的。
 
-| 文档 | 何时看 |
-|---|---|
-| [`docs/concepts.md`](docs/concepts.md) | 想搞清 SIMT / 硬件层级 / 内存层级 / 执行模型,跟 week1 代码注释互补 |
-| [`docs/cuda-vs-musa.md`](docs/cuda-vs-musa.md) | 有 CUDA 基础迁移过来,或 API 想不起 MUSA 名 |
-| [`docs/musa-cuda-pitfalls.md`](docs/musa-cuda-pitfalls.md) | 写 MUSA / CUDA 时最容易混淆的索引、内存、同步、warp、库调用清单 |
-| [`docs/glossary.md`](docs/glossary.md) | 看代码遇到生词速查(warp / occupancy / shfl / pitch ...) |
+### Week 2：理解“提交”不等于“完成”
 
-## 学习检测
+重点观察 H2D → kernel → D2H 的顺序、stream 内的依赖、不同 stream 的潜在并发，以及 event/同步对计时的影响。Graph 不是天然更快，必须用实际测量验证 launch overhead 是否值得优化。
 
-[`docs/index.html`](docs/index.html) 是纯静态题库测试页，覆盖 Week 1-6 和
-Attention / Flash kernel case。它支持题库筛选、随机练习、错题复习、标记复习，
-答题记录保存在浏览器 `localStorage`，适合直接用 GitHub Pages 发出去。
+### Week 3：从“一个线程一个结果”走向协作
 
-## 练习题
+重点是归约的演进：global memory 基线 → 循环展开 → shared memory/warp shuffle。特别注意分支分化、warp 宽度和同步边界，不能把 CUDA 的固定假设直接套到所有 MUSA 设备。
 
-- [`docs/leetgpu-easy.md`](docs/leetgpu-easy.md) · [LeetGPU](https://leetgpu.com/challenges) Easy 18 道题,移植成 MUSA。代码在 [`code/leetgpu/easy/`](code/leetgpu/easy/),跟着 roadmap 周次穿插刷。
-- [`docs/cuda-example-map.md`](docs/cuda-example-map.md) · CUDA_Freshman / CUDA samples 到本仓库 week 路线的迁移映射。CUDA 对照区见 [`code/cuda-freshman/`](code/cuda-freshman/)。
-- [`code/gpu-architecture-practice/`](code/gpu-architecture-practice/) · GPU Architecture and Programming Practice 外部案例集,覆盖 Stream、muBLAS、muDNN、muSOLVER、MCCL、虚拟内存、GEMV/GEMM 等主题,目录内 README 已补知识点索引。
+### Week 4：把访存当成性能主线
+
+重点不是背“合并访存”四个字，而是观察相邻线程访问的地址是否连续、offset 如何改变事务数量、AoS/SoA 如何改变布局，以及 transpose 中 shared memory bank conflict 如何出现。
+
+### Week 5：用片上存储提高数据复用
+
+重点是 shared memory 的加载、同步和复用；从 naive GEMM 对照到 tiled GEMM，再和 muBLAS 建立性能基线。每次优化都要同时看正确性、访存模式、寄存器和 occupancy。
+
+### Week 6：从单卡 kernel 进入工程系统
+
+重点是错误定位、调试器、Error Dump、多卡中的 rank/device/stream/communicator 关系，以及 torch_musa 自定义算子的边界。这里更关注“如何验证和排错”，而不只是 API 调用。
+
+## 练习与扩展材料
+
+- 每周习题：`code/weekN/exercises.md`
+- 每周学习材料：`code/weekN/learning-notes.md`
+- LeetGPU MUSA 练习：[`docs/leetgpu-easy.md`](docs/leetgpu-easy.md)
+- CUDA 对照案例：[`code/cuda-freshman/`](code/cuda-freshman/)
+- GPU 架构与库调用案例：[`code/gpu-architecture-practice/`](code/gpu-architecture-practice/)
+- 学习记录和实测结果：[`notes/`](notes/)
+- 在线自测题库：[`docs/index.html`](docs/index.html)
 
 ## 仓库结构
 
-```
+```text
 musa-learning-notes/
-├── README.md
-├── LICENSE
-├── code/
-│   ├── CMakeLists.txt        ← 顶层 CMake,串各 week + leetgpu
-│   ├── include/
-│   │   └── musa_common.h     ← CHECK 宏 + CpuTimer + GpuTimer
-│   ├── week1/                ← 入门 6 示例
-│   ├── week2/                ← Stream / Event / Graph 8 示例
-│   ├── week3/                ← 执行模型 / Reduce 6 示例
-│   ├── week4/                ← 全局内存与访存 6 示例
-│   ├── week5/                ← Shared / Constant / GEMM 7 示例
-│   ├── week6/                ← 调试 / MCCL / torch_musa 5 示例
-│   ├── cuda-freshman/        ← 外部 CUDA 例子对照区
-│   ├── gpu-architecture-practice/ ← 外部 MUSA 实践案例集 + 知识点索引
-│   └── leetgpu/easy/         ← LeetGPU Easy 18 题 MUSA 移植
-└── docs/
-    ├── setup.md              ← 环境搭建
-    ├── roadmap.md            ← 6 周路线(38 示例,对标 CUDA_Freshman 颗粒度)
-    ├── concepts.md           ← 基础概念(SIMT / 硬件 / 内存 / 同步 / 错误)
-    ├── cuda-vs-musa.md       ← CUDA→MUSA 命名映射 + 真正差异
-    ├── glossary.md           ← 术语小词典
-    ├── leetgpu-easy.md       ← 练习题章节索引(对应 LeetGPU Easy)
-    ├── cuda-example-map.md   ← CUDA 例子到 MUSA week 路线的映射
-    └── articles/             ← 学习笔记 / 公众号文章
+├── README.md                         # 学习者入口：路线、重点、入口
+├── Agent.md                          # 代理/协作者工作约束
+├── code/week1..week6/                # 主线示例、教材和习题
+├── code/cuda-freshman/               # CUDA 对照材料
+├── code/gpu-architecture-practice/   # 外部 GPU/MUSA 案例集
+├── code/leetgpu/easy/                # LeetGPU MUSA 练习
+├── docs/                             # 概念、路线、API、环境和文章
+└── notes/                            # 实测结果、故障记录和官方文档摘录
 ```
 
-> 路线图设计参考了 [Tony-Tan/CUDA_Freshman](https://github.com/Tony-Tan/CUDA_Freshman),但保留按 week 组织(学习日志的节奏)。
+## 官方资料
 
-## 三个原则(给我自己也给读者)
+- [MUSA SDK v5.2.0 编程指南](https://docs.mthreads.com/musa-sdk/version-5.2.0/programming_guide/)
+- [MUSA SDK 安装指南](https://docs.mthreads.com/musa-sdk/version-5.2.0/)
+- [CUDA C++ Programming Guide](https://docs.nvidia.com/cuda/cuda-c-programming-guide/)
+- [CUDA_Freshman](https://github.com/Tony-Tan/CUDA_Freshman)
 
-1. **官方指南是 ground truth** —— 本仓库笔记若与官方矛盾以官方为准
-2. **不要把 MUSA 当 CUDA 复读机** —— API 接近,但 warp = 128(MUSA) vs 32(CUDA),调优经验取决于硬件
-3. **基础三章 + 编程基础先跑通** —— 这是 GPU 编程的通用能力,迁移到任何加速器都管用
+## 原则
 
-## 快速参考
-
-- [官方编程指南](https://docs.mthreads.com/musa-sdk/musa-sdk-doc-online/programming_guide/)
-- [官方安装指导](https://docs.mthreads.com/musa-sdk/musa-sdk-doc-online/install_guide/)
-- [AutoDL · 摩尔线程实例](https://www.autodl.com/)
+1. 官方指南是事实基准；仓库笔记与官方内容冲突时，以当前 SDK 文档和实际测试为准。
+2. MUSA 和 CUDA 的 API 很接近，但 warp 宽度、架构目标、工具链和性能行为不能默认相同。
+3. 先跑通最小程序，再做性能优化；性能数字必须来自实际运行记录。
 
 ## License
 
-MIT,代码和笔记随便用。
+MIT，代码和笔记随便用。
