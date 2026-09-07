@@ -78,7 +78,10 @@
 #include <cstdlib>
 
 __global__ void vector_add(const float* A, const float* B, float* C, int N) {
+    // 一个线程负责一个元素：先把 block 内线程号映射成全局下标。
     int i = blockIdx.x * blockDim.x + threadIdx.x;
+    // blocksPerGrid 用的是向上取整，所以最后一个 block 往往会多出一些线程，
+    // 这里必须做边界判断，避免访问越界。
     if (i < N) C[i] = A[i] + B[i];
 }
 
@@ -94,7 +97,14 @@ int main() {
     MUSA_CHECK(musaMemset(d_A, 0, bytes));      // 注意:Memset 按字节,这里只是图省事
     MUSA_CHECK(musaMemset(d_B, 0, bytes));
 
+    // threadsPerBlock 是 launch 参数，256 是常见经验值：
+    // 它是 warp(32) 的整数倍，通常有比较稳妥的调度效率。
     const int threadsPerBlock = 256;
+    // blocksPerGrid 要覆盖 N 个元素，所以要向上取整。
+    // 例如 N = 1000, blockSize = 256 时：
+    //   blocksPerGrid = (1000 + 256 - 1) / 256 = 4
+    //   总线程数 = 4 * 256 = 1024
+    //   后 24 个线程没有对应元素，会被 if (i < N) 拦住。
     const int blocksPerGrid   = (N + threadsPerBlock - 1) / threadsPerBlock;
 
     const int WARMUP = 2;
