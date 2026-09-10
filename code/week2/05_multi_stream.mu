@@ -115,13 +115,12 @@ int main() {
 
     // ── 跑法 A:单流(默认流)串行 ──
     {
-        GpuTimer t;
+        CpuTimer t;
         t.start();
         MUSA_CHECK(musaMemcpy(d_A, h_A, bytes, musaMemcpyHostToDevice));
         MUSA_CHECK(musaMemcpy(d_B, h_B, bytes, musaMemcpyHostToDevice));
         vector_add<<<(N+tpb-1)/tpb, tpb>>>(d_A, d_B, d_C, N);
         MUSA_CHECK(musaMemcpy(h_C, d_C, bytes, musaMemcpyDeviceToHost));
-        t.stop();
         std::printf("[A] single stream serial : %7.3f ms\n", t.elapsed_ms());
     }
 
@@ -132,7 +131,9 @@ int main() {
             MUSA_CHECK(musaStreamCreate(&streams[i]));
         }
 
-        GpuTimer t;
+        // 多 stream 的工作分布在 streams[c]，用 CPU wall-clock 包住完整流水线，
+        // 避免把默认 stream 上的 GpuTimer 误当成所有 stream 的总耗时。
+        CpuTimer t;
         t.start();
         for (int c = 0; c < CHUNKS; ++c) {
             size_t off = c * n;
@@ -150,7 +151,6 @@ int main() {
         for (int i = 0; i < CHUNKS; ++i) {
             MUSA_CHECK(musaStreamSynchronize(streams[i]));
         }
-        t.stop();
         std::printf("[B] %d-stream pipeline    : %7.3f ms\n", CHUNKS, t.elapsed_ms());
 
         for (int i = 0; i < CHUNKS; ++i) {
