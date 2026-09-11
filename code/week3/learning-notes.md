@@ -8,7 +8,7 @@ Week 3 的主线是执行模型。Reduce 是最适合入门的实验对象：它
 2. `02_reduce_naive.mu`: 建立 naive reduce 基线。
 3. `03_reduce_unrolling.mu`: 看每个线程多处理元素如何减少开销。
 4. `04_reduce_shfl.mu`: 进入 warp-level reduce。
-5. `05_nested_hello.mu`: 理解动态并行的语义和限制。
+5. `05_nested_hello.mu`: 理解 host 编排的两阶段 kernel 调度。
 6. `06_sum_matrix_2d.mu`: 把一维索引扩展到二维数据。
 
 ## 核心知识点
@@ -19,7 +19,7 @@ Week 3 的主线是执行模型。Reduce 是最适合入门的实验对象：它
 | `02_reduce_naive.mu` | 分块归约、host final reduce | 忽略 block 间不能直接同步 |
 | `03_reduce_unrolling.mu` | 每线程多元素、减少 block 数和循环开销 | 只看算术操作不看访存模式 |
 | `04_reduce_shfl.mu` | warp shuffle、warp size 差异 | 直接照搬 CUDA 的 32-wide 假设 |
-| `05_nested_hello.mu` | device 端 launch 子 kernel | 把动态并行当普通函数调用 |
+| `05_nested_hello.mu` | host 分两阶段启动 parent/child kernel | 把两个阶段误认为一个普通函数调用 |
 | `06_sum_matrix_2d.mu` | 2D grid、row-major 展开 | 混淆 `(x,y)` 和 `row/col` |
 
 ## 代码阅读抓手
@@ -170,53 +170,53 @@ shuffle 的通信范围是一个 warp/group，不能跨 block，也不能替代�
 它是在 `02` 的分块归约骨架上替换 block 内通信原语，也是对 `03` 优化边界的进一步推进。`01` 解释了为什么减少活跃路径可能重要；`05` 把关注点从组内同步转向 kernel 的 device-side 调度。
 
 
-### 5. `05_nested_hello.mu`：device-side launch 的动态并行
+### 5. `05_nested_hello.mu`：host 编排的两阶段 kernel 调度
 
 #### 示例目标
 
-验证设备端代码能否直接启动子 kernel，并让读者区分“调用普通 device 函数”和“发起新的 kernel launch”。它主要是语义和工具链能力探测，不是并行归约实现。
+用 host 端连续启动两个 kernel，模拟 parent → child 的两阶段任务关系。这样可以在当前不接受 device-side launch 的 MUSA 编译器上正常编译，同时让读者先理解“阶段之间需要等待”和“启动新的 kernel 不等于调用普通 device 函数”。
 
 
 #### 代码结构
 
-源码顶部的“预计输出”是截断示例，不是完整输出清单。`child_kernel` 只让每个 child block 的线程 0 打印 block 编号；`parent_kernel` 也只让每个 parent block 的线程 0 打印并执行 `child_kernel<<<2,4>>>`。`main` 启动 2 个 parent blocks、每 block 4 threads，因此实际有 2 个 parent block，每个都可能启动一个 2-block child grid；输出行数可能多于顶部展示的几行，parent/child 的 printf 交错顺序也不保证。
+`child_kernel` 只让每个 child block 的线程 0 打印 block 编号；`parent_kernel` 也只让每个 parent block 的线程 0 打印。`main` 先启动 2 个 parent blocks，调用 `MUSA_CHECK_KERNEL()` 等待完成，再由 host 启动一个 2-block child grid，因此输出是 2 行 parent 加 2 行 child，两个阶段不会交错。
 
 
 #### 核心知识点
 
-device-side launch 是运行中的 GPU 线程提交另一个 kernel，涉及动态并行支持、编译配置、运行时调度和父子 kernel 生命周期；它不是同步的普通函数调用，也不能假设 child printf 先后顺序。当前 SDK/config 未启用动态并行时，可能编译失败或 launch 失败；`MUSA_CHECK_KERNEL()` 主要检查外层 launch，实验时还要关注设备端 launch 错误处理和同步语义。
+这里不再依赖 device-side launch，也不声称演示动态并行；核心是 host 在两个阶段之间显式同步。第一个 `MUSA_CHECK_KERNEL()` 确认 parent 完成，第二个确认 child 完成。与真正的动态并行相比，这种写法牺牲了由 GPU 自己决定下一阶段启动时机的能力，但更容易观察、调试和编译。
 
 
 #### 执行流程
 
-host launch 两个 parent blocks → 每个 parent block 的 thread 0 打印并可能提交一个 `<<<2,4>>>` child → 每个 child grid 中的两个 block 各由 thread 0 打印 → host 检查外层 kernel 并输出能力提示。由于有 2 个 parent block，实际输出可能包含更多、甚至重复的 parent/child 行；输出可能交错，不能用行序判断父子完成顺序。
+host launch 两个 parent blocks → `MUSA_CHECK_KERNEL()` 等 parent 完成 → host launch 一个 `<<<2,4>>>` child grid → child 的两个 block 各由 thread 0 打印 → 再次检查 child 完成。parent 输出在前，child 输出在后；同一阶段内的 block 输出顺序仍不应作为调度保证。
 
 
 #### 常见错误与实验
 
-把 `child_kernel<<<...>>>` 当成普通函数；以为 parent 的每个线程都会 launch child；以为输出固定只有两行；忽略 SDK/config 对动态并行的支持。可把 parent block 数改为 1 与 2，观察 child 输出次数；再改变 child grid/block，并增加显式同步或错误检查，记录哪些语义由运行时保证、哪些只是 printf 排序偶然。
+把第二阶段 kernel 当成普通函数；忘记在两个阶段之间同步；以为一个 parent block 的每个线程都会产生一行输出。可把 parent grid 或 child grid 的 block 数改掉，观察每个 block 只有 thread 0 打印；再删除第一阶段的 `MUSA_CHECK_KERNEL()`，思考为什么 host 可能在 parent 完成前就提交下一阶段。
 
 
 #### 与本周其他示例的关系
 
-前四个示例主要研究一个 kernel 内的执行、同步和归约；本例把层次扩展到 kernel→kernel 的调度。它与 `02` 的“跨 block 需要新的阶段”形成对照：新阶段可以由 host 发起，也可以在支持条件满足时由 device 发起；`06` 则回到显式二维数据映射。
+前四个示例主要研究一个 kernel 内的执行、同步和归约；本例把关注点扩展到 kernel 阶段之间的 host 调度。它与 `02` 的“跨 block 需要新的阶段”形成对照：新阶段先由 host 显式发起，后续再学习设备支持时再讨论 device-side launch；`06` 则回到显式二维数据映射。
 
 
 ### 6. `06_sum_matrix_2d.mu`：二维索引与 row-major 行求和
 
 #### 示例目标
 
-把一维线程索引推广到矩阵，计算每一行的和，演示 2D grid/block 的坐标映射、边界判断和 C/C++ row-major 地址展开。
+把一维线程索引推广到矩阵，计算每一行的和，演示 2D grid/block 的坐标映射、边界判断和 C/C++ row-major 地址展开。这里 `W` 表示列数、`H` 表示行数，因此输入是 `H` 行 `W` 列，输出 `rows` 有 `H` 个元素。
 
 
 #### 代码结构
 
-kernel 用 `y = blockIdx.y * blockDim.y + threadIdx.y`、`x = blockIdx.x * blockDim.x + threadIdx.x` 得到矩阵坐标；只有 `x < width && y < height` 的线程执行 `atomicAdd(&rows[y], m[y * width + x])`。`main` 创建 `W=H=1024` 的全 1 矩阵，使用 `block(16,16)` 和覆盖矩阵的 2D grid，把行结果清零后拷回并检查首尾行。
+kernel 用 `y = blockIdx.y * blockDim.y + threadIdx.y`、`x = blockIdx.x * blockDim.x + threadIdx.x` 得到矩阵坐标；只有 `x < width && y < height` 的线程执行 `atomicAdd(&rows[y], m[y * width + x])`。`main` 创建 `W=H=1024` 的全 1 矩阵，使用 `block(16,16)` 和 `grid(64,64)` 覆盖矩阵，把行结果清零后拷回并检查首尾行。一个线程负责一个 `m[y][x]`，但同一行的很多线程共同写入同一个 `rows[y]`。
 
 
 #### 核心知识点
 
-row-major 中第 `y` 行第 `x` 列的线性位置是 `y * width + x`，所以同一行相邻线程通常访问相邻元素；这里的 `(x,y)` 是列/行坐标，而 `rows[y]` 明确按行聚合。每个 row 有多个线程同时更新，因此需要 `atomicAdd` 保证累加正确；代价是同一行的原子竞争，代码注释也指出高性能版本应先做 block 内归约再写出。二维 grid 不改变 block 内同步和跨 block 的限制。
+row-major 中第 `y` 行第 `x` 列的线性位置是 `y * width + x`，所以同一行相邻线程通常访问相邻元素；这里的 `(x,y)` 是列/行坐标，而 `rows[y]` 明确按行聚合。以 `W=H=1024` 为例，`block(16,16)` 产生 `grid(64,64)`，总共覆盖 1024×1024 个元素。每个 row 有多个线程同时更新，因此需要 `atomicAdd` 保证累加正确；代价是同一行的原子竞争，代码注释也指出高性能版本应先做 block 内归约再写出。二维 grid 不改变 block 内同步和跨 block 的限制。
 
 
 #### 执行流程
@@ -239,6 +239,6 @@ host 分配并初始化连续 row-major 矩阵 → 拷入 device、将 `rows` �
 - `8_divergence`: 分支分化。
 - `10_reduceInteger`、`12_reduce_unrolling`、`29_reduce_shfl`: reduce 三阶演进。
 - `28_shfl_test`: shuffle API 探测。
-- `13_nested_hello_world`: 动态并行。
+- `13_nested_hello_world`: nested kernel / 分阶段调度概念对照。
 
 完整映射见 [`../../docs/cuda-example-map.md`](../../docs/cuda-example-map.md)。

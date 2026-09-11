@@ -1,6 +1,6 @@
 # Week 3 · 执行模型
 
-对应官方指南 Ch5 + Ch9。本周用 reduce 串起 warp divergence、循环展开、warp shuffle、动态并行和 2D grid。
+对应官方指南 Ch5 + Ch9。本周用 reduce 串起 warp divergence、循环展开、warp shuffle、分阶段 kernel 调度和 2D grid。
 
 本周教材见 [`learning-notes.md`](learning-notes.md)：先建立 reduce 基线，再对比 unrolling 和 shuffle。
 
@@ -10,7 +10,7 @@
 | `02_reduce_naive.mu` | global memory + host final reduce 基线 |
 | `03_reduce_unrolling.mu` | 每线程处理 2 个元素的展开归约 |
 | `04_reduce_shfl.mu` | warp shuffle 归约骨架，MUSA warp=128 时需按 SDK 调整 mask |
-| `05_nested_hello.mu` | 动态并行骨架：device kernel 启动子 kernel |
+| `05_nested_hello.mu` | 两阶段 kernel 调度：host 等 parent 完成后启动 child |
 | `06_sum_matrix_2d.mu` | 2D grid 矩阵求和 |
 
 ```bash
