@@ -9,7 +9,8 @@ Week 3 的主线是执行模型。Reduce 是最适合入门的实验对象：它
 3. `03_reduce_unrolling.mu`: 看每个线程多处理元素如何减少开销。
 4. `04_reduce_shfl.mu`: 进入 warp-level reduce。
 5. `05_nested_hello.mu`: 理解 host 编排的两阶段 kernel 调度。
-6. `06_sum_matrix_2d.mu`: 把一维索引扩展到二维数据。
+6. `06_sum_matrix_2d.mu`: 用二维 grid/二维 block 做矩阵按行求和，并观察 CPU/GPU 结果与两种 GPU 计时。
+7. `07_sum_matrix_1d.mu`: 用一维线性 grid/block 完成同一问题，再恢复二维坐标并与 06 对比。
 
 ## 核心知识点
 
@@ -20,7 +21,8 @@ Week 3 的主线是执行模型。Reduce 是最适合入门的实验对象：它
 | `03_reduce_unrolling.mu` | 每线程多元素、减少 block 数和循环开销 | 只看算术操作不看访存模式 |
 | `04_reduce_shfl.mu` | warp shuffle、warp size 差异 | 直接照搬 CUDA 的 32-wide 假设 |
 | `05_nested_hello.mu` | host 分两阶段启动 parent/child kernel | 把两个阶段误认为一个普通函数调用 |
-| `06_sum_matrix_2d.mu` | 2D grid、row-major 展开 | 混淆 `(x,y)` 和 `row/col` |
+| `06_sum_matrix_2d.mu` | 2D grid/2D block、row-major 映射、行求和与 GPU 计时 | 混淆 `(x,y)` 和 `row/col`，忽略 atomicAdd 与数据传输的计时边界 |
+| `07_sum_matrix_1d.mu` | 线性 `idx`、`idx % width`/`idx / width` 恢复坐标、CPU/GPU 误差对比 | 误把一维线程布局当成一维数据，或把 kernel-only 当成端到端时间 |
 
 ## 代码阅读抓手
 
@@ -202,36 +204,68 @@ host launch 两个 parent blocks → `MUSA_CHECK_KERNEL()` 等 parent 完成 →
 前四个示例主要研究一个 kernel 内的执行、同步和归约；本例把关注点扩展到 kernel 阶段之间的 host 调度。它与 `02` 的“跨 block 需要新的阶段”形成对照：新阶段先由 host 显式发起，后续再学习设备支持时再讨论 device-side launch；`06` 则回到显式二维数据映射。
 
 
-### 6. `06_sum_matrix_2d.mu`：二维索引与 row-major 行求和
+### 6. `06_sum_matrix_2d.mu`：二维 grid/block 与 row-major 行求和
 
 #### 示例目标
 
-把一维线程索引推广到矩阵，计算每一行的和，演示 2D grid/block 的坐标映射、边界判断和 C/C++ row-major 地址展开。这里 `W` 表示列数、`H` 表示行数，因此输入是 `H` 行 `W` 列，输出 `rows` 有 `H` 个元素。
+这是一个独立的二维 grid/二维 block 矩阵行求和对比程序：每个线程处理一个二维位置，计算每一行的和，并同时给出 CPU double 参考、GPU 结果、总和与误差。这里 `W` 表示列数、`H` 表示行数，因此输入是 `H` 行 `W` 列，输出 `rows` 有 `H` 个元素。
 
 
 #### 代码结构
 
-kernel 用 `y = blockIdx.y * blockDim.y + threadIdx.y`、`x = blockIdx.x * blockDim.x + threadIdx.x` 得到矩阵坐标；只有 `x < width && y < height` 的线程执行 `atomicAdd(&rows[y], m[y * width + x])`。`main` 创建 `W=H=1024` 的全 1 矩阵，使用 `block(16,16)` 和 `grid(64,64)` 覆盖矩阵，把行结果清零后拷回并检查首尾行。一个线程负责一个 `m[y][x]`，但同一行的很多线程共同写入同一个 `rows[y]`。
+kernel 用 `y = blockIdx.y * blockDim.y + threadIdx.y`、`x = blockIdx.x * blockDim.x + threadIdx.x` 得到矩阵坐标；只有 `x < width && y < height` 的线程执行 `atomicAdd(&rows[y], m[y * width + x])`。`main` 使用固定的非全 1 输入，先用 CPU double 累加每行，再以 `block(16,16)` 和 `grid(64,64)` 执行 GPU 版本。输出包含配置、CPU/GPU 的 row0 和 row_last、CPU/GPU 总和、绝对/相对误差，以及带容差判断的 `PASS`/`FAIL`。
 
 
 #### 核心知识点
 
-row-major 中第 `y` 行第 `x` 列的线性位置是 `y * width + x`，所以同一行相邻线程通常访问相邻元素；这里的 `(x,y)` 是列/行坐标，而 `rows[y]` 明确按行聚合。以 `W=H=1024` 为例，`block(16,16)` 产生 `grid(64,64)`，总共覆盖 1024×1024 个元素。每个 row 有多个线程同时更新，因此需要 `atomicAdd` 保证累加正确；代价是同一行的原子竞争，代码注释也指出高性能版本应先做 block 内归约再写出。二维 grid 不改变 block 内同步和跨 block 的限制。
+row-major 中第 `y` 行第 `x` 列的线性位置是 `y * width + x`，所以同一行相邻线程通常访问相邻元素；这里的 `(x,y)` 是列/行坐标，而 `rows[y]` 明确按行聚合。以 `W=H=1024` 为例，`block(16,16)` 产生 `grid(64,64)`，总共覆盖 1024×1024 个元素。每个 row 有多个线程同时更新，因此需要 `atomicAdd` 保证累加正确；代价是同一行的原子竞争。CPU 参考在 `double` 中累加，GPU 输出数组和 `atomicAdd` 使用 `float`，所以结果应通过绝对/相对误差和容差判断，而不能要求逐位相同。二维 grid 不改变 block 内同步和跨 block 的限制。
 
 
 #### 执行流程
 
-host 分配并初始化连续 row-major 矩阵 → 拷入 device、将 `rows` 清零 → 以 16×16 block 启动覆盖 1024×1024 元素的 kernel → 合法线程按行原子累加 → 检查并拷回 1024 个行和 → 打印 `row0`、期望值和最后一行 → 释放资源。
+host 分配并初始化连续 row-major 矩阵 → CPU double 计算行和 → 拷入 device、将 `rows` 清零 → 用 `GpuTimer` 只测 kernel-only → 拷回 GPU 行和 → 再执行一次并用 wall timer 测 H2D + kernel + 同步 + D2H 的 end-to-end → 计算总和和行误差 → 打印计时、行和、总和与误差 → 释放资源。
 
 
 #### 常见错误与实验
 
-把 `x` 当行、`y` 当列；地址误写成 `x * height + y`；只检查一维边界；忘记清零 `rows`；把 atomicAdd 当成无代价操作。可改成非方阵并使用不能整除 16 的宽高验证边界，填入递增值手算一行；再实现 block 内行归约，比较原子竞争、访存布局和结果一致性。
+把 `x` 当行、`y` 当列；地址误写成 `x * height + y`；只检查一维边界；忘记清零 `rows`；把 `atomicAdd` 当成无代价操作；把 kernel-only 与 end-to-end 时间混为一谈。可改成非方阵并使用不能整除 16 的宽高验证边界，填入递增值手算一行；再实现 block 内行归约，比较原子竞争、访存布局、计时口径和结果误差。
 
 
 #### 与本周其他示例的关系
 
-它复用 `02`/`03` 的“多个线程产生局部贡献、最后汇总”思想，但把一维 partial 换成按 `y` 索引的行结果，并用 atomic 处理并发写入；它也延续 `01` 的线程坐标影响执行/访存的视角，与 `05` 的 kernel 层级调度无直接依赖。
+它复用 `02`/`03` 的“多个线程产生局部贡献、最后汇总”思想，但把一维 partial 换成按 `y` 索引的行结果，并用 atomic 处理并发写入；它也延续 `01` 的线程坐标影响执行/访存的视角，与 `05` 的 kernel 层级调度无直接依赖。`07` 保持计算目标和输入一致，只改变线程布局，适合比较二维坐标直接映射与线性索引恢复的差异。
+
+
+### 7. `07_sum_matrix_1d.mu`：一维线性映射恢复二维坐标
+
+#### 示例目标
+
+用一维 grid/一维 block 完成与 `06_sum_matrix_2d.mu` 相同的矩阵按行求和。这个版本把整个 `H × W` 矩阵压平成线性空间，用 `idx` 找到元素，再恢复其二维坐标，帮助区分“线程布局是一维”和“数据本身是一维”这两个概念。
+
+
+#### 代码结构
+
+kernel 计算 `idx = blockIdx.x * blockDim.x + threadIdx.x`，越界线程返回；随后用 `x = idx % width` 得到列坐标、用 `y = idx / width` 得到行坐标，并执行 `atomicAdd(&rows[y], m[idx])`。由于 row-major 存储中 `idx == y * width + x`，直接访问 `m[idx]` 与按坐标展开访问等价。`main` 使用 `W=H=1024`、256-thread block 和 4096 个 block，输出配置、CPU/GPU 行和、总和及误差。
+
+
+#### 核心知识点
+
+线性索引恢复二维坐标的关键是整除和取模：`y = idx / width`，`x = idx % width`；反向展开则是 `idx = y * width + x`。与 `06` 的 `grid(64,64)`、`block(16,16)` 不同，`07` 的 `grid` 和 `block` 都只有 x 维，但覆盖的元素数量与行聚合逻辑相同。多个线程仍会同时更新同一 `rows[y]`，因此仍需要 `atomicAdd`。CPU 用 double 累加，GPU 用 float atomic 累加，舍入顺序和精度不同，允许小范围绝对/相对误差。
+
+
+#### 执行流程
+
+host 初始化同一份固定输入 → CPU double 计算行和 → H2D 并清零 GPU 行结果 → `GpuTimer` 测一维 kernel-only → 拷回并记录 GPU 行和 → 清零后重新执行，用 wall timer 测 H2D + kernel + 同步 + D2H 的 end-to-end → 汇总行和、总和和误差 → 打印 `[config]`、`[time]`、`[rows]`、`[total]`、`[error]` 各类结果。
+
+
+#### 常见错误与实验
+
+把 `idx` 直接当成行号；把除法和取模中的 `width` 错写成 `height`；忘记 `idx >= width * height` 的边界判断；认为 `m[idx]` 与二维坐标访问不同；把 CPU double 与 GPU float 的微小差异误判为 kernel 错误；或者拿 kernel-only 时间直接与端到端时间比较。可把矩阵改成非方阵，手算几个 `idx` 的 `(x,y)`，再改变 block size 比较两种布局的访存、原子竞争和计时结果。
+
+
+#### 与本周其他示例的关系
+
+它与 `06` 是同一问题的布局对照：`06` 直接由二维 block/grid 生成 `(x,y)`，`07` 先生成线性 `idx` 再恢复 `(x,y)`；两者都采用 row-major 和按行 `atomicAdd`，都输出 CPU/GPU 计时及误差。它把 `02`/`03` 的汇总思想延伸到二维数据，并为后续比较线性化数据结构、映射成本和访存模式提供基线。
 
 
 ## CUDA_Freshman 对照

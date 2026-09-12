@@ -1,39 +1,42 @@
-// 二维 grid + 二维 block：矩阵按行求和，并比较 CPU/GPU 结果。
+// 一维 grid + 一维 block：矩阵按行求和
 //
-// 输入矩阵是 H 行 W 列，使用 row-major 存储：
+// 这份代码和 06_sum_matrix_2d.mu 计算同一个问题，但线程只有一个线性编号：
 //
-//       column x →  0      1      2          W-1
-//   row y=0      [m[0],  m[1],  m[2],  ... , m[W-1]]
-//       y=1      [m[W],  m[W+1],m[W+2],... , m[2W-1]]
+//   idx = blockIdx.x * blockDim.x + threadIdx.x
+//   x = idx % width
+//   y = idx / width
+//   rows[y] += m[idx]
 //
-// 线程坐标：
-//   ix = blockIdx.x * blockDim.x + threadIdx.x
-//   iy = blockIdx.y * blockDim.y + threadIdx.y
-//   idx = iy * width + ix
-//
-// 当前 W=H=1024：
-//   block=(16,16) → 一个 block 覆盖 16 列×16 行，共 256 个线程
-//   grid=(64,64)   → 64×64 个 block，覆盖 1024×1024 个矩阵元素
-//
-// 一个 block 的覆盖关系（bx=1, by=2）：
-//   x=16...31，y=32...47
-//   threadIdx=(5,7) → ix=21，iy=39
-//   该线程读取 m[39*width+21]，并累加到 rows[39]
+// 也就是说，二维坐标 (x,y) 只是被“压平”成 idx 后再恢复出来。
 
 #include "musa_common.h"
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
 
-// 每个线程负责一个二维位置 (x,y)。同一行的多个线程共同写 rows[y]，
-// 所以使用 atomicAdd；rows[y] 最终是第 y 行所有元素的和。
-__global__ void matrix_to_row_sums(const float* m, float* rows,
-                                   int width, int height) {
-    int x = blockIdx.x * blockDim.x + threadIdx.x;
-    int y = blockIdx.y * blockDim.y + threadIdx.y;
-    if (x < width && y < height) {
-        atomicAdd(&rows[y], m[y * width + x]);
-    }
+// 输入矩阵是 row-major：第 y 行第 x 列位于 m[y * width + x]。
+// 一维 kernel 直接使用 idx 访问 m[idx]，再通过除法和取模恢复行列坐标。
+//
+// 以 width=8、blockDim.x=4 为例：
+//
+//   idx:  0  1  2  3 | 4  5  6  7 | 8  9 10 11
+//   x:    0  1  2  3 | 4  5  6  7 | 0  1  2  3
+//   y:    0  0  0  0 | 0  0  0  0 | 1  1  1  1
+//
+// 实际计算中：x = idx % width，y = idx / width；rows[y] 是第 y 行的和。
+__global__ void matrix_to_row_sums_1d(const float* m, float* rows,
+                                       int width, int height) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int total = width * height;
+    if (idx >= total) return;
+
+    int x = idx % width;
+    int y = idx / width;
+    // x 主要用于展示二维坐标恢复；m[idx] 与 m[y * width + x] 等价。
+    (void)x;
+
+    // 同一行的多个线程会同时更新 rows[y]，因此需要 atomicAdd。
+    atomicAdd(&rows[y], m[idx]);
 }
 
 struct ErrorStats {
@@ -57,6 +60,8 @@ int main() {
     const int W = 1024;
     const int H = 1024;
     const int total = W * H;
+    const int threads = 256;
+    const int blocks = (total + threads - 1) / threads;
     const size_t matrix_bytes = static_cast<size_t>(total) * sizeof(float);
     const size_t rows_bytes = static_cast<size_t>(H) * sizeof(float);
 
@@ -68,7 +73,7 @@ int main() {
     MUSA_CHECK(musaMalloc(&d, matrix_bytes));
     MUSA_CHECK(musaMalloc(&d_rows, rows_bytes));
 
-    // 固定的非全 1 输入，便于观察 float atomic 累加和 CPU double 累加的差异。
+    // 使用固定的非全 1 输入，让 CPU double 与 GPU float 的累加差异可观察。
     for (int i = 0; i < total; ++i) {
         h[i] = 1.0f + static_cast<float>(i % 17) * 0.03125f;
     }
@@ -82,16 +87,12 @@ int main() {
     }
     double cpu_ms = cpu_timer.elapsed_ms();
 
-    const dim3 block(16, 16);
-    const dim3 grid((W + block.x - 1) / block.x,
-                    (H + block.y - 1) / block.y);
-
-    // kernel-only：GpuTimer 只包住二维 kernel，不包含 H2D/D2H。
+    // kernel-only：只测 GPU kernel，不包含 H2D/D2H。
     MUSA_CHECK(musaMemcpy(d, h, matrix_bytes, musaMemcpyHostToDevice));
     MUSA_CHECK(musaMemset(d_rows, 0, rows_bytes));
     GpuTimer kernel_timer;
     kernel_timer.start();
-    matrix_to_row_sums<<<grid, block>>>(d, d_rows, W, H);
+    matrix_to_row_sums_1d<<<blocks, threads>>>(d, d_rows, W, H);
     kernel_timer.stop();
     float gpu_kernel_ms = kernel_timer.elapsed_ms();
     MUSA_CHECK_KERNEL();
@@ -102,7 +103,7 @@ int main() {
     CpuTimer gpu_wall_timer;
     gpu_wall_timer.start();
     MUSA_CHECK(musaMemcpy(d, h, matrix_bytes, musaMemcpyHostToDevice));
-    matrix_to_row_sums<<<grid, block>>>(d, d_rows, W, H);
+    matrix_to_row_sums_1d<<<blocks, threads>>>(d, d_rows, W, H);
     MUSA_CHECK(musaDeviceSynchronize());
     MUSA_CHECK(musaMemcpy(rows_gpu, d_rows, rows_bytes, musaMemcpyDeviceToHost));
     double gpu_end_to_end_ms = gpu_wall_timer.elapsed_ms();
@@ -122,8 +123,8 @@ int main() {
     bool pass = row_error.max_abs <= abs_tol && row_error.max_rel <= rel_tol
              && total_abs_error <= abs_tol && total_rel_error <= rel_tol;
 
-    std::printf("[config] matrix=%d x %d, 2D block=(%u,%u), 2D grid=(%u,%u)\n",
-                W, H, block.x, block.y, grid.x, grid.y);
+    std::printf("[config] matrix=%d x %d, 1D block=%d, 1D grid=%d\n",
+                W, H, threads, blocks);
     std::printf("[time] CPU=%.4f ms, GPU kernel-only=%.4f ms, GPU end-to-end=%.4f ms\n",
                 cpu_ms, gpu_kernel_ms, gpu_end_to_end_ms);
     for (int y = 0; y < H; ++y) {

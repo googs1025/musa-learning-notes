@@ -11,7 +11,8 @@
 | `03_reduce_unrolling.mu` | 每线程处理 2 个元素的展开归约 |
 | `04_reduce_shfl.mu` | warp shuffle 归约骨架，MUSA warp=128 时需按 SDK 调整 mask |
 | `05_nested_hello.mu` | 两阶段 kernel 调度：host 等 parent 完成后启动 child |
-| `06_sum_matrix_2d.mu` | 2D grid 矩阵求和 |
+| `06_sum_matrix_2d.mu` | 2D grid + 2D block、矩阵行求和、CPU/GPU 计时与精度对比 |
+| `07_sum_matrix_1d.mu` | 1D grid + 1D block、线性下标恢复二维坐标、CPU/GPU 计时与精度对比 |
 
 ```bash
 cd code/week3
@@ -22,6 +23,7 @@ make
 ./04_reduce_shfl
 ./05_nested_hello
 ./06_sum_matrix_2d
+./07_sum_matrix_1d
 ```
 
 结果记录到 `../../notes/week3.md`。
