@@ -22,7 +22,8 @@
 3. Week 主线练习放 `code/weekN/exercises.md`；刷题索引放 `code/weekN/question-bank/`；快速复习材料可放 `code/weekN/concept-review.md`。
 4. 性能数字不要伪造。需要实测的表格可以留 `?`，并说明记录到对应 `notes/weekN.md`。
 5. MUSA 与 CUDA 很像，但不要默认性能经验完全相同。尤其注意 MUSA warp size 通常按 128 讨论。
-6. 新增知识点、示例、case、概念文档或复习材料时，必须同步评估是否需要给 `docs/index.html` 增加对应测试题；如果不增加题目，需要在提交或 PR 描述里说明原因。
+6. 新增知识点、示例、case、概念文档或复习材料时，必须在同一次修改中给 `docs/index.html` 的 MUSA Quiz 增加对应测试题；不得只更新学习材料而把题库同步留到以后。基础概念（如 thread、block、grid、warp、索引计算、内存层级、同步、访存）、代码写法、易错点和面试问法也必须纳入题库。题目必须覆盖新增内容的关键概念或易错点，并补齐 `answer`、`pitfall`、`source` 字段。
+7. 每次新增或修改学习材料后，必须运行题库和文档校验；如果当前环境没有 MUSA SDK，至少运行静态校验，并在结果中明确不能声称 MUSA 编译通过。
 
 ## 构建与运行
 
@@ -80,6 +81,7 @@ Mac 本地没有 `mcc` 时，可以本地编辑、远端运行：
 ## Git 与验证
 
 - 提交前运行 `git diff --check`。
+- 每次新增学习内容后运行 `node scripts/check-docs.js`，确认 Quiz 题目结构、题目来源路径和学习材料完整。
 - 文档改动应检查 Markdown 链接、图片路径和代码块是否闭合。
 - MUSA 示例在没有 MUSA SDK 的 Mac 上不能声称“编译通过”；应明确说明只做了静态检查或远程验证。
 - 不要把用户已有的未提交修改混入无关 PR；提交前按目标路径检查 staged diff。
