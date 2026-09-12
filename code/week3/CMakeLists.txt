@@ -6,6 +6,7 @@ set(WEEK3_EXAMPLES
     04_reduce_shfl
     05_nested_hello
     06_sum_matrix_2d
+    07_sum_matrix_1d
 )
 foreach(name IN LISTS WEEK3_EXAMPLES)
     add_musa_executable(${name} ${name}.mu)

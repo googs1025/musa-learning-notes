@@ -5,7 +5,7 @@ INCLUDES  ?= -I$(MUSA_PATH)/include -I../include
 LDFLAGS   ?= -L$(MUSA_PATH)/lib -lmusa -lmusart
 
 BINS = 01_warp_divergence 02_reduce_naive 03_reduce_unrolling \
-       04_reduce_shfl 05_nested_hello 06_sum_matrix_2d
+       04_reduce_shfl 05_nested_hello 06_sum_matrix_2d 07_sum_matrix_1d
 
 .PHONY: all clean
 all: $(BINS)
