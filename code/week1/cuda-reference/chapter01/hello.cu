@@ -19,5 +19,3 @@ int main(int argc, char **argv)
     CHECK(cudaDeviceReset());
     return 0;
 }
-
-

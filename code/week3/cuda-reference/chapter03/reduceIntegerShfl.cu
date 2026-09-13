@@ -8,7 +8,7 @@
  */
 
 #define DIM     128
-#define SMEMDIM 4     // 128/32 = 8 
+#define SMEMDIM 4     // 128/32 = 8
 
 // Recursive Implementation of Interleaved Pair Approach
 int recursiveReduce(int *data, int const size)
