@@ -179,3 +179,34 @@ Week 6 的价值不只是跑通代码，而是形成可复现的调试记录。
 CUDA_Freshman 基本不覆盖本周主题。可以只把 NVIDIA cuda-samples 的多卡、调试、profiling 示例作为概念对照，MUSA 实现以官方文档和本仓库代码为准。
 
 完整映射见 [`../../docs/cuda-example-map.md`](../../docs/cuda-example-map.md)。
+
+## CUDA reference：库、多 GPU 与调试对照
+
+这些源码保留 CUDA 原语义，学习时要区分 runtime、专用库和硬件/进程依赖。`BACKEND=musa`
+只选择 MUSA 编译路径，不自动提供 cuBLAS/cuSPARSE/cuFFT 等价库、P2P 拓扑或调试器能力。
+
+### Ch8 库映射
+
+- `cublas.cu` 输入列主序矩阵 A 和向量 X/Y，调用 SGEMV，输出满足 Y = alpha*A*X + beta*Y。重点记录句柄、拷贝边界和列主序布局；CUDA 需要 cuBLAS，MUSA 端要确认 Mapping 或对应数学库。
+- `cusparse.cu` 先统计非零元，再把 dense A 转成 CSR，最后运行 SpMV。验证 `trueNnz`、CSR 三数组和结果 Y；descriptor、索引基和旧 API 在 MUSA 映射层可能不同。
+- `cufft.cu` 生成余弦采样并执行 C2C forward FFT。验证输入长度、DC/低频系数和复数布局；不要从一次输出推导性能结论。
+
+### Ch9 多 GPU、device 与 P2P buffer
+
+`simpleMultiGPU.cu` 按 device 切片，每张卡配套 device buffer、pinned host buffer 和 stream。每次分配、拷贝、launch、同步前都确认当前 device，最终将每卡结果与 host reference 比较；计时覆盖异步拷贝、kernel 和同步。
+
+`simpleP2P.c` 是 source-only 的 MPI staging 参考：GPU buffer → pinned host → MPI rank → pinned host → GPU buffer。它需要 MPI C toolchain、`mpi.h`、恰好两个 MPI process 和两张卡；不属于当前 Makefile 的 TARGET/optional。记录 rank/device 绑定、消息大小、循环次数、latency 与 MB/s，并与 peer access 明确区分。
+
+`simpleP2P_PingPong.cu` 探测 peer capability，启用 peer access 后比较单向与双向 `cudaMemcpyAsync`。验证必须记录 `cudaDeviceCanAccessPeer`、拓扑和 event 时间；没有两张互通 GPU 时只保留探测结果。
+
+### Ch10 调试、修复与综合性能
+
+`debug-hazards.cu` 用共享结果、局部归约和 atomicAdd 组成调试实验；先验证数值，再改变 block/iteration，不能把一次成功当作无竞争证明。
+
+`debug-segfault.cu` 故意没有把每行 device pointer 复制到 `d_matrix`，故障来自无效 pointer table；`debug-segfault.fixed.cu` 增加该 memcpy。使用调试符号、同步点、线程索引和错误码比较两版，故障版只在隔离环境显式运行。
+
+`sumMatrixGPU.cu` 输入两个 nx × ny row-major float matrix，输出 C=A+B。先做 host reference，再检查 warm-up、launch、同步和拷回；同时记录矩阵规模、block 配置和设备型号。
+
+`crypt.parallelized.cu` 与 `crypt.overlap.cu` 按 8-byte IDEA block 加密/解密，后者用多个 stream 重叠分块。输入长度必须是 8 的倍数并带 8 个 16-bit 用户密钥；用 encrypt→decrypt round-trip、逐字节比较或 hash 验证。它们是教学样例，不是生产密码实现。
+
+默认 `make` 排除库、MPI/P2P、debug 和 crypt；用 `make optional` 或显式 `TARGET=...`。当前无 SDK，以下内容只完成静态关系和 dry-run 验证。

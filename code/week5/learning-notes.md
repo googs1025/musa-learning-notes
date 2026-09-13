@@ -236,3 +236,55 @@ muBLAS 后续可能提供经过库作者优化的 SGEMM 实现，但当前源码
 GEMM 进阶可参考 SGEMM_CUDA: <https://github.com/siboehm/SGEMM_CUDA>。
 
 完整映射见 [`../../docs/cuda-example-map.md`](../../docs/cuda-example-map.md)。
+
+## CUDA reference：Ch5/Ch7 对照阅读
+
+本组 `.cu` 文件保留上游 CUDA 写法，用来和本周 MUSA 主线并排阅读。要把
+三类证据分开：源码中出现的 API、索引、同步和算法流程是“源码事实”；能否
+被 nvcc 或 mcc/MUSA Mapping 接受是“编译验证”；bank conflict、atomic 竞争、
+误差大小和 float/double 速度是“设备实测”，不能从源码或一次 dry-run 推断。
+
+### Shared 生命周期、同步与 constant broadcast/stencil
+
+`checkSmemSquare.cu` 和 `checkSmemRectangle.cu` 分别用方形、矩形 block 展示
+static/dynamic shared 的布局、转置式读写和 padding。源码事实是 shared 属于
+block，在 kernel 执行期间由 block 内线程共同使用；写入后读取前需要
+`__syncthreads()`。padding 只改变地址到 bank 的映射，是否减少冲突、是否更快
+必须用 profiler 或计时实测。
+
+`constantReadOnly.cu` 对比 constant symbol 和只读指针，`constantStencil.cu`
+用小型系数完成 stencil。源码事实是 host 通过 symbol copy 初始化只读系数，
+kernel 读取它们；constant broadcast 是否命中、分散访问是否退化，属于目标
+GPU 的设备行为。stencil 的 halo 和边界也要单独检查，不能因为结果打印完成
+就认为所有输出元素都被正确初始化。
+
+### Reduce、atomic ordering 与 custom atomic
+
+`reduceInteger.cu` 展示 global/shared reduction、循环展开和 partial sum。源码
+事实包括每轮归约的同步、block size 假设以及 block 间结果需要后续合并；输入
+规模不是 block size 整数倍时，越界补零和最终校验是关键。`reduceIntegerShfl.cu`
+使用 `__shfl_xor`、`warpSize` 和 CUDA 32-lane 假设，因此 Makefile 默认将其列为
+optional；MUSA 是否能保留相同 lane/mask 语义，要在目标 SDK 上单独编译、运行
+并用已知答案验证。
+
+`my-atomic-add.cu` 的 custom atomic add 是“读取旧值 → `atomicCAS` 尝试更新 →
+失败后重试”的源码事实。`atomic-ordering.cu` 对比 atomic 与非原子更新：
+atomic 保证某个更新操作不可被并发更新撕裂，但不保证线程按固定顺序执行，也
+不自动等价于完整的内存栅栏。最终计数、输出顺序和竞争下的分布要通过多次设备
+运行观察；后端对 `atomicCAS` 的支持和性能也必须编译/实测确认。
+
+### Floating-point accuracy、performance 与 FMAD
+
+`floating-point-accuracy.cu` 让二进制浮点表示误差可见；误差阈值应随 dtype、
+运算次数和输入范围记录。`floating-point-perf.cu` 分开统计 host→device、
+kernel、device→host 的时间，并比较 float/double；计时区间是源码事实，但具体
+倍数受设备双精度吞吐、带宽、频率和分配开销影响，仓库不预填通用结论。
+
+`fmad.cu` 用计算结果展示乘加融合对舍入的影响。是否融合由表达式、优化选项、
+编译器和目标架构共同决定；要通过编译器输出或设备结果验证，不能把 `-O2`
+直接解释为 CUDA 与 MUSA 一定采用相同 FMAD 策略。
+
+建议顺序：`checkSmemSquare` → `constantStencil` → `reduceInteger` →
+`my-atomic-add` → `floating-point-accuracy` → `floating-point-perf` → `fmad`，
+最后在确认 warp 语义后显式尝试 optional shuffle。把 backend、架构参数、设备、
+误差、计时范围和重复次数记录到 `notes/week5.md`。

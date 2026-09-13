@@ -1,5 +1,13 @@
 # Week 4 习题
 
+## E4.1 读写方向与布局
+
+分别 dry-run `chapter04__readSegment`、`chapter04__writeSegment`、`chapter04__simpleMathAoS` 和 `chapter04__simpleMathSoA`，画出线程到地址的映射。若有 CUDA/MUSA 设备，记录同一数据规模下的有效带宽，并注明不能跨设备比较未经实测的结论。
+
+## E4.2 backend 与 symbol/transpose 差异
+
+用 `BACKEND=cuda` 和 `BACKEND=musa MUSA_ARCH=mp_31` 检查 `chapter04__transpose`、`chapter04__globalVariable` 的命令差异；说明 global symbol、shared tile 和同步语义中哪些来自 CUDA 源码，哪些必须由 MUSA SDK 验证。
+
 > 把运行数据写入 `../../notes/week4.md`。
 
 1. 记录 `01_saxpy_bandwidth` 的 GB/s，与理论带宽比值。

@@ -255,6 +255,10 @@ stream 1: H2D ... ms  kernel ... ms  D2H ... ms
 
 ## E2.10 综合：streamed 累加（综合 / 选做）
 
+## E2.11 CUDA reference 内存与异步对照（动手）
+
+进入 `code/week2/cuda-reference`，用 `make -n BACKEND=cuda TARGET=chapter04__memTransfer` 和 `make -n BACKEND=musa MUSA_ARCH=mp_31 TARGET=chapter06__asyncAPI` 检查双后端命令。选择 `chapter04__pinMemTransfer` 与 `chapter04__sumMatrixGPUManaged`（或 zero-copy），在 `notes/week2.md` 记录编译器、Toolkit/SDK、架构、结果，并解释 pinned、managed、zero-copy 中至少两种路径的输入/输出和同步边界。再单独标记 `chapter06__simpleHyperqBreadth` 的 Hyper-Q 和 callback 的 MUSA 限制；无 SDK 时不得声称编译通过。
+
 写一个新文件 `09_streamed_reduce.mu`（不进 `CMakeLists.txt` 也行，先放本地）：
 
 - 输入：长度 `N = 1<<26` 的 float 数组，按 chunk 分成 `K = 8` 份。

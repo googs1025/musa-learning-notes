@@ -16,3 +16,13 @@
 结果记录到 `../../notes/week4.md`。
 
 CUDA_Freshman 对照案例和迁移计划见 [`../../docs/cuda-example-map.md`](../../docs/cuda-example-map.md)。
+
+## CUDA reference 对照
+
+访存布局与 shared shape 的 `.cu` 参考见 [`cuda-reference/README.md`](cuda-reference/README.md)。它们与本周 `.mu` 主线互为对照，不预填性能结论；请在 CUDA 与 MUSA 环境分别记录带宽、设备和 SDK。
+
+```bash
+cd code/week4/cuda-reference
+make BACKEND=cuda TARGET=chapter04__readSegment
+make BACKEND=musa MUSA_ARCH=mp_31 TARGET=chapter04__transpose
+```

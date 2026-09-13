@@ -24,6 +24,12 @@ Week 1 的目标不是写复杂 kernel，而是建立 GPU 程序的最小心智�
 
 ## Grid / Block / Thread 容易混淆点
 
+## CUDA reference 阅读补充
+
+`cuda-reference/chapter01/hello.cu` 和 Chapter 2 的索引、grid/block、数组/矩阵加示例保留 CUDA 的 `.cu` 文件与 `cudaMalloc/cudaMemcpy` 语义；它们与本周 `.mu` 主线的关系是“同一 kernel 模型、不同 runtime 命名”。先用 `chapter01__hello` 验证编译链，再比较三种矩阵 launch 形状的输出与边界判断。CUDA 可用 `nvcc`，MUSA 使用 `mcc -mtgpu`/Mapping，但本仓库没有声称 MUSA 已编译通过。
+
+可观察实验：分别运行 `chapter02__sumMatrixOnGPU-1D-grid-1D-block`、`chapter02__sumMatrixOnGPU-2D-grid-1D-block` 和 `chapter02__sumMatrixOnGPU-2D-grid-2D-block`，记录 launch 形状、验证结果和设备属性；再把矩阵尺寸改成不能整除 block 的值，观察越界保护是否仍使结果正确。`checkDeviceInfor.cu` 的属性字段和 `sumArraysOnGPU-timer.cu` 的计时结果都依赖具体 CUDA/MUSA SDK 与设备，不能直接横向比较。
+
 先把一句话记牢：
 
 ```text

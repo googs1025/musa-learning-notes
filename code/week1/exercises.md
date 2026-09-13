@@ -206,6 +206,10 @@ LOOPS=50000000  t_launch=... ms  t_wait=... ms
 
 ## E1.10 把同步删了会怎样（思考 + 验证）
 
+## E1.11 CUDA reference 双后端记录（动手）
+
+进入 `code/week1/cuda-reference`，分别执行 `make -n BACKEND=cuda TARGET=chapter01__hello` 和 `make -n BACKEND=musa MUSA_ARCH=mp_31 TARGET=chapter01__hello`。在 `notes/week1.md` 记录：编译器路径、CUDA Toolkit 或 MUSA SDK 版本、目标架构、完整命令、是否实际编译/运行、输出与错误。再选择一个 `chapter02__sumMatrixOnGPU-2D-grid-2D-block`，说明 `.cu` 与本周 `.mu` 的 API/语义关系；没有 SDK 时只能报告静态检查，不能写“编译通过”。
+
 修改 `06_async_kernel.mu`：
 - (a) 删掉 `musaDeviceSynchronize()`，立刻 `return 0`。kernel 还会跑完吗？
 - (b) 在删掉同步的版本后面加一句 `musaMemcpy(&host_sink, d_sink, ..., D2H)`。结果对吗？

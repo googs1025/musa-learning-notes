@@ -1,5 +1,13 @@
 # Week 4 学习材料
 
+## CUDA reference 对照课文
+
+`readSegment.cu` 和 `writeSegment.cu` 将读方向、写方向与 segment/stride 联系起来；`readSegmentUnroll.cu` 说明 unroll 只改变每线程工作量，不能自动修复不连续地址。`simpleMathAoS.cu` 与 `simpleMathSoA.cu` 对照结构体交错布局和按字段分离布局。
+
+`transpose.cu` 同时改变读写方向，是检查 coalescing 与 shared tile 价值的核心案例；应分别分析 global read、shared read、global write 和同步边界。`globalVariable.cu` 用 device/global symbol 展示 host 与 device 变量生命周期，是否能在 MUSA 上映射由 SDK 验证。
+
+所有带宽或耗时结论都必须记录数据规模、计时范围、设备、架构和 Toolkit/SDK。CUDA 32-thread warp、bank 数量和性能排序不能直接推广为 MUSA 结论。
+
 Week 4 专注全局内存访问。GPU kernel 的算术经常不是瓶颈，访存地址是否连续、是否合并、数据布局是否适合线程访问，才决定吞吐上限。
 
 ## 阅读顺序
