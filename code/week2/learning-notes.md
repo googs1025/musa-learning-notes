@@ -28,6 +28,12 @@ Week 2 把 Week 1 的单个 kernel 扩展成完整 GPU 程序：准备输入、�
 
 ## 逐示例课文
 
+## CUDA reference 阅读补充
+
+Chapter 4 的 `.cu` 示例把 Week 2 的内存路径拆开：`memTransfer` 是 pageable + 显式 H2D/D2H，`pinMemTransfer` 引入 page-locked host memory，`sumMatrixGPUManual` 是显式拷贝基线，`sumMatrixGPUManaged` 改用 managed memory，`sumArrayZerocpy` 则用 mapped host memory 直接让 device 访问 host。它们与 `.mu` 主线是概念对照，不是 API 改名后的重复实现；CUDA 用 `nvcc`，MUSA 是否支持对应 API、迁移或映射语义必须实测。
+
+Chapter 6 的 `asyncAPI` 使用 `cudaMemcpyAsync`、stream 和 event，`simpleCallback` 观察完成回调，两个 Hyper-Q 示例观察 breadth submission 与 `cudaStreamWaitEvent` 依赖。可观察实验是固定输入分别运行 manual/managed，并把 async 示例的 pageable buffer 改回普通 `malloc`：记录编译器、Toolkit/SDK、架构和结果，区分“编译成功”“功能正确”“真正重叠”。zero-copy、managed memory、callback 和 Hyper-Q 都可能是 CUDA-only、旧 Toolkit 或特定硬件能力，不能把 CUDA 输出外推为 MUSA 性能结论。
+
 ### 01_vector_add_runtime.mu：Runtime API 的七步骨架
 
 #### 示例目标

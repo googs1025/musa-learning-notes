@@ -41,6 +41,11 @@ function checkQuizData() {
       }
     }
 
+    const sourcePath = path.join(root, q.source);
+    if (!fs.existsSync(sourcePath) || !fs.statSync(sourcePath).isFile()) {
+      throw new Error(`missing source ${q.source} in question ${q.id}`);
+    }
+
     if (q.type === "choice") {
       if (!Array.isArray(q.choices) || q.choices.length < 2) {
         throw new Error(`bad choices in question ${q.id}`);

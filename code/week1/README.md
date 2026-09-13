@@ -84,3 +84,7 @@ Grid / block / thread 的层级、索引换算和边界判断容易混淆，先�
 LeetGPU Easy 题，按必做、进阶和选做分层。
 
 CUDA_Freshman 对照案例和迁移计划见 [`../../docs/cuda-example-map.md`](../../docs/cuda-example-map.md)。
+
+## CUDA reference（精选）
+
+来自 *Professional CUDA C Programming* 的基础 `.cu` 示例已放在 [`cuda-reference/`](cuda-reference/)。它们保留 CUDA API，使用目录内 `make BACKEND=cuda|musa` 区分编译后端；MUSA 仅记录兼容路径，未在当前环境声称实编通过。逐文件 target、限制和运行命令见 [`cuda-reference/README.md`](cuda-reference/README.md)。

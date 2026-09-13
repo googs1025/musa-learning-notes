@@ -1,5 +1,13 @@
 # Week 3 习题
 
+## E3.1 双后端与 warp 差异实验
+
+在 `code/week3/cuda-reference` 分别执行 `make -n BACKEND=cuda TARGET=chapter03__reduceIntegerShfl` 与 `make -n BACKEND=musa MUSA_ARCH=mp_31 TARGET=chapter03__reduceIntegerShfl`，记录编译器、架构参数和源码中的 `warpSize`/mask 假设。若有设备，再分别运行 `simpleShfl`，不要把 CUDA 32-lane 输出直接当作 MUSA 正确性证明。
+
+## E3.2 默认 all 与可选目标
+
+解释为什么动态并行和旧 shuffle 目标不应默认执行；分别显式构建 `chapter03__nestedHelloWorld`，记录失败位置、SDK 版本和替代的 host-side 两阶段实现。
+
 > 把运行数据写入 `../../notes/week3.md`，不要填伪造性能数字。
 
 1. 对比 `01_warp_divergence` 中 coherent / divergent 的耗时。

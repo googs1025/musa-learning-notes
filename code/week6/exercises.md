@@ -55,4 +55,18 @@
    sample ...
    ```
 
-   如果环境没装 `torch_musa` 或没有可用 MUSA 设备，会在 import 或 availability 检查处失败；记录 `torch.__version__`、`torch_musa` 包版本和错误信息。
+  如果环境没装 `torch_musa` 或没有可用 MUSA 设备，会在 import 或 availability 检查处失败；记录 `torch.__version__`、`torch_musa` 包版本和错误信息。
+
+## CUDA reference 实验
+
+6. 在 `code/week6/cuda-reference` 运行 `make -n BACKEND=cuda` 与 `make -n BACKEND=musa MUSA_ARCH=mp_31`，记录编译器和架构参数；dry-run 不等于真实编译。
+
+7. 运行 `chapter09__simpleMultiGPU`，记录 device count、实际 GPU 数和每卡切片大小；改变 GPU 数与 ishift，确认每卡结果和 host reference 一致。
+
+8. 在两卡机器上运行 `chapter09__simpleP2P_PingPong`，记录 peer capability、P2P enable、拓扑和 event 带宽；`simpleP2P.c` 仅作 source-only 阅读/外部 MPI C toolchain 实验，确认 `mpi.h`、world size 为 2，并区分 host staging 与 peer access。
+
+9. 为 cublas、cusparse、cufft 建立依赖表：头文件、链接库、库版本、输入输出验证方法。CUDA 与 MUSA 分开记录，缺库时保留原始错误。
+
+10. 对 `chapter10__debug-segfault` 和 `chapter10__debug-segfault.fixed` 做调试对照；记录 launch 配置、同步点、错误码、调试器行号以及修复版结果。故障版只在隔离环境运行。
+
+11. 对 `chapter10__crypt.parallelized` 或 `chapter10__crypt.overlap` 做 encrypt→decrypt round-trip，记录输入长度、key 文件格式、输出 hash、stream 数和计时边界；明确这是 IDEA 教学样例。

@@ -29,3 +29,13 @@ make
 结果记录到 `../../notes/week3.md`。
 
 CUDA_Freshman 对照案例和迁移计划见 [`../../docs/cuda-example-map.md`](../../docs/cuda-example-map.md)。
+
+## CUDA reference 对照
+
+精选《Professional CUDA C Programming》执行模型示例见 [`cuda-reference/README.md`](cuda-reference/README.md)。源码保持 `.cu`，可分别选择 `BACKEND=cuda` 或 `BACKEND=musa`；MUSA 目标目前仅做命令级验证。动态并行和旧 shuffle 不在默认 `all` 中，需显式指定 target。
+
+```bash
+cd code/week3/cuda-reference
+make BACKEND=cuda TARGET=chapter03__simpleDivergence
+make BACKEND=musa MUSA_ARCH=mp_31 TARGET=chapter03__sumMatrix
+```

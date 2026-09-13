@@ -1,5 +1,15 @@
 # Week 3 学习材料
 
+## CUDA reference 对照课文
+
+`cuda-reference/chapter03/simpleDivergence.cu` 把分支位置与执行代价联系起来；`reduceInteger.cu` 展示从邻近配对、交错寻址到 unroll 的归约基线。`sumMatrix.cu` 与现有 `06_sum_matrix_2d.mu` 对照输入、输出和 row-major 索引。
+
+`reduceIntegerShfl.cu` 和 `simpleShfl.cu` 用 shuffle 在 warp 内交换寄存器值。CUDA 示例通常按 32-thread warp 和对应 mask 书写；MUSA 的实际 warp size、mask 宽度以及兼容 intrinsic 必须以目标 SDK/设备探测为准，不能把 CUDA 的 `warpSize == 32` 当作 MUSA 结论。
+
+`nestedHelloWorld.cu`、`nestedReduce.cu` 是 device-side dynamic parallelism：kernel 内再次 launch kernel，并依赖额外编译/运行支持，因此默认不纳入 `make all`。`checkSmemSquare.cu`、`checkSmemRectangle.cu` 对比 shared tile 的行列形状、动态 shared 和 padding；重点观察线程到 bank 的映射，而不是只看输出是否正确。
+
+阅读顺序：`simpleDivergence` → `reduceInteger` → `reduceIntegerShfl` → `sumMatrix` → `checkSmem*`；最后再阅读可选的 nested 示例。
+
 Week 3 的主线是执行模型。Reduce 是最适合入门的实验对象：它既能暴露线程索引、访存、同步和分支问题，又能逐步演进到 unrolling 和 shuffle。
 
 ## 阅读顺序

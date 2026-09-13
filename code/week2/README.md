@@ -107,3 +107,7 @@ cmake --build build --target 05_multi_stream
 > 实测时建议顺序：01 → 03 → 02 → 04 → 05 → 06 → 07 → 08。`01_vector_add_runtime` 先验证整条链路通；`03_vector_add_timer` 先把计时方法学固定下来，后面所有 µs 级实测才有意义。
 
 CUDA_Freshman 对照案例和迁移计划见 [`../../docs/cuda-example-map.md`](../../docs/cuda-example-map.md)。
+
+## CUDA reference（精选）
+
+内存传输、pinned/managed/zero-copy 和异步 API 的 CUDA 原始语义见 [`cuda-reference/`](cuda-reference/)。源码保留 `.cu`，目录内 `make BACKEND=cuda|musa` 选择后端；zero-copy、managed memory、callback 和 Hyper-Q 的 MUSA 状态必须按设备与 SDK 单独验证。逐文件清单见 [`cuda-reference/README.md`](cuda-reference/README.md)。
