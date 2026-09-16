@@ -56,6 +56,8 @@ GPU
 
 记住一句话:**block 是调度的边界,warp 是执行的边界。**
 
+> 这里用 CUDA 常见的 SM 心智模型做快速入门。MUSA 的 `MPC → MPX → MP` 物理层级、CUDA 近似对照和完整执行路径见 [`gpu-hierarchy.md`](gpu-hierarchy.md)。
+
 ---
 
 ## 3. 线程层级与全局索引
@@ -235,6 +237,7 @@ kernel<<<g, b>>>(h_ptr); // ✗ illegal address(kernel 用 host 地址)
 
 ## 延伸阅读
 
+- [`gpu-hierarchy.md`](gpu-hierarchy.md) — MUSA 的 MPC / MPX / MP 硬件层级与 CUDA 近似对照
 - [`cuda-vs-musa.md`](cuda-vs-musa.md) — CUDA / MUSA 命名对照与差异
 - [`glossary.md`](glossary.md) — 术语小词典
 - [官方编程指南 Ch1–4](https://docs.mthreads.com/musa-sdk/musa-sdk-doc-online/programming_guide/) — 权威文档

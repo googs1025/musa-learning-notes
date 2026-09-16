@@ -55,6 +55,7 @@ cmake --build build -j
 ### 3. 先掌握这些概念
 
 - [`docs/concepts.md`](docs/concepts.md)：SIMT、SM、grid/block/thread、内存层次、同步。
+- [`docs/gpu-hierarchy.md`](docs/gpu-hierarchy.md)：MUSA 的 MPC / MPX / MP 层级、CUDA 近似对照与 kernel 执行路径。
 - [`docs/musa-runtime-api.md`](docs/musa-runtime-api.md)：Runtime API 速查。
 - [`docs/musa-cuda-pitfalls.md`](docs/musa-cuda-pitfalls.md)：最容易写错的索引、内存、同步和 warp 问题。
 - [`docs/cuda-vs-musa.md`](docs/cuda-vs-musa.md)：CUDA 迁移到 MUSA 时哪些地方不能机械替换。
