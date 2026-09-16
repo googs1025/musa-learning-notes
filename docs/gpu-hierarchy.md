@@ -118,7 +118,7 @@ MP_21：8 MPC × 2 MPX/MPC × 2 MP/MPX = 32 MP
 
 ## 参考资料
 
-- [MUSA Programming Guide：Hardware Architecture（RC 4.3）](https://docs.mthreads.com/en/musa-sdk/musa-sdk-doc-online/history_version/rc4.3/programming_guide/Chapter02/)
+- [MUSA Programming Guide：Hardware Architecture（RC 4.3）](https://docs.mthreads.com/musa-sdk/version-4.3.x/programming_guide/Chapter02/)
 - [MUSA Programming Guide：GPU Parallel Computing（4.3.x）](https://docs.mthreads.com/musa-sdk/version-4.3.x/programming_guide/Chapter01/)
 - [CUDA Programming Guide：Programming Model](https://docs.nvidia.com/cuda/cuda-programming-guide/01-introduction/programming-model.html)
 - [Nsight Compute Profiling Guide](https://docs.nvidia.com/nsight-compute/ProfilingGuide/)
