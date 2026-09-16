@@ -1,14 +1,13 @@
 # CUDA → MUSA 对照与迁移
 
-> MUSA SDK 设计上几乎一对一映射 CUDA Runtime API。
-> 这篇文档列**完整命名映射 + 真正不同的地方 + 实战迁移步骤**。
+> MUSA SDK 的 Runtime API 大多可以与 CUDA 一一对照。
+> 本文整理命名映射、主要差异和迁移步骤。
 
 ---
 
-## 一句话总结
+## 迁移范围
 
-> **把 `cuda` 全局替换成 `musa`,把 `nvcc` 替换成 `mcc`,90% 的 CUDA 代码就能编**。
-> 剩下 10% 集中在:`warp = 128` 引发的同步原语、专有库名(muBLAS / muDNN)、特定调优参数。
+API 前缀和工具链名称通常可以直接替换。`warp = 128` 涉及的同步原语、专有库名（muBLAS / muDNN）和调优参数需要单独检查。
 
 ---
 
@@ -126,7 +125,7 @@
 
 ---
 
-## 真正的差异(踩坑警告)
+## 主要差异
 
 ### 1. Warp size:128 vs 32 ⚠️
 
@@ -162,7 +161,7 @@ CUDA Driver API 用 `cu` 前缀(`cuLaunchKernel`、`cuModuleLoad` 等);MUSA Driv
 
 ## 实战迁移步骤
 
-如果你手里有一份 CUDA 项目想跑在 MUSA 上,推荐顺序:
+把 CUDA 项目迁移到 MUSA 时，可以按下面的顺序处理：
 
 ```bash
 # 1. 大批量替换 API 前缀(用 sed 或 IDE 全局替换)
@@ -192,15 +191,15 @@ mcc -O2 src/main.mu -o main -lmusart
 
 ## 不要自动化的地方
 
-- **`-arch=sm_xx` 不要无脑替换** —— 必须用 MUSA 真实存在的架构号
-- **warp 边界 32 不要替换 128 替换** —— 算法层面要重新 review,不仅仅是数字
-- **`cuda` 出现在字符串里** —— 比如错误日志、cmake 变量名,有些是无害的不要改
+- `-arch=sm_xx` 必须换成 MUSA 工具链实际支持的架构号。
+- warp 边界从 32 改到 128 会改变算法语义，需要重新检查算法，不能只改数字。
+- 错误日志和 CMake 变量名中的 `cuda` 可能不需要替换，应先确认它的用途。
 
 ---
 
 ## 参考
 
-- [`concepts.md`](concepts.md) — 基础概念(SIMT / 硬件 / 内存)
-- [`glossary.md`](glossary.md) — 术语小词典
-- [官方编程指南 Ch11 附录](https://docs.mthreads.com/musa-sdk/musa-sdk-doc-online/programming_guide/) — 错误码完整表
-- [CUDA C++ 编程指南](https://docs.nvidia.com/cuda/cuda-c-programming-guide/) — 学完 MUSA 反过来看 CUDA 文档很顺
+- [`concepts.md`](concepts.md)：基础概念（SIMT / 硬件 / 内存）
+- [`glossary.md`](glossary.md)：术语小词典
+- [官方编程指南 Ch11 附录](https://docs.mthreads.com/musa-sdk/musa-sdk-doc-online/programming_guide/)：错误码完整表
+- [CUDA C++ 编程指南](https://docs.nvidia.com/cuda/cuda-c-programming-guide/)：CUDA 编程参考

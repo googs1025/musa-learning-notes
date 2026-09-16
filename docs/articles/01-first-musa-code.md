@@ -14,7 +14,7 @@
 - 摩尔线程的 MUSA SDK 跟 CUDA 几乎一对一映射,学一份等于顺带把 CUDA 也补了;
 - 给自己定个节奏:每周读一章官方指南 + 跑通对应代码 + 写一篇笔记,逼着输出。
 
-第一周的目标很简单:**把 Hello World 跑起来,搞清楚 MUSA 的软件栈分层。** 对应官方指南 Ch1–4。
+第一周先把 Hello World 跑起来，再搞清楚 MUSA 的软件栈分层。对应官方指南 Ch1 到 Ch4。
 
 ---
 
@@ -38,11 +38,11 @@
 └─────────────────────────────────────────┘
 ```
 
-我学到的几个关键点:
+我记下了三点：
 
-- **Runtime API 是 99% 应用要打交道的层**,Driver API 主要是 JIT、动态加载 kernel 模块的场景才用。第一周完全不用碰 Driver API。
+- 日常应用主要和 Runtime API 打交道。Driver API 多用在 JIT 和动态加载 kernel 模块的场景，第一周暂时不需要碰。
 - 跟 CUDA 几乎是一对一映射:`cuda*` 改 `musa*`,`nvcc` 改 `mcc`,`nvidia-smi` 改 `mthreads-gmi`,基本就完成大半翻译。
-- **有一个坑容易踩**:CUDA 的 warp 是 32 线程,MUSA 是 **128 线程**(摩尔线程内部叫 MTT, Multi-Thread-Tile)。涉及 warp-level 操作时坐标系会变,我标记下来,等到 Week 4 性能优化再回头看。
+- CUDA 的 warp 是 32 线程，MUSA 是 **128 线程**（摩尔线程内部叫 MTT, Multi-Thread-Tile）。涉及 warp-level 操作时坐标系会变，我先标记下来，等到 Week 4 性能优化再回头看。
 
 ---
 
@@ -61,7 +61,7 @@
 
 ## 6 个最小示例,我的笔记
 
-我给自己定的规矩:每个示例不仅要能编过、跑过,还要自己能用一两句话讲清楚"为什么是这样写"。下面是这 6 个示例我学到的关键点。完整代码在 `code/week1/`。
+我给自己定的规矩是：每个示例要能编过、跑过，也要能用一两句话讲清楚“为什么这样写”。完整代码在 `code/week1/`。
 
 ### Hello World
 
@@ -86,7 +86,7 @@ int main() {
 
 - `__global__` 这个修饰符的语义:CPU 调用,GPU 执行,**返回值必须 void**。我一开始想返回个 int 看看效果,直接编不过,这才意识到 kernel 是异步启动的,语义上根本拿不到返回值。
 - `<<<1, 5>>>` 这个语法第一次见挺反直觉,但其实就是"启动 1 个 block × 5 个线程"的简写。
-- 没写 `musaDeviceSynchronize()` 前我看不到 GPU 的输出 —— 后来才知道 GPU 上的 printf 是写到环形缓冲区的,程序不同步直接退出,缓冲区就被丢了。
+- 没写 `musaDeviceSynchronize()` 时，我看不到 GPU 的输出。后来才知道 GPU 上的 printf 会写到环形缓冲区，程序未同步就退出时，缓冲区也被丢了。
 
 跑出来 5 行 GPU 输出**顺序不固定**,这点我开始觉得是 bug,后来反应过来:GPU 是 SIMT 模型,不同 warp 调度顺序由硬件决定,不能依赖输出顺序判断逻辑。
 
@@ -106,7 +106,7 @@ int idx = blockIdx.x * blockDim.x + threadIdx.x;
 - 可以 `__syncthreads()` 互相等;
 - 一定调度到同一个 SM 上。
 
-而 block 之间是独立的,不能直接同步,可以被调到不同 SM 跑。所以 **block size 决定协作粒度,grid size 决定总并行度** —— 这个划分是物理硬件结构的反映,不是为了凑数。
+block 之间相互独立，不能直接同步，也可能被调度到不同 SM 上。因此，block size 决定协作粒度，grid size 决定总并行度。这个划分对应着物理硬件结构。
 
 ### 设备查询:让"硬件"具体起来
 
@@ -161,9 +161,9 @@ CHECK(musaDeviceSynchronize());   // ← 异步错误:执行期崩溃
 我自己测了下,只查任意一个会怎样:
 
 - 只 sync 不 GetLastError:launch 配置非法时(比如 `<<<1, 99999>>>`),kernel 根本没跑,sync 啥也不报。
-- 只 GetLastError 不 sync:kernel 内部越界写指针,launch 时是合法配置,GetLastError 显示 ok,**直到下一次 musaMemcpy 才挂**。报错点离真正的 bug 隔了十万八千里。
+- 只 GetLastError 不 sync:kernel 内部越界写指针,launch 时是合法配置,GetLastError 显示 ok,**直到下一次 musaMemcpy 才挂**。报错点离 bug 发生的位置隔了十万八千里。
 
-这就是为什么我现在写 MUSA 代码时养成了反射:每次 `<<<>>>` 后面接两行 CHECK。
+现在我会在每次 `<<<>>>` 后面接两行 CHECK，分别捕获这两类错误。
 
 CHECK 宏长这样,准备复制到所有 MUSA 项目:
 
@@ -180,7 +180,7 @@ CHECK 宏长这样,准备复制到所有 MUSA 项目:
 
 ### 异步 kernel:第一次"看见"它
 
-知道 kernel 是异步的是一回事,**亲眼看见**又是一回事。我写了个故意慢的 kernel,分别测了两段时间:
+我写了一个故意很慢的 kernel，分别测量 launch 和等待 GPU 完成的时间：
 
 ```cpp
 auto t0 = chrono::now();
@@ -202,7 +202,7 @@ wait   ≈ 42 ms     ← 这才是 kernel 真正在 GPU 上跑的时间
 这个比例让我直观地理解了几件事:
 
 - **想测 kernel 时间必须先 sync**,否则你测的是 launch 开销;
-- launch 本身有固定开销(微秒级),所以**反复 launch 极小 kernel** 时它会变成瓶颈 —— 这就是 MUSA Graph 要解决的问题(下周的内容);
+- launch 本身有固定的微秒级开销，反复 launch 极小 kernel 时会变成瓶颈。下周会用 MUSA Graph 继续研究这个问题；
 - `musaMemcpy(D2H)` 内部会**隐式同步**,所以日常代码里很多时候不用显式 sync,但前提是后面紧跟 D2H 拷贝。
 
 ---
@@ -238,10 +238,10 @@ nvidia-smi            →  mthreads-gmi
 
 留个清单,后面学到的时候回来填:
 
-1. **MTT (warp) = 128 在 occupancy 计算里是怎么影响 block size 选择的?** —— Week 3 看 Ch9 的时候应该会清楚。
-2. **musaMallocManaged(统一内存)和普通 musaMalloc 的真实代价差多少?** —— 准备拿同一个 vectorAdd 跑两版对比。
-3. **Driver API 到底什么场景才值得用?** —— 下周用 Driver API 重写一遍 vectorAdd,看代码量差异。
-4. **MUSA 的 mcc 编译流程跟 nvcc 是不是一样分 host/device 两路?** —— 想 dump 中间产物看一下。
+1. MTT (warp) = 128 在 occupancy 计算里怎么影响 block size 的选择？Week 3 看 Ch9 时再回来补。
+2. `musaMallocManaged`（统一内存）和普通 `musaMalloc` 的代价差多少？准备拿同一个 vectorAdd 跑两版对比。
+3. Driver API 在什么场景下值得用？下周用 Driver API 重写一遍 vectorAdd，看看代码量差异。
+4. MUSA 的 mcc 是否和 nvcc 一样，把编译流程分成 host/device 两路？想 dump 中间产物看一下。
 
 ---
 
@@ -261,5 +261,3 @@ nvidia-smi            →  mthreads-gmi
 - 代码:`code/week1/01..06_*.mu`,6 个示例 + Makefile + 10 道习题
 - 笔记:本文
 - 仓库:[github.com/googs1025/musa-learning-notes](https://github.com/googs1025/musa-learning-notes)
-
-下周见。
