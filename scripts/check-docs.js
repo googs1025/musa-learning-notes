@@ -17,10 +17,10 @@ function requireFile(relativePath) {
 }
 
 function checkQuizData() {
-  const html = readText("docs/index.html");
+  const html = readText("docs/quiz.html");
   const match = html.match(/const QUESTIONS = ([\s\S]*?\n    \];)/);
   if (!match) {
-    throw new Error("QUESTIONS not found in docs/index.html");
+    throw new Error("QUESTIONS not found in docs/quiz.html");
   }
 
   const questions = Function(`return ${match[1].replace(/;$/, "")}`)();
@@ -30,7 +30,7 @@ function checkQuizData() {
 
   const ids = new Set(questions.map((q) => q.id));
   if (ids.size !== questions.length) {
-    throw new Error("duplicate question ids in docs/index.html");
+    throw new Error("duplicate question ids in docs/quiz.html");
   }
 
   const required = ["id", "deck", "type", "question", "answer", "pitfall", "source"];
