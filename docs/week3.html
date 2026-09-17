@@ -124,9 +124,12 @@ if (tid == 0) partial[blockIdx.x] = s[0];</code></pre>
 
         <h3>先做组内 shuffle，再合并各组结果</h3>
         <div class="code-card">
-          <header>04 · Shuffle 归约（原码节选）</header>
-          <pre><code>for (int offset = warpSize / 2; offset &gt; 0; offset &gt;&gt;= 1) {
-    v += __shfl_down_sync(0xffffffff, v, offset);
+          <header>04 · Shuffle 归约（改编的结构伪代码）</header>
+          <pre><code>warp_reduce_sum(v, mask) {
+    // mask 的类型和值必须由目标 MUSA SDK 与设备确认。
+    for (int offset = warpSize / 2; offset &gt; 0; offset &gt;&gt;= 1) {
+        v += __shfl_down_sync(mask, v, offset);
+    }
 }
 
 int lane = tid % warpSize;
@@ -134,7 +137,7 @@ int warp = tid / warpSize;
 if (lane == 0) warp_sums[warp] = v;
 __syncthreads();</code></pre>
         </div>
-        <p>这是源文件当前使用的 <code>warpSize</code>、<code>__shfl_down_sync</code> 与 mask。该 mask、函数签名和 group 宽度是否适合目标环境，必须以本地 SDK 和设备验证；不能从 CUDA 32-lane 习惯反推。</p>
+        <p>这段结构伪代码只保留源文件的数据流；<code>mask</code> 是无类型、无取值的形参占位，必须从目标 MUSA SDK 与设备能力中确认。调用名沿用源码符号，也不代表跨目标可直接使用。链接中的当前源码仍含 CUDA 派生的硬编码 mask，使用前必须审计其 mask、函数签名和 group 宽度，不能从 CUDA 32-lane 习惯反推。</p>
         <a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week3/04_reduce_shfl.mu">查看源码：04_reduce_shfl.mu</a>
 
         <h3>从二维线程坐标得到 row-major 地址</h3>
