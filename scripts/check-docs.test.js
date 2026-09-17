@@ -35,6 +35,10 @@ test("baseline validates all pages and 136 local links", () => {
 });
 
 const invalidCases = [
+  ["missing local script", "docs/index.html", (html) => html.replace('src="assets/knowledge.js"', 'src="assets/missing.js"'), /assets\/missing\.js.*docs\/index\.html/],
+  ["script path escapes deployed root", "docs/index.html", append('<script src="../README.md"></script>'), /outside.*docs.*\.\.\/README\.md.*docs\/index\.html/],
+  ["script directory requires index", "docs/index.html", append('<script src="assets/"></script>'), /index\.html.*assets\/.*docs\/index\.html/],
+  ["malformed script encoding has context", "docs/index.html", append('<script src="assets/%ZZ.js"></script>'), /encoding.*assets\/%ZZ\.js.*docs\/index\.html/],
   ["missing visible marker", "docs/week1.html", (html) => html.replaceAll("本周要回答的问题", "REMOVED"), /本周要回答的问题/],
   ["commented home link", "docs/index.html", commentLink("week6.html"), /missing required link week6\.html/],
   ["commented topic link", "docs/gpu-hierarchy.html", commentLink("week1.html"), /missing required link week1\.html/],
@@ -63,6 +67,11 @@ for (const [name, page, mutate, expected] of invalidCases) {
 }
 
 const validCases = [
+  ["src text inside pre is ignored", '<pre> src="assets/missing.js"</pre>', 136],
+  ["commented script is ignored", '<!-- <script src="assets/missing.js"></script> -->', 136],
+  ["script body is not parsed for src", '<script>const sample = \'<script src="assets/missing.js">\';</script>', 136],
+  ["external and protocol script sources are ignored", '<script src="https://example.com/app.js"></script><script src="//example.com/app.js"></script><script src="data:text/javascript,void(0)"></script>', 136],
+  ["encoded local script path is valid", '<script src="assets/knowledge%2Ejs?q=1&amp;v=2"></script>', 136],
   ["href and rel text inside pre are ignored", '<pre> href="missing.html" rel="prev"</pre>', 136],
   ["href text in a title is ignored", '<span title=\'nested href="missing.html"\'>text</span>', 136],
   ["encoded path query and fragment resolve", '<a href="week%31.html?q=a&amp;b=2#execution%2Dmodel">encoded</a>', 137],

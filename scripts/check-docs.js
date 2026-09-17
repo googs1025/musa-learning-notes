@@ -68,8 +68,9 @@ function attributeValues(html, name) {
   return openingTags(html).filter((tag) => name in tag.attributes).map((tag) => tag.attributes[name]);
 }
 
-function staticHtml(html) {
-  return html.replace(/<!--[\s\S]*?-->|<script\b[^>]*>[\s\S]*?<\/script\s*>|<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, "");
+function staticHtml(html, preserveScriptTags = false) {
+  return html.replace(/<!--[\s\S]*?-->|(<script\b(?:[^"'<>]|"[^"]*"|'[^']*')*>)[\s\S]*?<\/script\s*>|<style\b[^>]*>[\s\S]*?<\/style\s*>/gi,
+    (_match, scriptTag) => preserveScriptTags && scriptTag ? scriptTag : "");
 }
 
 function requireLink(html, href, relativePath, label, rel) {
@@ -141,48 +142,59 @@ function checkKnowledgePages() {
   console.log(`knowledge pages: ${knowledgePages.length}`);
 }
 
+function requireLocalTarget(reference, page) {
+  const link = reference.trim();
+  const hashIndex = link.indexOf("#");
+  let fragment;
+  let pathname;
+  try {
+    fragment = hashIndex < 0 ? "" : decodeURIComponent(link.slice(hashIndex + 1));
+    pathname = decodeURIComponent(link.split(/[?#]/, 1)[0]);
+  } catch {
+    throw new Error(`invalid URL encoding in ${reference} in ${page}`);
+  }
+  let target = pathname
+    ? path.resolve(pathname.startsWith("/") ? docsRoot : path.dirname(path.join(root, page)), pathname.replace(/^\//, ""))
+    : path.join(root, page);
+  const relativeTarget = path.relative(docsRoot, target);
+  if (relativeTarget.startsWith("..") || path.isAbsolute(relativeTarget)) {
+    throw new Error(`local link outside deployed docs root: ${reference} in ${page}`);
+  }
+  if (!fs.existsSync(target)) {
+    throw new Error(`broken local link ${reference} in ${page}`);
+  }
+  if (fs.statSync(target).isDirectory()) {
+    target = path.join(target, "index.html");
+    if (!fs.existsSync(target) || !fs.statSync(target).isFile()) {
+      throw new Error(`missing directory index.html for ${reference} in ${page}`);
+    }
+  }
+  if (!fs.statSync(target).isFile()) {
+    throw new Error(`invalid local link target ${reference} in ${page}`);
+  }
+  if (fragment && /\.html?$/i.test(target)) {
+    const ids = attributeValues(staticHtml(fs.readFileSync(target, "utf8")), "id");
+    if (!ids.includes(fragment)) {
+      throw new Error(`broken local fragment ${reference} in ${page}`);
+    }
+  }
+}
+
 function checkLocalLinks() {
   let count = 0;
   for (const page of knowledgePages) {
-    const html = staticHtml(readText(page));
-    for (const href of attributeValues(html, "href")) {
+    const raw = readText(page);
+    for (const href of attributeValues(staticHtml(raw), "href")) {
       const link = href.trim();
       if (/^(?:https?:|mailto:|\/\/)/i.test(link) || link === "#") continue;
-      const hashIndex = link.indexOf("#");
-      let fragment;
-      let pathname;
-      try {
-        fragment = hashIndex < 0 ? "" : decodeURIComponent(link.slice(hashIndex + 1));
-        pathname = decodeURIComponent(link.split(/[?#]/, 1)[0]);
-      } catch {
-        throw new Error(`invalid URL encoding in ${href} in ${page}`);
-      }
-      let target = pathname
-        ? path.resolve(pathname.startsWith("/") ? docsRoot : path.dirname(path.join(root, page)), pathname.replace(/^\//, ""))
-        : path.join(root, page);
-      const relativeTarget = path.relative(docsRoot, target);
-      if (relativeTarget.startsWith("..") || path.isAbsolute(relativeTarget)) {
-        throw new Error(`local link outside deployed docs root: ${href} in ${page}`);
-      }
-      if (!fs.existsSync(target)) {
-        throw new Error(`broken local link ${href} in ${page}`);
-      }
-      if (fs.statSync(target).isDirectory()) {
-        target = path.join(target, "index.html");
-        if (!fs.existsSync(target) || !fs.statSync(target).isFile()) {
-          throw new Error(`missing directory index.html for ${href} in ${page}`);
-        }
-      }
-      if (!fs.statSync(target).isFile()) {
-        throw new Error(`invalid local link target ${href} in ${page}`);
-      }
-      if (fragment && /\.html?$/i.test(target)) {
-        const ids = attributeValues(staticHtml(fs.readFileSync(target, "utf8")), "id");
-        if (!ids.includes(fragment)) {
-          throw new Error(`broken local fragment ${href} in ${page}`);
-        }
-      }
+      requireLocalTarget(href, page);
       count += 1;
+    }
+    for (const tag of openingTags(staticHtml(raw, true))) {
+      if (tag.name !== "script" || !("src" in tag.attributes)) continue;
+      const src = tag.attributes.src.trim();
+      if (/^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(src)) continue;
+      requireLocalTarget(src, page);
     }
   }
   console.log(`local links: ${count}`);
