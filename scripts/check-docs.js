@@ -58,7 +58,7 @@ function requireLink(html, href, relativePath, label, rel) {
 
 function checkKnowledgePages() {
   const homePath = "docs/index.html";
-  const home = requireText(homePath, ['data-page-kind="home"']);
+  const home = staticHtml(requireText(homePath, ['data-page-kind="home"']));
   for (const page of knowledgePages.slice(1)) {
     requireLink(home, path.basename(page), homePath);
   }
@@ -95,11 +95,11 @@ function checkKnowledgePages() {
 
   const topicPath = "docs/gpu-hierarchy.html";
   const topic = requireText(topicPath, ['data-page-kind="topic"', "MPC", "MPX", "一个 kernel 的旅行", "不能逐层翻译"]);
-  requireLink(topic, "index.html", topicPath);
-  requireLink(topic, "week1.html", topicPath);
+  requireLink(staticHtml(topic), "index.html", topicPath);
+  requireLink(staticHtml(topic), "week1.html", topicPath);
   if (topic.includes("MPE")) throw new Error(`unexpected MPE in ${topicPath}`);
   const quiz = requireText("docs/quiz.html", ["musa-learning-quiz-v1"]);
-  requireLink(quiz, "index.html", "docs/quiz.html");
+  requireLink(staticHtml(quiz), "index.html", "docs/quiz.html");
   console.log(`knowledge pages: ${knowledgePages.length}`);
 }
 
