@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="zh-CN" data-page-kind="week">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Week 1：理解 MUSA kernel 的执行模型、GPU 硬件层级、线程索引、Host/Device 内存边界与错误检查。">
+  <title>Week 1 · 执行模型 | MUSA GPU 编程知识库</title>
+  <link rel="stylesheet" href="assets/knowledge.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="site-nav" aria-label="主导航">
+      <a class="brand" href="index.html">MUSA GPU 编程知识库</a>
+      <ul class="nav-links">
+        <li><a href="index.html#weeks">每周路径</a></li>
+        <li><a href="gpu-hierarchy.html">GPU 层级</a></li>
+        <li><a href="quiz.html">知识自测</a></li>
+      </ul>
+    </nav>
+  </header>
+  <main class="page-shell article-layout">
+    <nav class="article-nav" aria-label="本页目录">
+      <p><strong>Week 1 · 执行模型</strong></p>
+      <ul>
+        <li><a href="#goals">本周目标</a></li>
+        <li><a href="#execution-model">核心知识</a></li>
+        <li><a href="#code-points">关键代码</a></li>
+        <li><a href="#pitfalls">注意事项</a></li>
+        <li><a href="#questions">精选题目</a></li>
+      </ul>
+    </nav>
+    <article class="article-content">
+      <header>
+        <p class="tag">Week 1 · 执行模型</p>
+        <h1>一个 kernel 怎样启动并落到 GPU 硬件？</h1>
+        <p>从一次启动出发，连接线程组织、硬件执行、数据移动与结果检查，建立写第一个 MUSA 程序所需的完整路径。</p>
+      </header>
+
+      <section id="goals">
+        <h2>本周要回答的问题</h2>
+        <ul>
+          <li>grid、block、warp、thread 分别描述什么？它们怎样映射到 MP？</li>
+          <li>怎样让每个线程找到自己的数据，同时避免最后一个 block 越界？</li>
+          <li>CPU 和 GPU 之间怎样传递数据，又怎样确认 kernel 已完成且没有出错？</li>
+        </ul>
+      </section>
+
+      <section id="execution-model">
+        <h2>核心知识</h2>
+        <div class="knowledge-grid">
+          <section class="knowledge-card">
+            <h3>1. 软件组织：一次启动到一个线程</h3>
+            <p><code>kernel → grid → block → warp → thread</code>：kernel 是设备函数，一次启动产生一个 grid；grid 包含多个 block，每个 block 包含线程，线程被组织成 warp 执行。这是并行工作的组织方式。</p>
+          </section>
+          <section class="knowledge-card">
+            <h3>2. 硬件组织：GPU 到 MP</h3>
+            <p><code>GPU → MPC → MPX → MP</code> 描述 MUSA 硬件层级，具体数量和资源范围随架构变化。CUDA SM 可帮助理解 MP 的编程角色，但两家物理结构不能逐层画等号。详见 <a href="gpu-hierarchy.html">GPU 层级专题</a>。</p>
+          </section>
+          <section class="knowledge-card">
+            <h3>3. block 驻留，warp 执行</h3>
+            <p>一个完整 block 驻留在一个 MP 上，不会拆到多个 MP。block 是资源分配与线程协作的边界，warp 是 SIMT 执行分组。warp 宽度与驻留资源上限要查询目标设备，不能照抄其他架构的常数。</p>
+          </section>
+          <section class="knowledge-card">
+            <h3>4. 四个内置索引变量</h3>
+            <p><code>threadIdx</code> 是 block 内线程编号，<code>blockIdx</code> 是 grid 内 block 编号；<code>blockDim</code> 和 <code>gridDim</code> 分别是 block 和 grid 的维度。一维全局索引是 <code>blockIdx.x * blockDim.x + threadIdx.x</code>。</p>
+          </section>
+          <section class="knowledge-card" id="memory-boundary">
+            <h3>5. Host / Device 内存边界</h3>
+            <p>本周使用普通 host 内存与 <code>musaMalloc</code> 分配的 device 内存：host 不能直接解引用 device 指针，kernel 也不能把普通 host 指针当作显存使用。用 <code>musaMemcpy</code> 显式传输数据，按 <code>元素数 × sizeof(元素类型)</code> 计算字节数，使用完后释放内存。</p>
+          </section>
+          <section class="knowledge-card">
+            <h3>6. 启动成功不代表执行成功</h3>
+            <p><code>musaGetLastError()</code> 常用于检查 launch 配置错误；非法地址等异步执行错误要在同步点检查。普通 Runtime API 的返回值也应检查，避免把早先的问题误判成后续调用的故障。</p>
+          </section>
+          <section class="knowledge-card">
+            <h3>7. launch 异步，同步确认完成</h3>
+            <p>kernel 启动返回时，GPU 可能仍在执行。<code>musaDeviceSynchronize()</code> 成功返回可确认当前设备此前提交的工作完成。读取 host 结果还需要把数据拷回；本周默认流中的同步 D2H 拷贝会等待相关工作和拷贝完成。</p>
+          </section>
+        </div>
+      </section>
+
+      <section id="code-points">
+        <h2>关键代码</h2>
+        <h3>从线程位置得到数组位置</h3>
+        <p>block 数通常向上取整，因此总线程数可能大于元素数。索引计算和边界保护要一起出现。下面将索引示例改写为数组写入，便于观察每个线程负责的位置。</p>
+        <div class="code-card">
+          <header>全局索引与边界保护</header>
+          <pre><code>int idx = blockIdx.x * blockDim.x + threadIdx.x;
+if (idx &lt; n) {
+    output[idx] = idx;
+}</code></pre>
+        </div>
+        <a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week1/02_thread_index.mu">查看源码：02_thread_index.mu</a>
+
+        <h3>分配、传入、计算、传回</h3>
+        <p>这是带输入数据的流程示意：<code>h_data</code> 是已准备好的 host 缓冲区，<code>d_data</code> 是 device 指针，<code>bytes</code> 是数据字节数。原始示例在 GPU 上直接填常数，不需要 H2D 输入；这里补上 H2D 以展示完整方向。实际程序还要检查每个 API 返回值，并用 <code>musaFree</code> 释放显存。</p>
+        <div class="code-card">
+          <header>Host / Device 数据流</header>
+          <pre><code>musaMalloc(&amp;d_data, bytes);
+musaMemcpy(d_data, h_data, bytes, musaMemcpyHostToDevice);
+kernel&lt;&lt;&lt;grid, block&gt;&gt;&gt;(d_data, n);
+musaMemcpy(h_data, d_data, bytes, musaMemcpyDeviceToHost);</code></pre>
+        </div>
+        <a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week1/04_memory_basics.mu">查看源码：04_memory_basics.mu</a>
+
+        <h3>调试期的两步检查</h3>
+        <p>先检查启动状态，再等待执行并检查异步错误。<code>MUSA_CHECK</code> 表示项目中的错误检查宏；源码为演示多个错误使用了不退出的 <code>CHECK_SOFT</code>。逐次同步便于定位问题，但会影响并发，后续应按实际依赖选择同步范围。</p>
+        <div class="code-card">
+          <header>检查 launch 与异步执行</header>
+          <pre><code>kernel&lt;&lt;&lt;grid, block&gt;&gt;&gt;(d_data, n);
+MUSA_CHECK(musaGetLastError());
+MUSA_CHECK(musaDeviceSynchronize());</code></pre>
+        </div>
+        <a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week1/05_error_check.mu">查看源码：05_error_check.mu</a>
+      </section>
+
+      <section id="pitfalls">
+        <h2>注意事项</h2>
+        <ul class="pitfall-list">
+          <li><strong>遗漏边界保护：</strong>向上取整会产生多余线程，访问数组前先判断 <code>idx &lt; n</code>。</li>
+          <li><strong>在 host 解引用 device 指针：</strong>同步不会把显存变成 host 数组，应先 D2H 拷贝再读取 host 缓冲区。</li>
+          <li><strong>把 musaMemset 当成按元素赋值：</strong>它按字节填充；填入 1 不等于把每个 float 设为 <code>1.0f</code>，应使用初始化 kernel 或 host 赋值后拷贝。</li>
+          <li><strong>相信 GPU printf 的输出顺序：</strong>线程与 block 的执行先后不固定，打印行的顺序不能证明索引或调度顺序。</li>
+          <li><strong>只检查 launch 错误：</strong><code>musaGetLastError()</code> 成功不保证 kernel 没有越界；调试时还要检查同步返回值。</li>
+        </ul>
+      </section>
+
+      <section id="questions">
+        <h2>精选题目</h2>
+        <p>先独立回答，再展开核对。题干、答案与易错点保留完整自测原文；其中 SM 使用 CUDA 类比语境，MUSA 对应的 block 驻留位置称为 MP，具体物理实现不能画等号。</p>
+        <details id="w1-q1">
+          <summary><code>kernel&lt;&lt;&lt;grid, block&gt;&gt;&gt;</code> 里的 <code>grid</code> 和 <code>block</code> 分别控制什么？</summary>
+          <p>答案：<code>grid</code> 决定启动多少个 block，<code>block</code> 决定每个 block 里有多少个 thread。</p>
+          <p>易错点：<code>&lt;&lt;&lt;2, 4&gt;&gt;&gt;</code> 是 2 个 block、每个 block 4 个线程，总共 8 个线程。</p>
+        </details>
+        <details id="w1-q3">
+          <summary>为什么常见 kernel 都要写 <code>if (idx &lt; N)</code>？</summary>
+          <p>答案：<code>blocks = (N + threads - 1) / threads</code> 保证线程数不少于 N，但不保证刚好等于 N。</p>
+          <p>易错点：多出来的线程必须主动退出，否则可能越界读写。</p>
+        </details>
+        <details id="w1-q7">
+          <summary><code>musaGetLastError()</code> 和 <code>musaDeviceSynchronize()</code> 分别主要抓什么错误？</summary>
+          <p>答案：<code>musaGetLastError()</code> 常用于抓 launch 配置错误；<code>musaDeviceSynchronize()</code> 等待 kernel 完成，并暴露异步执行中的错误。</p>
+          <p>易错点：调试期推荐 launch 后做两步检查，避免漏掉运行期 illegal address 等异步错误。</p>
+        </details>
+        <details id="w1-q10">
+          <summary>一个 block 会不会跨多个 SM 执行？</summary>
+          <p>答案：一个 block 会被调度到同一个 SM 上执行。</p>
+          <p>易错点：block 内可以用 shared memory 和 <code>__syncthreads()</code> 协作，不同 block 不能直接这样同步。</p>
+        </details>
+        <div class="quiz-preview">
+          <h3>完整自测</h3>
+          <p>进入 <a href="quiz.html">知识自测</a>，选择 Week 1，继续检查索引、内存与异步执行的理解。</p>
+        </div>
+      </section>
+
+      <nav class="pager" aria-label="学习路径翻页">
+        <a href="index.html">返回知识库首页</a>
+        <a href="week2.html" rel="next">下一周：Week 2 · 并发与编排 →</a>
+      </nav>
+    </article>
+  </main>
+  <footer class="footer"><p>MUSA Learning Notes · 内容以官方文档和仓库实测为准</p></footer>
+</body>
+</html>
