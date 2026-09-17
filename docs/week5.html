@@ -100,10 +100,12 @@
     out[t] = tile[255 - t];
 }
 
+reverse_in_block&lt;&lt;&lt;1, 256&gt;&gt;&gt;(out);
+
 // 动态 shared 的字节数由 launch 第三个参数给出：
 // dynamic_shared&lt;&lt;&lt;1, 256, 256 * sizeof(float)&gt;&gt;&gt;(out);</code></pre>
         </div>
-        <p>每个线程先写自己的槽位，block 全体同步后再读取另一个线程写入的位置。静态与动态声明改变大小的确定方式，不改变 block 级作用域和生命周期。</p>
+        <p>这个固定示例必须恰好启动一个 block、每个 block 256 个线程：<code>tile[256]</code> 只容纳线程索引 0–255，而反向索引 <code>255 - t</code> 也以该范围为前提。每个线程先写自己的槽位，block 全体同步后再读取另一个线程写入的位置。静态与动态声明改变大小的确定方式，不改变 block 级作用域和生命周期。</p>
         <a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week5/01_shared_basics.mu">查看源码：01_shared_basics.mu</a>
 
         <h3>Constant 符号声明与 host 复制</h3>
@@ -114,12 +116,18 @@
 float weights[5] = {0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f};
 musaMemcpyToSymbol(c_w, weights, sizeof(weights));
 
-// kernel 内：同一轮 k 中，各线程读取相同的 c_w[k + 2]
-for (int k = -2; k &lt;= 2; ++k) {
-    value += in[i + k] * c_w[k + 2];
+// kernel 内仅处理 stencil 半径覆盖的内部点。
+int i = blockIdx.x * blockDim.x + threadIdx.x;
+if (i &gt;= 2 &amp;&amp; i &lt; n - 2) {
+    float value = 0.0f;
+    // 同一轮 k 中，各线程读取相同的 c_w[k + 2]。
+    for (int k = -2; k &lt;= 2; ++k) {
+        value += in[i + k] * c_w[k + 2];
+    }
+    out[i] = value;
 }</code></pre>
         </div>
-        <p>Host 使用符号名复制五个权重；kernel 对该符号只读，循环中的共同权重访问形成广播式模式。</p>
+        <p>Host 使用符号名复制五个权重；kernel 的内部点 guard 保证 <code>in[i+k]</code> 不越界。kernel 对 constant 符号只读，循环中的共同权重访问形成广播式模式。</p>
         <a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week5/04_stencil_constant.mu">查看源码：04_stencil_constant.mu</a>
 
         <h3>Naive GEMM 的行列映射与累加</h3>
