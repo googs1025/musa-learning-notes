@@ -219,6 +219,10 @@ main section { scroll-margin-top: 92px; }
 }
 .article-content > :first-child { margin-top: 0; }
 .article-content h2, .article-content h3 { line-height: 1.25; scroll-margin-top: 92px; }
+.article-content .knowledge-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+}
+.article-content :not(pre) > code { overflow-wrap: anywhere; }
 
 .callout, .quiz-preview {
   margin: 24px 0;
@@ -302,6 +306,11 @@ pre code { padding: 0; color: inherit; background: transparent; }
   html { scroll-behavior: auto; }
 }
 
+@media (max-width: 1000px) {
+  .article-layout { grid-template-columns: minmax(0, 1fr); }
+  .article-nav { position: static; }
+}
+
 @media (max-width: 760px) {
   .site-nav {
     width: min(100% - 28px, 1180px);
@@ -315,6 +324,7 @@ pre code { padding: 0; color: inherit; background: transparent; }
   .hero { padding: 30px 22px; border-radius: 16px; }
   .hero h1 { font-size: clamp(2rem, 12vw, 3.1rem); }
   .week-grid, .topic-grid, .knowledge-grid, .article-layout { grid-template-columns: minmax(0, 1fr); }
+  .article-content .knowledge-grid { grid-template-columns: minmax(0, 1fr); }
   .card, .knowledge-card, .article-content { padding: 20px; }
   .article-nav { position: static; }
   .section-heading { margin-top: 46px; }

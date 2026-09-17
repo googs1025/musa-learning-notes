@@ -136,7 +136,7 @@ MP_21：8 MPC × 2 MPX/MPC × 2 MP/MPX = 32 MP</code></pre>
         <h3>block 大小与尾部 warp</h3>
         <p>如果 block 的线程数不是目标 warp 大小的整数倍，最后一个 warp 会出现没有对应有效线程的 lane，执行资源可能被浪费。应通过设备属性或对应架构文档查询并确认目标设备的 warp size，再选择 block 大小；不要从 CUDA、另一代 MUSA 架构或旧示例中机械照抄常数。</p>
         <h3>驻留资源与 occupancy</h3>
-        <p>每个 block 使用更多寄存器或片上存储，可能减少一个 MP 能同时驻留的 block 和 warp 数量。反过来，更多已经就绪的 warp 往往能在部分 warp 等待访存或依赖时继续推进，从而隐藏延迟。这里的 occupancy 指实际驻留量相对硬件上限的比例，而不是单独决定速度的分数。</p>
+        <p>每个 block 使用更多寄存器或片上存储，可能减少一个 MP 能同时驻留的 block 和 warp 数量。反过来，更多已经就绪的 warp 往往能在部分 warp 等待访存或依赖时继续推进，从而隐藏延迟。这里的 occupancy 指一个 MP 上实际驻留的活跃 warp 数，除以该架构每个 MP 支持的最大驻留 warp 数；活跃 warp 也包括暂时等待数据或依赖的 warp，并不等于此刻都在执行。这个比例不是单独决定速度的分数。</p>
         <h3>occupancy 不是最终目标</h3>
         <p>更高 occupancy 不保证 kernel 更快。分析性能时还要一起看 stall 原因、内存带宽、指令吞吐以及数据复用；有时减少访存、提高复用或降低指令数量，比继续追高 occupancy 更重要。</p>
       </section>

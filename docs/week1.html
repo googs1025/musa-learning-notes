@@ -104,7 +104,7 @@ musaMemcpy(h_data, d_data, bytes, musaMemcpyDeviceToHost);</code></pre>
         <a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week1/04_memory_basics.mu">查看源码：04_memory_basics.mu</a>
 
         <h3>调试期的两步检查</h3>
-        <p>先检查启动状态，再等待执行并检查异步错误。<code>MUSA_CHECK</code> 表示项目中的错误检查宏；源码为演示多个错误使用了不退出的 <code>CHECK_SOFT</code>。逐次同步便于定位问题，但会影响并发，后续应按实际依赖选择同步范围。</p>
+        <p>先检查启动状态，再等待执行并检查异步错误。<code>MUSA_CHECK</code> 是本仓库自定义的辅助宏，不是 MUSA Runtime API，定义见 <a href="https://github.com/googs1025/musa-learning-notes/blob/main/code/include/musa_common.h">code/include/musa_common.h</a>：出错时打印文件、行号和错误信息并退出。使用下方片段前，需将 <code>code/include</code> 加入编译器头文件搜索路径并引入 <code>#include "musa_common.h"</code>。Week 1 源码为连续演示多个错误，实际使用的是文件内定义、只打印不退出的 <code>CHECK_SOFT</code>。逐次同步便于定位问题，但会影响并发，后续应按实际依赖选择同步范围。</p>
         <div class="code-card">
           <header>检查 launch 与异步执行</header>
           <pre><code>kernel&lt;&lt;&lt;grid, block&gt;&gt;&gt;(d_data, n);
