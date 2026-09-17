@@ -4,6 +4,7 @@ const fs = require("fs");
 const path = require("path");
 
 const root = path.resolve(__dirname, "..");
+const docsRoot = path.join(root, "docs");
 const knowledgePages = [
   "docs/index.html",
   "docs/week1.html",
@@ -27,9 +28,9 @@ function requireFile(relativePath) {
   }
 }
 
-function requireText(relativePath, requiredTexts) {
+function requireText(relativePath, requiredTexts, raw = false) {
   requireFile(relativePath);
-  const text = readText(relativePath);
+  const text = raw ? readText(relativePath) : staticHtml(readText(relativePath));
   for (const required of requiredTexts) {
     if (!text.includes(required)) {
       throw new Error(`missing required text ${required} in ${relativePath}`);
@@ -38,9 +39,33 @@ function requireText(relativePath, requiredTexts) {
   return text;
 }
 
+function decodeEntities(text) {
+  const named = { amp: "&", quot: '"', apos: "'", lt: "<", gt: ">" };
+  return text.replace(/&(#x[\da-f]+|#\d+|amp|quot|apos|lt|gt);/gi, (entity, code) => {
+    if (code[0] !== "#") return named[code.toLowerCase()];
+    const value = code[1].toLowerCase() === "x" ? parseInt(code.slice(2), 16) : Number(code.slice(1));
+    return value > 0 && value <= 0x10ffff && !(value >= 0xd800 && value <= 0xdfff)
+      ? String.fromCodePoint(value) : "\ufffd";
+  });
+}
+
+// Tokenize opening tags first, then consume complete attribute values so text
+// such as title='example href="..."' cannot introduce a fictitious attribute.
+function openingTags(html) {
+  const tags = /<([a-z][\w:-]*)\b((?:[^"'<>]|"[^"]*"|'[^']*')*)>/gi;
+  return Array.from(html.matchAll(tags), (tag) => {
+    const attributes = Object.create(null);
+    const pattern = /([^\s"'<>\/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
+    for (const match of tag[2].matchAll(pattern)) {
+      const name = match[1].toLowerCase();
+      if (!(name in attributes)) attributes[name] = decodeEntities(match[2] ?? match[3] ?? match[4] ?? "");
+    }
+    return { name: tag[1].toLowerCase(), attributes };
+  });
+}
+
 function attributeValues(html, name) {
-  const pattern = new RegExp(`\\s${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s"'=<>\x60]+))`, "gi");
-  return Array.from(html.matchAll(pattern), (match) => match[1] ?? match[2] ?? match[3]);
+  return openingTags(html).filter((tag) => name in tag.attributes).map((tag) => tag.attributes[name]);
 }
 
 function staticHtml(html) {
@@ -48,17 +73,28 @@ function staticHtml(html) {
 }
 
 function requireLink(html, href, relativePath, label, rel) {
-  const links = html.match(/<a\b[^>]*>[\s\S]*?<\/a\s*>/gi) || [];
-  if (!links.some((link) => attributeValues(link, "href").includes(href)
-    && (!label || link.replace(/<[^>]*>/g, "").trim() === label)
-    && (!rel || attributeValues(link, "rel").some((value) => value.split(/\s+/).includes(rel))))) {
+  const links = html.match(/<a\b(?:[^"'<>]|"[^"]*"|'[^']*')*>[\s\S]*?<\/a\s*>/gi) || [];
+  if (!links.some((link) => {
+    const { attributes } = openingTags(link)[0];
+    return attributes.href === href
+      && (!label || decodeEntities(link.replace(/<[^>]*>/g, "")).trim() === label)
+      && (!rel || (attributes.rel || "").split(/\s+/).includes(rel));
+  })) {
     throw new Error(`missing required link ${href}${label ? ` (${label})` : ""} in ${relativePath}`);
+  }
+}
+
+function requirePageKind(html, kind, relativePath) {
+  const htmlTag = openingTags(html).find((tag) => tag.name === "html");
+  if (htmlTag?.attributes["data-page-kind"] !== kind) {
+    throw new Error(`missing data-page-kind="${kind}" on html in ${relativePath}`);
   }
 }
 
 function checkKnowledgePages() {
   const homePath = "docs/index.html";
-  const home = staticHtml(requireText(homePath, ['data-page-kind="home"']));
+  const home = requireText(homePath, []);
+  requirePageKind(home, "home", homePath);
   for (const page of knowledgePages.slice(1)) {
     requireLink(home, path.basename(page), homePath);
   }
@@ -66,7 +102,8 @@ function checkKnowledgePages() {
   const markers = ["本周要回答的问题", "核心知识", "关键代码", "注意事项", "精选题目", "完整自测"];
   for (let week = 1; week <= 6; week += 1) {
     const page = `docs/week${week}.html`;
-    const html = staticHtml(requireText(page, ['data-page-kind="week"']));
+    const html = requireText(page, []);
+    requirePageKind(html, "week", page);
     const visibleText = html.replace(/<[^>]*>/g, "");
     for (const marker of markers) {
       if (!visibleText.includes(marker)) {
@@ -94,11 +131,12 @@ function checkKnowledgePages() {
   }
 
   const topicPath = "docs/gpu-hierarchy.html";
-  const topic = requireText(topicPath, ['data-page-kind="topic"', "MPC", "MPX", "一个 kernel 的旅行", "不能逐层翻译"]);
-  requireLink(staticHtml(topic), "index.html", topicPath);
-  requireLink(staticHtml(topic), "week1.html", topicPath);
+  const topic = requireText(topicPath, ["MPC", "MPX", "一个 kernel 的旅行", "不能逐层翻译"]);
+  requirePageKind(topic, "topic", topicPath);
+  requireLink(topic, "index.html", topicPath);
+  requireLink(topic, "week1.html", topicPath);
   if (topic.includes("MPE")) throw new Error(`unexpected MPE in ${topicPath}`);
-  const quiz = requireText("docs/quiz.html", ["musa-learning-quiz-v1"]);
+  const quiz = requireText("docs/quiz.html", ["musa-learning-quiz-v1"], true);
   requireLink(staticHtml(quiz), "index.html", "docs/quiz.html");
   console.log(`knowledge pages: ${knowledgePages.length}`);
 }
@@ -108,22 +146,37 @@ function checkLocalLinks() {
   for (const page of knowledgePages) {
     const html = staticHtml(readText(page));
     for (const href of attributeValues(html, "href")) {
-      const link = href.trim().replace(/&amp;/gi, "&");
+      const link = href.trim();
       if (/^(?:https?:|mailto:|\/\/)/i.test(link) || link === "#") continue;
       const hashIndex = link.indexOf("#");
-      const fragment = hashIndex < 0 ? "" : decodeURIComponent(link.slice(hashIndex + 1));
-      const pathname = decodeURIComponent(link.split(/[?#]/, 1)[0]);
-      const target = pathname
-        ? path.resolve(pathname.startsWith("/") ? path.join(root, "docs") : path.dirname(path.join(root, page)), pathname.replace(/^\//, ""))
+      let fragment;
+      let pathname;
+      try {
+        fragment = hashIndex < 0 ? "" : decodeURIComponent(link.slice(hashIndex + 1));
+        pathname = decodeURIComponent(link.split(/[?#]/, 1)[0]);
+      } catch {
+        throw new Error(`invalid URL encoding in ${href} in ${page}`);
+      }
+      let target = pathname
+        ? path.resolve(pathname.startsWith("/") ? docsRoot : path.dirname(path.join(root, page)), pathname.replace(/^\//, ""))
         : path.join(root, page);
+      const relativeTarget = path.relative(docsRoot, target);
+      if (relativeTarget.startsWith("..") || path.isAbsolute(relativeTarget)) {
+        throw new Error(`local link outside deployed docs root: ${href} in ${page}`);
+      }
       if (!fs.existsSync(target)) {
         throw new Error(`broken local link ${href} in ${page}`);
       }
-      const stat = fs.statSync(target);
-      if (!stat.isFile() && !stat.isDirectory()) {
+      if (fs.statSync(target).isDirectory()) {
+        target = path.join(target, "index.html");
+        if (!fs.existsSync(target) || !fs.statSync(target).isFile()) {
+          throw new Error(`missing directory index.html for ${href} in ${page}`);
+        }
+      }
+      if (!fs.statSync(target).isFile()) {
         throw new Error(`invalid local link target ${href} in ${page}`);
       }
-      if (fragment && stat.isFile() && /\.html?$/i.test(target)) {
+      if (fragment && /\.html?$/i.test(target)) {
         const ids = attributeValues(staticHtml(fs.readFileSync(target, "utf8")), "id");
         if (!ids.includes(fragment)) {
           throw new Error(`broken local fragment ${href} in ${page}`);
