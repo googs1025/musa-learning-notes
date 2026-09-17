@@ -70,7 +70,7 @@
       <section id="reduction">
         <h2>从 block 归约到 shuffle</h2>
         <h3>Shared-memory tree reduction</h3>
-        <p>naive 版本先让每个线程把一个输入元素搬进 shared memory，越界位置填 0；随后每轮把后半段加到前半段，并在轮次之间调用 <code>__syncthreads()</code>。这个 barrier 只覆盖同一个 block，所以每个 block 最终只能安全地产生一个 partial sum。</p>
+        <p>naive 版本先让每个线程把一个输入元素搬进 shared memory，越界位置填 0；随后每轮把后半段加到前半段，并在轮次之间调用 <code>__syncthreads()</code>。这个 barrier 只覆盖同一个 block，所以每个 block 最终只能安全地产生一个 partial sum。当前折半循环还要求 block size 是 2 的幂；任意 <code>N</code> 能通过尾段补 0 处理，不代表任意 block size 都适用于这棵归约树。</p>
         <p>跨 block 的最终汇总必须进入新阶段：教学示例把 partial 数组拷回 host 后串行相加，也可以再启动第二个 reduction kernel。不能用一次 block barrier 假装同步整个 grid。</p>
 
         <h3>Unroll2：每线程先合并两个元素</h3>
@@ -130,12 +130,15 @@ if (tid == 0) partial[blockIdx.x] = s[0];</code></pre>
     for (int offset = warpSize / 2; offset &gt; 0; offset &gt;&gt;= 1) {
         v += __shfl_down_sync(mask, v, offset);
     }
+    return v;
 }
 
+v = warp_reduce_sum(v, mask);
 int lane = tid % warpSize;
 int warp = tid / warpSize;
 if (lane == 0) warp_sums[warp] = v;
-__syncthreads();</code></pre>
+__syncthreads();
+// warp_sums 的第二阶段归约另行处理，此处省略。</code></pre>
         </div>
         <p>这段结构伪代码只保留源文件的数据流；<code>mask</code> 是无类型、无取值的形参占位，必须从目标 MUSA SDK 与设备能力中确认。调用名沿用源码符号，也不代表跨目标可直接使用。链接中的当前源码仍含 CUDA 派生的硬编码 mask，使用前必须审计其 mask、函数签名和 group 宽度，不能从 CUDA 32-lane 习惯反推。</p>
         <a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week3/04_reduce_shfl.mu">查看源码：04_reduce_shfl.mu</a>
@@ -176,6 +179,7 @@ if (x &lt; width &amp;&amp; y &lt; height) {
         <details id="w3-q2">
           <summary>MUSA 做 warp-level shuffle/reduce 时，为什么不能照搬 CUDA 的 warp=32 假设？</summary>
           <p>MUSA warp size 通常按 128 理解，shuffle mask、warp 数量、reduction tree 深度都要重新算。</p>
+          <p>这里的 128 只对应题目采用的示例语境；实际目标的 warp/group 宽度必须向目标设备查询，并结合所用 MUSA SDK 确认。</p>
           <p>代码语法接近 CUDA，不代表调优参数可以机械照搬。</p>
         </details>
         <details id="w3-q7">
@@ -186,6 +190,7 @@ if (x &lt; width &amp;&amp; y &lt; height) {
         <details id="w3-q8">
           <summary>reduce 的输入长度不是 block size 或 unroll 粒度整数倍时，尾部元素如何处理？</summary>
           <p>每次加载都做边界判断，越界线程使用 0 或直接退出，不能越界读写。</p>
+          <p>对本页的 shared-memory reduction，越界线程必须写入 0，并继续参加后续所需的 barrier；只有后续协作和同步不再依赖该线程时，才可以提前返回。</p>
           <p>只检查第一个加载位置而忘记检查 unroll 后的第二个或更多位置。</p>
         </details>
         <div class="quiz-preview">
