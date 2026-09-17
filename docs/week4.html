@@ -65,8 +65,8 @@
             <p><code>in[i + offset]</code> 中，相邻线程的元素步长仍为 1；统一 offset 改变的是访问区间相对 cache line 或内存事务边界的起点。不同 offset 可能覆盖不同数量的事务，但缓存和设备实现也会影响结果，因此要在相同口径下测多个 offset，不能把所有非零 offset 当成同一种代价。</p>
           </section>
           <section class="knowledge-card">
-            <h3>4. Unrolling 不会重写地址关系</h3>
-            <p>展开可以改变每线程工作量、循环和调度开销，但同一访问指令中各线程的基础地址仍保留原来的 offset、stride 与对齐关系。它可能有益、无益或因寄存器压力而变慢；是否改善只能结合地址序列、occupancy 与实测判断。</p>
+            <h3>4. Unrolling 不保证改善合并访存</h3>
+            <p>循环展开本身不保证 coalescing。当前 <code>03_offset_unrolling.mu</code> 令 <code>i = tid * 4</code>：单个线程处理四个连续元素，但对每个标量 <code>k</code>，相邻线程访问的地址相隔 4 个元素，不再是标量 baseline 的 stride 1。编译器还可能改变或合并实际 load/store，因此必须重新分析生成的访问指令、内存事务和实测结果；不能仅凭 <code>#pragma unroll</code> 断言 offset 或合并访存问题已经改善。</p>
           </section>
         </div>
       </section>
@@ -154,7 +154,7 @@ if (x &lt; h &amp;&amp; y &lt; w) {
     out[y * h + x] = tile[threadIdx.x][threadIdx.y];
 }</code></pre>
         </div>
-        <p>所有线程都到达同步点，第二阶段才读取 tile。当前示例的 2048×2048 尺寸可被 32×32 tile 整除；推广到非整 tile 边界时，还要避免有效输出读取未初始化的 tile 元素。</p>
+        <p>所有线程都无条件到达同步点，第二阶段才读取 tile。当前成对的边界条件也能保护非完整 tile：通过输出检查的 <code>(x, y)</code> 读取 <code>tile[threadIdx.x][threadIdx.y]</code>，该位置正是交换线程坐标后、在对应输入检查下装入的元素。这个保证依赖同时保留两组互补 guard，并把 barrier 留在条件分支之外；若改动索引对应关系、block 形状、边界条件或让线程提前返回，就必须重新证明边界安全，必要时显式初始化 tile。</p>
         <a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week4/06_transpose_padded.mu">查看源码：06_transpose_padded.mu</a>
       </section>
 
