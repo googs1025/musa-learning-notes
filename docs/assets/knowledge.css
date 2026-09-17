@@ -270,6 +270,17 @@ details[open] summary { margin-bottom: 12px; }
   text-align: center;
 }
 .is-hidden { display: none !important; }
+.sr-only {
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  position: absolute;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
 
 table { width: 100%; margin: 24px 0; border-collapse: collapse; background: var(--surface); }
 th, td { padding: 11px 13px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
@@ -286,6 +297,10 @@ pre {
   -webkit-overflow-scrolling: touch;
 }
 pre code { padding: 0; color: inherit; background: transparent; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
 
 @media (max-width: 760px) {
   .site-nav {
@@ -304,7 +319,14 @@ pre code { padding: 0; color: inherit; background: transparent; }
   .article-nav { position: static; }
   .section-heading { margin-top: 46px; }
   .pager { flex-direction: column; }
-  pre, table {
+  pre {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    white-space: pre;
+    -webkit-overflow-scrolling: touch;
+  }
+  table {
     display: block;
     max-width: 100%;
     overflow-x: auto;

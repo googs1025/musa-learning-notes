@@ -31,10 +31,12 @@
       </div>
     </section>
 
-    <div class="search-box">
+    <div class="search-box" data-search-controls hidden>
       <label for="knowledge-search">搜索知识库</label>
       <input id="knowledge-search" type="search" placeholder="搜索：warp、stream、GEMM、MCCL" autocomplete="off" data-knowledge-search>
+      <p class="sr-only" role="status" aria-live="polite" data-search-status></p>
     </div>
+    <noscript><p class="callout">搜索功能需要启用 JavaScript；你仍可浏览下方全部内容。</p></noscript>
 
     <section id="weeks" aria-labelledby="weeks-title">
       <div class="section-heading">
