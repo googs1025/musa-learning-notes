@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="zh-CN" data-page-kind="week">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Week 2：理解 pageable 与 pinned 内存、CPU/GPU 计时、多 stream 流水线、event 依赖、Graph 重放和 callback 完成通知。">
+  <title>Week 2 · 并发与编排 | MUSA GPU 编程知识库</title>
+  <link rel="stylesheet" href="assets/knowledge.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="site-nav" aria-label="主导航">
+      <a class="brand" href="index.html">MUSA GPU 编程知识库</a>
+      <ul class="nav-links">
+        <li><a href="index.html#weeks">每周路径</a></li>
+        <li><a href="index.html#topics">知识专题</a></li>
+        <li><a href="quiz.html">知识自测</a></li>
+      </ul>
+    </nav>
+  </header>
+  <main class="page-shell article-layout">
+    <nav class="article-nav" aria-label="本页目录">
+      <p><strong>Week 2 · 并发与编排</strong></p>
+      <ul>
+        <li><a href="#goals">本周目标</a></li>
+        <li><a href="#memory">核心知识：内存与计时</a></li>
+        <li><a href="#streams">Stream、Event 与 Graph</a></li>
+        <li><a href="#code-points">关键代码</a></li>
+        <li><a href="#pitfalls">注意事项</a></li>
+        <li><a href="#questions">精选题目</a></li>
+      </ul>
+    </nav>
+    <article class="article-content">
+      <header>
+        <p class="tag">Week 2 · 并发与编排</p>
+        <h1>怎样让数据搬运与计算有序重叠？</h1>
+        <p>从单次 kernel 扩展到完整流水线：选择 host 内存，测量真实耗时，再用 stream、event 和 graph 表达任务顺序与重复执行。</p>
+        <p><a href="quiz.html">进入知识自测，选择 Week 2</a></p>
+      </header>
+
+      <section id="goals">
+        <h2>本周要回答的问题</h2>
+        <ul>
+          <li>pageable 与 pinned host memory 的数据传输路径有什么差别？</li>
+          <li>怎样区分 CPU 入队耗时、GPU kernel 时间和整条流水线的耗时？</li>
+          <li>哪些 chunk 可以独立推进，哪些跨 stream 的读写必须等待 event？</li>
+          <li>Graph 何时值得重放，callback 又能告诉 host 哪些完成信息？</li>
+        </ul>
+      </section>
+
+      <section id="memory">
+        <h2>核心知识</h2>
+        <div class="knowledge-grid">
+          <section class="knowledge-card">
+            <h3>1. Pageable 与 pinned</h3>
+            <p>普通 <code>malloc</code> 取得 pageable host memory。传输时驱动通常需要内部 pinned staging 区中转；<code>musaMallocHost</code> 或 <code>musaHostAlloc</code> 分配的 page-locked 内存更适合 DMA。它优化的是 H2D/D2H 路径，分配和占住物理页也有成本，应控制大小并复用。</p>
+          </section>
+          <section class="knowledge-card">
+            <h3>2. CPU wall-clock 要等工作完成</h3>
+            <p>只用 CPU 时钟包住 kernel launch，主要得到入队开销。把完成同步包含在计时区间，才能覆盖 GPU 工作；这个数字也包含 host 提交、等待与同步成本。多流流水线的端到端时间要等所有相关 stream 完成后再结束计时。</p>
+          </section>
+          <section class="knowledge-card">
+            <h3>3. GPU event 标记时间线</h3>
+            <p>在同一 stream 按 start event → kernel → stop event 入队，等 stop 完成后读取 elapsed，可测量这段 GPU 时间。event 放在 H2D 之前就会把传输也算进去；不同 stream 上没有依赖的两枚 event 不能直接当作有序区间。先 warm-up，再做多次统计。</p>
+          </section>
+          <section class="knowledge-card">
+            <h3>4. Unified memory 与 prefetch</h3>
+            <p><code>musaMallocManaged</code> 简化 host/device 指针使用，但数据驻留与迁移仍有成本。统一内存和 <code>musaMemPrefetchAsync</code> 的能力、迁移行为取决于平台、设备与 SDK；先检查支持情况和 API 返回值。本仓库示例会在 prefetch 不支持时跳过，每次 run 又会重新分配，第二轮不能直接称为同一批页的热启动。</p>
+          </section>
+        </div>
+        <p>继续阅读 <a href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week2/04_vector_add_unified.mu">统一内存与 prefetch 示例</a>，核对目标平台的行为。</p>
+      </section>
+
+      <section id="streams">
+        <h2>Stream、Event 与 Graph</h2>
+        <h3>同流 FIFO，跨流需要明确依赖</h3>
+        <p>同一 stream 内的操作按提交顺序推进。不同 stream 没有天然的完成顺序；独立任务在资源允许时可以重叠。默认流的隐式同步还取决于 legacy、non-blocking 或 per-thread 等实际配置，不能仅凭流数量判断并发。</p>
+        <h3>把 H2D → kernel → D2H 切成 chunk</h3>
+        <p><a href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week2/05_multi_stream.mu">多流示例</a>把输入切成四份：每个 chunk 的 <code>off=c*n</code> 指向独立范围，同一条 stream 依次搬入 A/B、运行 <code>vector_add</code>、搬回 C。其他 stream 可推进其他 chunk，形成搬运与计算流水线。pinned buffer、异步拷贝和合适的 stream 配置提供重叠条件，最终收益仍受 copy engine、kernel 资源占用与 chunk 粒度限制。</p>
+        <div class="callout">
+          <p>每个 chunk 内：H2D(A/B) → kernel → D2H(C)。不同 chunk 使用不重叠的数组范围；host 等所有相关 stream 完成后，才读取结果或复用 buffer。</p>
+        </div>
+        <h3>Event 连接生产者与消费者</h3>
+        <p><code>fill_A</code> 在 <code>s1</code> 写入数据后记录 <code>a_done</code>；<code>s2</code> 先等待该 event，再运行 <code>square_to_b</code>。<code>musaStreamWaitEvent</code> 为后续消费者操作建立设备端等待，host 可以继续提交其他任务。它只约束需要等待的工作，无需在这条依赖边上同步整个设备。</p>
+        <h3>Capture → Instantiate → Replay</h3>
+        <p>Graph capture 记录操作及其依赖，录制期间的 kernel 不实际计算。结束 capture 得到 <code>graph</code>，instantiate 得到可执行的 <code>exec</code>，之后每次 <code>musaGraphLaunch</code> 重放固定结构。示例将五个 <code>add_one</code> 录成一张图，观察重复提交的成本。</p>
+        <p>Graph 自身也有启动和构建成本。仓库记录的 AutoDL MTT、MUSA 3.1.0、每图五个小 kernel 实验中，Graph 曾慢于 direct launch；这只描述那组环境与工作负载。比较时应保持数据规模、操作数量和计时口径一致，说明是否包含构建成本，并记录设备、驱动、SDK 与重复测量结果。</p>
+        <h3>Callback 是 host 完成通知</h3>
+        <p><a href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week2/08_stream_callback.mu">callback 示例</a>在各 stream 的 kernel 后加入 <code>on_chunk_done</code>。运行时到达相应位置后执行 host 回调；跨 stream 的回调顺序可能不同于 chunk 提交顺序。回调中可投递 <code>chunk_id</code> 与状态，让主线程或 worker 处理后续工作。</p>
+        <p>按该示例及学习笔记记录的约束，callback 内不要调用 MUSA API 或再次 launch；保持通知轻量，避免重 CPU 工作或异常穿过 C 回调边界，具体限制以使用的 SDK 文档为准。示例的 <code>counter=4</code> 仅证明四次通知发生；判断成功还要检查 callback 的 <code>status</code>。</p>
+      </section>
+
+      <section id="code-points">
+        <h2>关键代码</h2>
+        <p>以下是阅读抓手，省略了部分准备、初始化与清理；完整资源生命周期和错误检查见各源文件。</p>
+        <h3>Pinned buffer 支撑异步传输</h3>
+        <p>依据示例注释，把同步 benchmark 改写成异步 H2D 片段，沿用 <code>h_pinned</code> 与 <code>d_dst</code>；假定 device buffer、stream 和输入均已准备好。原 benchmark 实际使用 <code>musaMallocHost</code> 加同步 <code>musaMemcpy</code>，没有直接测量多流重叠。</p>
+        <div class="code-card">
+          <header>02 · Pinned host memory 与异步 H2D（改写）</header>
+          <pre><code>float* h_pinned = nullptr;
+MUSA_CHECK(musaHostAlloc(&amp;h_pinned, bytes, 0));
+// 在 host 填充 h_pinned 后，提交传输。
+MUSA_CHECK(musaMemcpyAsync(d_dst, h_pinned, bytes,
+                          musaMemcpyHostToDevice, stream));
+MUSA_CHECK(musaStreamSynchronize(stream));
+MUSA_CHECK(musaFreeHost(h_pinned));</code></pre>
+        </div>
+        <p>这里的同步保证释放前传输完成。真正流水线应把等待放在需要读取或复用 buffer 的位置，避免每个 chunk 入队后立即阻塞。</p>
+        <a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week2/02_vector_add_pinned.mu">查看源码：02_vector_add_pinned.mu</a>
+
+        <h3>把计时点放在同一 stream</h3>
+        <p>将 timer 示例注释中的 event 流程展开，使用源码的 <code>vector_add</code> 与参数；假定 <code>t0</code>、<code>t1</code> 和 <code>stream</code> 已创建。完整示例以 <code>GpuTimer</code> 封装这些操作。</p>
+        <div class="code-card">
+          <header>03 · GPU event 包住 kernel（展开）</header>
+          <pre><code>MUSA_CHECK(musaEventRecord(t0, stream));
+vector_add&lt;&lt;&lt;blocksPerGrid, threadsPerBlock, 0, stream&gt;&gt;&gt;(
+    d_A, d_B, d_C, N);
+MUSA_CHECK(musaEventRecord(t1, stream));
+MUSA_CHECK(musaEventSynchronize(t1));
+float ms;
+MUSA_CHECK(musaEventElapsedTime(&amp;ms, t0, t1));</code></pre>
+        </div>
+        <a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week2/03_vector_add_timer.mu">查看源码：03_vector_add_timer.mu</a>
+
+        <h3>消费者只等待所需的数据</h3>
+        <p><code>a_done</code> 必须记录在生产者之后，消费者必须提交在 wait 之后。即使删掉 wait 后偶尔验证通过，也无法证明不存在跨流数据竞争。</p>
+        <div class="code-card">
+          <header>06 · Event 建立生产者—消费者依赖</header>
+          <pre><code>fill_A&lt;&lt;&lt;bpg, tpb, 0, s1&gt;&gt;&gt;(d_a, N);
+MUSA_CHECK(musaEventRecord(a_done, s1));
+MUSA_CHECK(musaStreamWaitEvent(s2, a_done, 0));
+square_to_b&lt;&lt;&lt;bpg, tpb, 0, s2&gt;&gt;&gt;(d_a, d_b, N);</code></pre>
+        </div>
+        <a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week2/06_stream_event_dep.mu">查看源码：06_stream_event_dep.mu</a>
+
+        <h3>先录制，再实例化和重放</h3>
+        <p>这段录制 <code>OPS_PER_STEP</code> 个操作。得到图之后，还需调用 <code>musaGraphInstantiate(&amp;exec, graph, nullptr, nullptr, 0)</code>，再循环 <code>musaGraphLaunch(exec, s)</code> 才会计算。</p>
+        <div class="code-card">
+          <header>07 · 捕获一组 add_one 操作</header>
+          <pre><code>MUSA_CHECK(musaStreamBeginCapture(s, musaStreamCaptureModeGlobal));
+for (int k = 0; k &lt; OPS_PER_STEP; ++k) {
+    add_one&lt;&lt;&lt;bpg, tpb, 0, s&gt;&gt;&gt;(d_x, N);
+}
+musaGraph_t graph;
+MUSA_CHECK(musaStreamEndCapture(s, &amp;graph));</code></pre>
+        </div>
+        <a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week2/07_musa_graph.mu">查看源码：07_musa_graph.mu</a>
+      </section>
+
+      <section id="pitfalls">
+        <h2>注意事项</h2>
+        <ul class="pitfall-list">
+          <li>Pageable buffer 配上 <code>musaMemcpyAsync</code>，仍可能发生内部中转或 host 阻塞。API 名字不能证明拷贝与 kernel 真正重叠。</li>
+          <li>没有同步的 CPU 计时容易只测到提交；event 计时必须确认目标 stream、计时边界和 stop 完成。多流总时间要覆盖全部相关工作。</li>
+          <li>在每个 chunk 后插入 <code>musaDeviceSynchronize()</code> 会等待更大范围的工作，破坏原本可重叠的流水线；局部依赖优先用 event 表达。</li>
+          <li>不同 stream 的 callback 不共享提交顺序。按编号消费结果时，应传递编号并由 host 排序，或为真正的执行依赖加入 event。</li>
+          <li>Graph 不会自动更快。记录 capture/instantiate 与 replay 的测量边界，保持 direct 与 graph 的 workload 一致，再实测比较。</li>
+          <li>统一内存与 prefetch 的支持和表现随平台、SDK 改变；不能把 API 可调用或一次正确输出当作性能收益已验证。</li>
+        </ul>
+      </section>
+
+      <section id="questions">
+        <h2>精选题目</h2>
+        <p>先说出判断依据，再展开核对。以下题目与完整题库保持一致。</p>
+        <details id="w2-q1">
+          <summary>Pinned memory 相比普通 pageable host memory，主要优化哪段？</summary>
+          <p>Pinned host memory 更利于 DMA，通常能提升 H2D/D2H 拷贝带宽。</p>
+          <p>它不是让 kernel 算得更快，而是优化主机和设备之间的数据搬运。</p>
+        </details>
+        <details id="w2-q4">
+          <summary>跨 stream 建立依赖时，更适合用什么机制？</summary>
+          <p>event 可以在一个 stream 记录完成点，在另一个 stream 等待它。</p>
+          <p>用 host sleep 猜时间不可靠，也会破坏调度。</p>
+        </details>
+        <details id="w2-q8">
+          <summary>跨多个 stream 的 callback 完成顺序能否当作提交顺序？</summary>
+          <p>不能。不同 stream 之间没有天然的完成顺序，callback 触发顺序可能和 chunk 提交顺序不同。</p>
+          <p>需要按编号处理时，应把 chunk_id 投递给主线程或显式建立 event 依赖。</p>
+        </details>
+        <details id="w2-q9">
+          <summary>为什么不能因为 CUDA Graph 理论上能减少 launch overhead，就直接断言 MUSA Graph 一定更快？</summary>
+          <p>Graph 的收益取决于 SDK、驱动实现、图中操作数量和 kernel 粒度，必须在相同 workload 和计时口径下实测。</p>
+          <p>API 能调用不等于优化收益已验证；小图的固定 graph 开销可能超过 direct launch。</p>
+        </details>
+        <div class="quiz-preview">
+          <h3>完整自测</h3>
+          <p>进入 <a href="quiz.html">知识自测</a>，选择 Week 2，继续检查内存传输、异步计时与依赖编排。</p>
+        </div>
+      </section>
+
+      <nav class="pager" aria-label="学习路径翻页">
+        <a href="week1.html" rel="prev">← 上一周：Week 1 · 执行模型</a>
+        <a href="week3.html" rel="next">下一周：Week 3 · 内存访问 →</a>
+      </nav>
+    </article>
+  </main>
+  <footer class="footer"><p>MUSA Learning Notes · 内容以官方文档和仓库实测为准</p></footer>
+</body>
+</html>
