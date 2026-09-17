@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="zh-CN" data-page-kind="week">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Week 5：理解 shared memory、constant memory、GEMM 分块复用与 muBLAS 公平对比。">
+  <title>Week 5 · 片上复用 | MUSA GPU 编程知识库</title>
+  <link rel="stylesheet" href="assets/knowledge.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="site-nav" aria-label="主导航">
+      <a class="brand" href="index.html">MUSA GPU 编程知识库</a>
+      <ul class="nav-links">
+        <li><a href="index.html#weeks">每周路径</a></li>
+        <li><a href="index.html#topics">知识专题</a></li>
+        <li><a href="quiz.html">知识自测</a></li>
+      </ul>
+    </nav>
+  </header>
+  <main class="page-shell article-layout">
+    <nav class="article-nav" aria-label="本页目录">
+      <p><strong>Week 5 · 片上复用</strong></p>
+      <ul>
+        <li><a href="#goals">本周目标</a></li>
+        <li><a href="#shared">Shared Memory</a></li>
+        <li><a href="#constant">Constant Memory</a></li>
+        <li><a href="#gemm">GEMM 分块复用</a></li>
+        <li><a href="#code-points">关键代码</a></li>
+        <li><a href="#pitfalls">注意事项</a></li>
+        <li><a href="#questions">精选题目</a></li>
+      </ul>
+    </nav>
+    <article class="article-content">
+      <header>
+        <p class="tag">Week 5 · 片上复用</p>
+        <h1>怎样用片上存储提高数据复用？</h1>
+        <p>先建立 shared memory 的作用域、生命周期与同步边界，再用 constant memory 处理广播式只读数据，最后把这些原则落到 tiled GEMM。</p>
+        <p><a href="quiz.html">进入知识自测，选择 Week 5</a></p>
+      </header>
+
+      <section id="goals">
+        <h2>本周要回答的问题</h2>
+        <ul>
+          <li>Shared memory 由谁共享、何时创建和释放，线程间交换数据为什么必须同步？</li>
+          <li>Constant memory 在怎样的读取模式下容易形成广播？</li>
+          <li>Naive GEMM 怎样把线程映射到输出元素，为什么 K 维分块能减少重复 global memory 读取？</li>
+          <li>边界 tile、两次 barrier、tile 资源占用和 muBLAS 对比应怎样处理？</li>
+        </ul>
+      </section>
+
+      <section id="shared">
+        <h2>核心知识</h2>
+        <div class="knowledge-grid">
+          <section class="knowledge-card">
+            <h3>1. Shared memory 属于一个 block</h3>
+            <p>每个 block 拥有独立的 shared-memory 实例，同一 block 的线程可以共同读写，不同 block 不能借它直接通信。静态声明的大小在编译期确定；动态 shared memory 由 kernel launch 的第三个参数指定。两者都随 block 建立，随 block 结束而失效。</p>
+          </section>
+          <section class="knowledge-card">
+            <h3>2. Barrier 划分生产与消费阶段</h3>
+            <p>一个线程读取其他线程写入的 shared 数据前，必须等所有生产者完成写入。<code>__syncthreads()</code> 是 block 级 barrier，因此参与该阶段的线程都要到达它；把 barrier 放进只有部分线程进入的分支，可能造成等待无法完成。边界线程可以装入零，但不能提前绕过集体同步。</p>
+          </section>
+        </div>
+        <div class="callout">
+          <p>Shared memory 的价值来自“先协同装载，再多次复用”。如果只搬一次、读一次，额外的装载与同步未必值得。</p>
+        </div>
+      </section>
+
+      <section id="constant">
+        <h2>Constant Memory：面向广播式只读访问</h2>
+        <p><code>__constant__</code> 数据由 host 复制到 device 符号，kernel 只能读取。它有专门 cache；当同一 warp 的多个线程读取同一地址时，读取容易以广播方式服务。Week 5 的五点 stencil 中，每个线程在同一次循环迭代读取同一个权重 <code>c_w[k + 2]</code>，正符合这种模式。</p>
+        <p>Constant memory 不是任意只读数组的自动加速开关。若相邻线程同时读取许多不同地址，广播优势会下降；容量、访问模式和实测结果都要一起检查。</p>
+      </section>
+
+      <section id="gemm">
+        <h2>GEMM：沿 K 维分块复用</h2>
+        <h3>Naive：一个线程计算一个输出元素</h3>
+        <p>对 row-major 的 <code>A[M×K]</code>、<code>B[K×N]</code> 和 <code>C[M×N]</code>，二维线程坐标分别映射到 <code>row</code> 与 <code>col</code>。线程遍历 K 维，将 <code>A[row*K+k]</code> 与 <code>B[k*N+col]</code> 累加到 <code>C[row*N+col]</code>。映射直接，但同一 block 内相邻输出会反复从 global memory 读取重叠的 A 行片段和 B 列片段。</p>
+        <h3>Tiled：装载一次，block 内重复使用</h3>
+        <p>Tiled GEMM 把 K 维切成宽度为 <code>TS</code> 的片段。每轮由整个 block 协同把一个 A tile 和一个 B tile 装入 shared memory，第一次 barrier 确保装载完成；随后每个线程从 shared 中做 <code>TS</code> 次乘加，第二次 barrier 确保所有读取结束，下一轮才可覆盖 tile。这样每个已装载元素可被 block 内多个线程复用。</p>
+        <h3>边界和资源决定可行性</h3>
+        <p>当 M、N 或 K 不是 <code>TS</code> 的整数倍时，最后一个 tile 不完整。装载时要分别检查 A 的 <code>row/aCol</code> 与 B 的 <code>bRow/col</code>，越界位置写零；最终写 C 也要检查 <code>row/col</code>。增大 tile 能提高潜在复用率，却也会增加每 block 的线程数和 shared-memory 用量，可能降低 occupancy，甚至超过启动限制。</p>
+        <h3>muBLAS 是测量基线，不是默认等价目标</h3>
+        <p>库实现可作为优化参照，但不能预设入门 tiled kernel 应与 muBLAS 等价。应在相同矩阵尺寸、dtype、输入、warm-up、同步、计时范围和误差检查下测量，再解释差距。仓库的 <a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week5/07_mublas_sgemm.mu">07_mublas_sgemm.mu</a> 是保守的调用骨架：必须先按本机 MUSA SDK 的官方接口补齐调用，才能产生有效基线。</p>
+      </section>
+
+      <section id="code-points">
+        <h2>关键代码</h2>
+        <p>以下是依据对应源文件整理的改编节选，突出存储、索引和同步关系；完整的分配、计时、检查与释放请查看源码。</p>
+
+        <h3>Shared allocation、装载与 barrier</h3>
+        <div class="code-card">
+          <header>01 · Shared basics（改编节选）</header>
+          <pre><code>__global__ void reverse_in_block(float* out) {
+    __shared__ float tile[256];
+    int t = threadIdx.x;
+
+    tile[t] = float(t);
+    __syncthreads();
+    out[t] = tile[255 - t];
+}
+
+// 动态 shared 的字节数由 launch 第三个参数给出：
+// dynamic_shared&lt;&lt;&lt;1, 256, 256 * sizeof(float)&gt;&gt;&gt;(out);</code></pre>
+        </div>
+        <p>每个线程先写自己的槽位，block 全体同步后再读取另一个线程写入的位置。静态与动态声明改变大小的确定方式，不改变 block 级作用域和生命周期。</p>
+        <a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week5/01_shared_basics.mu">查看源码：01_shared_basics.mu</a>
+
+        <h3>Constant 符号声明与 host 复制</h3>
+        <div class="code-card">
+          <header>04 · Constant stencil（改编节选）</header>
+          <pre><code>__constant__ float c_w[5];
+
+float weights[5] = {0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f};
+musaMemcpyToSymbol(c_w, weights, sizeof(weights));
+
+// kernel 内：同一轮 k 中，各线程读取相同的 c_w[k + 2]
+for (int k = -2; k &lt;= 2; ++k) {
+    value += in[i + k] * c_w[k + 2];
+}</code></pre>
+        </div>
+        <p>Host 使用符号名复制五个权重；kernel 对该符号只读，循环中的共同权重访问形成广播式模式。</p>
+        <a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week5/04_stencil_constant.mu">查看源码：04_stencil_constant.mu</a>
+
+        <h3>Naive GEMM 的行列映射与累加</h3>
+        <div class="code-card">
+          <header>05 · Naive GEMM（改编节选）</header>
+          <pre><code>int row = blockIdx.y * blockDim.y + threadIdx.y;
+int col = blockIdx.x * blockDim.x + threadIdx.x;
+if (row &lt; M &amp;&amp; col &lt; N) {
+    float sum = 0.0f;
+    for (int k = 0; k &lt; K; ++k) {
+        sum += A[row * K + k] * B[k * N + col];
+    }
+    C[row * N + col] = sum;
+}</code></pre>
+        </div>
+        <p>线程的 y/x 坐标映射到输出的 row/col；三个索引都按 row-major 展开。</p>
+        <a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week5/05_naive_gemm.mu">查看源码：05_naive_gemm.mu</a>
+
+        <h3>Tiled GEMM 的装载、计算与覆盖边界</h3>
+        <div class="code-card">
+          <header>06 · Tiled GEMM（改编节选）</header>
+          <pre><code>for (int t = 0; t &lt; (K + TS - 1) / TS; ++t) {
+    int aCol = t * TS + threadIdx.x;
+    int bRow = t * TS + threadIdx.y;
+    tileA[threadIdx.y][threadIdx.x] =
+        (row &lt; M &amp;&amp; aCol &lt; K) ? A[row * K + aCol] : 0.0f;
+    tileB[threadIdx.y][threadIdx.x] =
+        (bRow &lt; K &amp;&amp; col &lt; N) ? B[bRow * N + col] : 0.0f;
+
+    __syncthreads();
+    for (int k = 0; k &lt; TS; ++k)
+        sum += tileA[threadIdx.y][k] * tileB[k][threadIdx.x];
+    __syncthreads();
+}
+if (row &lt; M &amp;&amp; col &lt; N) C[row * N + col] = sum;</code></pre>
+        </div>
+        <p>补零让不完整 K tile 仍可执行统一的内积循环；所有线程无条件经过两次 barrier，最终写回再由输出边界保护。</p>
+        <a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week5/06_tiled_gemm.mu">查看源码：06_tiled_gemm.mu</a>
+      </section>
+
+      <section id="pitfalls">
+        <h2>注意事项</h2>
+        <ul class="pitfall-list">
+          <li>不要在 shared-memory 写入者全部完成前读取数据；生产和消费阶段之间需要正确的 block 级 barrier。</li>
+          <li>不要把 <code>__syncthreads()</code> 放进只有部分线程进入的分支；divergent barrier 可能让 block 无法继续。</li>
+          <li>不要假设 M、N、K 都能整除 tile size；A/B 装载和 C 写回都要有对应的边界保护。</li>
+          <li>不要假设 tile 越大越快；同时检查线程数、shared-memory 容量、寄存器压力、occupancy 与实测时间。</li>
+          <li>不要用不同输入、误差容限或计时范围比较自写 GEMM 与 muBLAS；统一 dtype、尺寸、warm-up、同步和验证口径。</li>
+        </ul>
+      </section>
+
+      <section id="questions">
+        <h2>精选题目</h2>
+        <p>先独立作答，再展开核对。以下问题、答案与易错点逐字取自完整题库。</p>
+        <details id="w5-q1">
+          <summary>Tiled GEMM 使用 shared memory 的核心收益是什么？</summary>
+          <p>一个 block 协同加载 A/B tile 到 shared memory，tile 内元素被多个线程重复使用。</p>
+          <p>shared memory 作用域是 block，不能跨 block 共享。</p>
+        </details>
+        <details id="w5-q2">
+          <summary>Tiled GEMM 中两次 <code>__syncthreads()</code> 分别保护什么？</summary>
+          <p>第一次等所有线程把 tile 装进 shared；第二次等本轮计算读完 shared，再允许下一轮覆盖 tile。</p>
+          <p>漏掉任意一个同步点都可能产生数据竞态和偶发错误。</p>
+        </details>
+        <details id="w5-q3">
+          <summary>Constant memory 什么时候最容易发挥优势？</summary>
+          <p>constant memory 有专门 cache，适合同一地址广播式读取。</p>
+          <p>每个线程读不同地址时，优势会明显下降。</p>
+        </details>
+        <details id="w5-q9">
+          <summary>为什么要把自写 GEMM 和 muBLAS SGEMM 放在相同输入、误差检查和计时口径下比较？</summary>
+          <p>muBLAS 提供库级基线，比较时必须统一矩阵尺寸、dtype、warm-up、同步和计时范围。</p>
+          <p>入门 tiled GEMM 接近库性能不是默认目标，先保证正确性和解释性能差异。</p>
+        </details>
+        <div class="quiz-preview">
+          <h3>完整自测</h3>
+          <p>进入 <a href="quiz.html">知识自测</a>，选择 Week 5，继续检查片上存储、同步、边界 tile 与 GEMM 对比。</p>
+        </div>
+      </section>
+
+      <section id="resources">
+        <h2>延伸入口</h2>
+        <ul>
+          <li><a href="https://github.com/googs1025/musa-learning-notes/tree/main/code/week5/">本周源码目录</a></li>
+          <li><a href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week5/exercises.md">本周练习</a></li>
+        </ul>
+      </section>
+
+      <nav class="pager" aria-label="学习路径翻页">
+        <a href="week4.html" rel="prev">← 上一周：Week 4 · 访存性能</a>
+        <a href="week6.html" rel="next">下一周：Week 6 · 工程系统 →</a>
+      </nav>
+    </article>
+  </main>
+  <footer class="footer"><p>MUSA Learning Notes · 内容以官方文档和仓库实测为准</p></footer>
+</body>
+</html>
