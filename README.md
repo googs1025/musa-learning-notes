@@ -55,12 +55,13 @@ cmake --build build -j
 ### 3. 先掌握这些概念
 
 - [`docs/concepts.md`](docs/concepts.md)：SIMT、SM、grid/block/thread、内存层次、同步。
+- [`docs/gpu-hierarchy.md`](docs/gpu-hierarchy.md)：MUSA 的 MPC / MPX / MP 层级、CUDA 近似对照与 kernel 执行路径。
 - [`docs/musa-runtime-api.md`](docs/musa-runtime-api.md)：Runtime API 速查。
 - [`docs/musa-cuda-pitfalls.md`](docs/musa-cuda-pitfalls.md)：最容易写错的索引、内存、同步和 warp 问题。
 - [`docs/cuda-vs-musa.md`](docs/cuda-vs-musa.md)：CUDA 迁移到 MUSA 时哪些地方不能机械替换。
 - [`notes/musa-sdk-5.2.0.md`](notes/musa-sdk-5.2.0.md)：MUSA SDK 5.2.0 官方编程指南的重点摘录。
 
-## 各周真正要抓住的重点
+## 各周重点
 
 ### Week 1：建立执行模型
 
@@ -76,7 +77,7 @@ cmake --build build -j
 
 ### Week 4：把访存当成性能主线
 
-重点不是背“合并访存”四个字，而是观察相邻线程访问的地址是否连续、offset 如何改变事务数量、AoS/SoA 如何改变布局，以及 transpose 中 shared memory bank conflict 如何出现。
+观察相邻线程访问的地址是否连续、offset 如何改变事务数量、AoS/SoA 如何改变布局，以及 transpose 中 shared memory bank conflict 如何出现。这些现象比背下“合并访存”更有用。
 
 ### Week 5：用片上存储提高数据复用
 
@@ -84,7 +85,7 @@ cmake --build build -j
 
 ### Week 6：从单卡 kernel 进入工程系统
 
-重点是错误定位、调试器、Error Dump、多卡中的 rank/device/stream/communicator 关系，以及 torch_musa 自定义算子的边界。这里更关注“如何验证和排错”，而不只是 API 调用。
+这一周练习错误定位、调试器、Error Dump、多卡中的 rank/device/stream/communicator 关系，以及 torch_musa 自定义算子的边界。学习时要记录验证和排错过程，API 调用只是其中一部分。
 
 ## 练习与扩展材料
 

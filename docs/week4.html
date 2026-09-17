@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="zh-CN" data-page-kind="week">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Week 4：用 effective bandwidth、coalescing、AoS/SoA、transpose、shared tile 与 padding 分析 MUSA GPU 访存性能。">
+  <title>Week 4 · 访存性能 | MUSA GPU 编程知识库</title>
+  <link rel="stylesheet" href="assets/knowledge.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="site-nav" aria-label="主导航">
+      <a class="brand" href="index.html">MUSA GPU 编程知识库</a>
+      <ul class="nav-links">
+        <li><a href="index.html#weeks">每周路径</a></li>
+        <li><a href="index.html#topics">知识专题</a></li>
+        <li><a href="quiz.html">知识自测</a></li>
+      </ul>
+    </nav>
+  </header>
+  <main class="page-shell article-layout">
+    <nav class="article-nav" aria-label="本页目录">
+      <p><strong>Week 4 · 访存性能</strong></p>
+      <ul>
+        <li><a href="#goals">本周目标</a></li>
+        <li><a href="#memory-access">带宽与合并访存</a></li>
+        <li><a href="#layouts">AoS 与 SoA</a></li>
+        <li><a href="#transpose">转置与 Shared Tile</a></li>
+        <li><a href="#code-points">关键代码</a></li>
+        <li><a href="#pitfalls">注意事项</a></li>
+        <li><a href="#questions">精选题目</a></li>
+      </ul>
+    </nav>
+    <article class="article-content">
+      <header>
+        <p class="tag">Week 4 · 访存性能</p>
+        <h1>为什么结果正确但带宽利用率很低？</h1>
+        <p>从相邻线程的地址序列出发，依次检查有效带宽、起始对齐、字段布局和转置的读写方向，再用 shared tile 与 padding 重排访问。</p>
+        <p><a href="quiz.html">进入知识自测，选择 Week 4</a></p>
+      </header>
+
+      <section id="goals">
+        <h2>本周要回答的问题</h2>
+        <ul>
+          <li>怎样把 kernel 时间换算成 effective bandwidth，并保持比较口径一致？</li>
+          <li>连续访问、合并访存与起始地址对齐是什么关系，offset 实验改变了什么？</li>
+          <li>为什么 unrolling 不能修复地址模式，AoS 与 SoA 又怎样改变相邻线程的地址序列？</li>
+          <li>转置为何必须分别检查 global read 和 write，shared tile 与 padding 分别解决什么问题？</li>
+        </ul>
+      </section>
+
+      <section id="memory-access">
+        <h2>核心知识</h2>
+        <div class="knowledge-grid">
+          <section class="knowledge-card">
+            <h3>1. 时间要换算成有效带宽</h3>
+            <p><strong>Effective bandwidth</strong> 用约定的逻辑读写字节数除以 kernel 时间。SAXPY 的每个元素逻辑上读 <code>x</code>、读旧 <code>y</code>、写新 <code>y</code>，示例按 <code>3 × N × sizeof(float) / time</code> 估算。它是跨实验的统一指标，不等同于实际 DRAM 流量，也不能脱离数据规模、设备、SDK、预热与计时边界宣称硬件峰值。</p>
+          </section>
+          <section class="knowledge-card">
+            <h3>2. Coalescing 看一组线程的地址</h3>
+            <p>判断合并访存要观察同一条 load/store 上相邻线程的地址集合。访问 <code>a[i]</code>、<code>a[i+1]</code>、<code>a[i+2]</code> 通常更容易用较少的 global-memory 事务完成；只看单个线程的代码或数学工作量，无法说明吞吐。</p>
+          </section>
+          <section class="knowledge-card">
+            <h3>3. Offset 改起点，不改 stride</h3>
+            <p><code>in[i + offset]</code> 中，相邻线程的元素步长仍为 1；统一 offset 改变的是访问区间相对 cache line 或内存事务边界的起点。不同 offset 可能覆盖不同数量的事务，但缓存和设备实现也会影响结果，因此要在相同口径下测多个 offset，不能把所有非零 offset 当成同一种代价。</p>
+          </section>
+          <section class="knowledge-card">
+            <h3>4. Unrolling 不保证改善合并访存</h3>
+            <p>循环展开本身不保证 coalescing。当前 <code>03_offset_unrolling.mu</code> 令 <code>i = tid * 4</code>：单个线程处理四个连续元素，但对每个标量 <code>k</code>，相邻线程访问的地址相隔 4 个元素，不再是标量 baseline 的 stride 1。编译器还可能改变或合并实际 load/store，因此必须重新分析生成的访问指令、内存事务和实测结果；不能仅凭 <code>#pragma unroll</code> 断言 offset 或合并访存问题已经改善。</p>
+          </section>
+        </div>
+      </section>
+
+      <section id="layouts">
+        <h2>布局决定字段地址序列</h2>
+        <p>AoS 把一个对象的 <code>x/y/z/w</code> 交错放在一起。当前 <code>Particle</code> 是四个 <code>float</code>，因此相邻线程读取 <code>p[i].x</code> 时地址相隔 16 字节；读取 <code>p[i].y</code> 也是另一条 16 字节步长的序列。只计算 <code>x+y</code> 时，<code>z/w</code> 不参与运算，却可能随内存事务或 cache line 一同搬运。</p>
+        <p>SoA 把字段拆成数组，相邻线程分别读取连续的 <code>x[i]</code> 和连续的 <code>y[i]</code>，每条字段访问的地址间隔为 4 字节，更容易合并。这个例子解释的是访问模式，而不是宣称 SoA 普遍更快：若算法总是消费对象的全部字段，AoS 的局部性、转换成本、缓存、对齐与具体设备都可能改变结论。</p>
+        <div class="callout">
+          <p>比较布局时先画出“同一条指令上线程 0、1、2……访问哪个地址”，再核对两版工作量、初始化、验证和计时次数是否一致。</p>
+        </div>
+      </section>
+
+      <section id="transpose">
+        <h2>转置要同时检查读和写</h2>
+        <h3>Naive：读连续，写跨步</h3>
+        <p>输入为 row-major 的 <code>H × W</code> 矩阵时，线程以 <code>in[y * w + x]</code> 读取；固定 <code>y</code>、增加 <code>x</code> 会访问相邻元素。转置输出为 <code>W × H</code>，源码写 <code>out[x * h + y]</code>；对同一批沿 x 相邻的线程，写地址相隔 <code>h</code> 个元素。结果正确只证明索引完成了转置，不能证明写事务高效。</p>
+        <h3>Shared tile：把方向变化放在片上</h3>
+        <p>Tiled 版本先让线程按连续方向把输入写入 <code>tile[ty][tx]</code>，全 block 同步后交换 block 坐标和 tile 下标，再让全局输出写入沿线程 x 方向保持连续。shared memory 承担 tile 内的转置，<code>__syncthreads()</code> 建立装载阶段与读取阶段之间的可见性。</p>
+        <h3>Padding：改变 shared-memory 行跨度</h3>
+        <p><code>tile[TILE][TILE + 1]</code> 的额外一列不改变矩阵逻辑，而是改变 shared-memory 相邻行的地址跨度。它可在目标 bank 映射下错开转置列访问，降低多个线程落到同一 bank 的概率。bank 数量、映射、同步成本、shared-memory 占用和边界处理均依赖实现，必须在目标设备上验证，不能因为用了 shared memory 或 padding 就保证加速。</p>
+      </section>
+
+      <section id="code-points">
+        <h2>关键代码</h2>
+        <p>以下均为依据源文件整理的改编节选，只保留本节讨论的索引和同步；完整启动、计时、错误检查和资源释放请查看对应源码。</p>
+
+        <h3>Offset 保持连续步长，但移动访问起点</h3>
+        <div class="code-card">
+          <header>02 · Offset access（改编节选）</header>
+          <pre><code>__global__ void offset_copy(const float* in, float* out,
+                            int n, int offset) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i &lt; n) {
+        out[i] = in[i + offset];
+    }
+}
+
+// 源码为输入多分配 64 个 float；测试的最大 offset 是 31。</code></pre>
+        </div>
+        <p>边界条件保护实际输出下标 <code>i</code>；输入分配必须同时容纳 <code>i + offset</code>。源码用 <code>N + 64</code> 的输入分配覆盖其 offset 集合。</p>
+        <a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week4/02_offset_access.mu">查看源码：02_offset_access.mu</a>
+
+        <h3>AoS 与 SoA 的字段 load</h3>
+        <div class="code-card">
+          <header>04 · 两种字段布局（改编节选）</header>
+          <pre><code>struct Particle { float x, y, z, w; };
+
+// AoS：线程 i 与 i+1 的同一字段相隔 sizeof(Particle)。
+if (i &lt; n) out[i] = p[i].x + p[i].y;
+
+// SoA：每个字段数组中，线程 i 与 i+1 读取相邻 float。
+if (i &lt; n) out[i] = x[i] + y[i];</code></pre>
+        </div>
+        <p>两段都计算 <code>x+y</code>；差别是字段在内存中的排列及一组线程产生的地址序列。</p>
+        <a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week4/04_aos_vs_soa.mu">查看源码：04_aos_vs_soa.mu</a>
+
+        <h3>Row-major 转置的输入与输出索引</h3>
+        <div class="code-card">
+          <header>05 · Naive transpose（改编节选）</header>
+          <pre><code>int x = blockIdx.x * blockDim.x + threadIdx.x;
+int y = blockIdx.y * blockDim.y + threadIdx.y;
+if (x &lt; w &amp;&amp; y &lt; h) {
+    out[x * h + y] = in[y * w + x];
+}</code></pre>
+        </div>
+        <p><code>in[y*w+x]</code> 按输入行连续读取；<code>out[x*h+y]</code> 使用输出行宽 <code>h</code>，对沿 x 相邻的线程形成跨步写。</p>
+        <a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week4/05_transpose_naive.mu">查看源码：05_transpose_naive.mu</a>
+
+        <h3>Padded tile 分隔装载与转置写回</h3>
+        <div class="code-card">
+          <header>06 · Shared padded transpose（改编节选）</header>
+          <pre><code>__shared__ float tile[TILE][TILE + 1];
+
+int x = blockIdx.x * TILE + threadIdx.x;
+int y = blockIdx.y * TILE + threadIdx.y;
+if (x &lt; w &amp;&amp; y &lt; h) {
+    tile[threadIdx.y][threadIdx.x] = in[y * w + x];
+}
+__syncthreads();
+
+x = blockIdx.y * TILE + threadIdx.x;
+y = blockIdx.x * TILE + threadIdx.y;
+if (x &lt; h &amp;&amp; y &lt; w) {
+    out[y * h + x] = tile[threadIdx.x][threadIdx.y];
+}</code></pre>
+        </div>
+        <p>所有线程都无条件到达同步点，第二阶段才读取 tile。当前成对的边界条件也能保护非完整 tile：通过输出检查的 <code>(x, y)</code> 读取 <code>tile[threadIdx.x][threadIdx.y]</code>，该位置正是交换线程坐标后、在对应输入检查下装入的元素。这个保证依赖同时保留两组互补 guard，并把 barrier 留在条件分支之外；若改动索引对应关系、block 形状、边界条件或让线程提前返回，就必须重新证明边界安全，必要时显式初始化 tile。</p>
+        <a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week4/06_transpose_padded.mu">查看源码：06_transpose_padded.mu</a>
+      </section>
+
+      <section id="pitfalls">
+        <h2>注意事项</h2>
+        <ul class="pitfall-list">
+          <li>只报告毫秒数不能说明带宽利用率；同时说明逻辑读写字节数、effective bandwidth、数据规模、计时范围、设备与 SDK。</li>
+          <li>不要把所有 offset 一视同仁，也不要把 offset 误说成 stride；逐个测量起点相对事务边界的变化，并保持其他条件一致。</li>
+          <li>不要声称 unrolling 会修复 coalescing；展开改变每线程工作量，却不一定恢复地址对齐或相邻线程的地址关系。</li>
+          <li>转置不能只优化或描述读取一侧；分别列出 global read、global write 和 shared tile 的地址方向。</li>
+          <li>shared memory 并非自动无冲突或自动更快；检查 bank mapping、padding、同步、容量、occupancy 与边界 tile，并以实测收尾。</li>
+        </ul>
+      </section>
+
+      <section id="questions">
+        <h2>精选题目</h2>
+        <p>先独立作答，再展开核对。以下问题、答案与易错点逐字取自完整题库。</p>
+        <details id="w4-q1">
+          <summary>Coalesced access 主要影响什么？</summary>
+          <p>相邻线程访问连续地址时，硬件更容易合并内存事务，提高 global memory 吞吐。</p>
+          <p>数学计算少的 kernel 往往先被访存模式限制。</p>
+        </details>
+        <details id="w4-q2">
+          <summary>Shared memory transpose 为什么常用 padding？</summary>
+          <p>padding 改变 shared memory 行跨度，降低多个线程访问同一 bank 的概率。</p>
+          <p>padding 多一个元素看似浪费一点空间，但常能换来更少 bank conflict。</p>
+        </details>
+        <details id="w4-q3">
+          <summary>AoS vs SoA 主要是在比较什么？</summary>
+          <p>AoS/SoA 会改变线程读取字段时的地址分布，从而影响 coalescing。</p>
+          <p>面向 CPU 直觉舒服的数据布局，不一定适合 GPU。</p>
+        </details>
+        <details id="w4-q8">
+          <summary>为什么 unrolling 不能保证修复 offset 带来的访存损失？</summary>
+          <p>展开可以减少循环或 launch 开销，但错误的访问布局仍可能限制带宽。</p>
+          <p>优化要拆分变量，分别观察访存模式、寄存器、occupancy 和端到端时间。</p>
+        </details>
+        <div class="quiz-preview">
+          <h3>完整自测</h3>
+          <p>进入 <a href="quiz.html">知识自测</a>，选择 Week 4，继续检查有效带宽、offset、布局、转置与 bank conflict。</p>
+        </div>
+      </section>
+
+      <section id="resources">
+        <h2>延伸入口</h2>
+        <ul>
+          <li><a href="https://github.com/googs1025/musa-learning-notes/tree/main/code/week4/">本周源码目录</a></li>
+          <li><a href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week4/exercises.md">本周练习</a></li>
+        </ul>
+      </section>
+
+      <nav class="pager" aria-label="学习路径翻页">
+        <a href="week3.html" rel="prev">← 上一周：Week 3 · 线程协作</a>
+        <a href="week5.html" rel="next">下一周：Week 5 · 片上复用 →</a>
+      </nav>
+    </article>
+  </main>
+  <footer class="footer"><p>MUSA Learning Notes · 内容以官方文档和仓库实测为准</p></footer>
+</body>
+</html>

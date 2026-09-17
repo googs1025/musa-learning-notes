@@ -1,6 +1,6 @@
 # MUSA / CUDA 高频混淆点
 
-这份清单不是 API 大全，而是写 MUSA / CUDA kernel 时最容易把概念混在一起的地方。建议和 `code/week*/learning-notes.md` 对照读。
+这份清单汇总了写 MUSA / CUDA kernel 时容易混淆的概念，建议和 `code/week*/learning-notes.md` 对照读。
 
 ## 速查索引
 
@@ -51,7 +51,7 @@
 
 ## 5. 访存和性能
 
-- GPU kernel 常常不是算术慢，而是 global memory 访问慢。
+- 很多 GPU kernel 的瓶颈在 global memory 访问，不在算术运算。
 - 相邻线程访问相邻地址通常更容易合并访存；stride、offset、AoS 都可能破坏吞吐。
 - shared memory 只有在数据会被复用时才值得搬进去。
 - shared memory 也会有 bank conflict；padding 是常见处理方式。

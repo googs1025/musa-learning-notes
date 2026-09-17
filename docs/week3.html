@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="zh-CN" data-page-kind="week">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Week 3：理解 warp divergence、shared-memory reduction、unrolling、shuffle 和二维线程到 row-major 数据的映射。">
+  <title>Week 3 · 线程协作 | MUSA GPU 编程知识库</title>
+  <link rel="stylesheet" href="assets/knowledge.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="site-nav" aria-label="主导航">
+      <a class="brand" href="index.html">MUSA GPU 编程知识库</a>
+      <ul class="nav-links">
+        <li><a href="index.html#weeks">每周路径</a></li>
+        <li><a href="index.html#topics">知识专题</a></li>
+        <li><a href="quiz.html">知识自测</a></li>
+      </ul>
+    </nav>
+  </header>
+  <main class="page-shell article-layout">
+    <nav class="article-nav" aria-label="本页目录">
+      <p><strong>Week 3 · 线程协作</strong></p>
+      <ul>
+        <li><a href="#goals">本周目标</a></li>
+        <li><a href="#warps">Warp 与分支</a></li>
+        <li><a href="#reduction">归约与 Shuffle</a></li>
+        <li><a href="#mapping">二维映射</a></li>
+        <li><a href="#code-points">关键代码</a></li>
+        <li><a href="#pitfalls">注意事项</a></li>
+        <li><a href="#questions">精选题目</a></li>
+      </ul>
+    </nav>
+    <article class="article-content">
+      <header>
+        <p class="tag">Week 3 · 线程协作</p>
+        <h1>线程怎样协作完成一次归约？</h1>
+        <p>从 warp 内分支开始，沿 shared memory、同步、unrolling 和 shuffle 逐步改写 reduce，再把线程坐标映射到二维 row-major 数据。</p>
+        <p><a href="quiz.html">进入知识自测，选择 Week 3</a></p>
+      </header>
+
+      <section id="goals">
+        <h2>本周要回答的问题</h2>
+        <ul>
+          <li>为什么同一个 warp/group 内线程走不同路径会降低有效并行度？</li>
+          <li>一个 block 如何在 shared memory 中归约，block 之间的 partial sum 又由谁汇总？</li>
+          <li>每线程加载两个元素和 warp shuffle 分别减少了哪些工作，又引入了哪些边界条件？</li>
+          <li>二维 grid/block 的 <code>(x, y)</code> 如何对应 row-major 矩阵中的线性位置？</li>
+        </ul>
+      </section>
+
+      <section id="warps">
+        <h2>核心知识</h2>
+        <div class="knowledge-grid">
+          <section class="knowledge-card">
+            <h3>1. Divergence 看的是同组路径</h3>
+            <p>分支数量本身不是代价。若同一 warp/group 内各 lane 对条件的判断不同，硬件需要分段执行路径并暂时屏蔽不匹配的 lane，有效并行度会下降；若整组线程选择一致，即使存在 <code>if</code>，也不会因这个条件产生分支分化。</p>
+          </section>
+          <section class="knowledge-card">
+            <h3>2. 对照实验也要看工作量</h3>
+            <p><code>01_warp_divergence.mu</code> 的 coherent 条件按 <code>blockIdx.x</code> 分组，divergent 条件按 <code>threadIdx.x</code> 奇偶交替。但两条 divergent 路径分别使用乘法和除法，因此测得的 slowdown 同时包含控制流与算术差异，不能当作纯 divergence 成本。</p>
+          </section>
+          <section class="knowledge-card">
+            <h3>3. Warp 参数必须面向目标确认</h3>
+            <p>CUDA 示例常把 32-thread warp 和相应 mask 写进代码；这些不是跨平台常量。MUSA 的实际 warp/group 宽度、mask 语义和兼容 intrinsic 行为应以目标设备、当前 SDK 与实测为准。仓库示例的注释和常数是阅读起点，不是对所有 MUSA 目标的保证。</p>
+          </section>
+        </div>
+      </section>
+
+      <section id="reduction">
+        <h2>从 block 归约到 shuffle</h2>
+        <h3>Shared-memory tree reduction</h3>
+        <p>naive 版本先让每个线程把一个输入元素搬进 shared memory，越界位置填 0；随后每轮把后半段加到前半段，并在轮次之间调用 <code>__syncthreads()</code>。这个 barrier 只覆盖同一个 block，所以每个 block 最终只能安全地产生一个 partial sum。当前折半循环还要求 block size 是 2 的幂；任意 <code>N</code> 能通过尾段补 0 处理，不代表任意 block size 都适用于这棵归约树。</p>
+        <p>跨 block 的最终汇总必须进入新阶段：教学示例把 partial 数组拷回 host 后串行相加，也可以再启动第二个 reduction kernel。不能用一次 block barrier 假装同步整个 grid。</p>
+
+        <h3>Unroll2：每线程先合并两个元素</h3>
+        <p><a href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week3/03_reduce_unrolling.mu">unrolling 示例</a>让一个 block 覆盖 <code>2 * blockDim.x</code> 个输入元素。每个线程先在寄存器中合并 <code>in[i]</code> 与 <code>in[i + blockDim.x]</code>，再进入相同的 shared-memory tree；这样通常减少 block 数和部分调度、循环与 global-memory 中间工作，但性能仍需在相同计时口径下实测。</p>
+        <div class="callout">
+          <p>尾段不能只检查第一个位置：两次加载都要独立判断边界。对任意 <code>N</code>，越界元素应贡献 0 或不参与访问。</p>
+        </div>
+
+        <h3>Shuffle：寄存器交换有明确范围</h3>
+        <p>shuffle 让同一个 warp/group 内的 lane 直接交换寄存器值，可省去这一级 shared memory 与 block-wide barrier。它不能跨 warp 或跨 block；仓库实现仍把各 warp 的和写入 shared memory，执行一次 <code>__syncthreads()</code>，再由第一个 warp 完成第二级归约。</p>
+        <p>当前仓库的 <a href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week3/05_nested_hello.mu">nested hello 示例</a>也要按源码理解：它由 host 启动 parent、等待完成，再启动 child，是 host 编排的两阶段 kernel 调度，并非 kernel 内再次 launch kernel 的 device-side dynamic parallelism。</p>
+      </section>
+
+      <section id="mapping">
+        <h2>二维线程与 row-major 映射</h2>
+        <p>二维 block/grid 只是线程组织方式。线程用 x 维定位列、y 维定位行：<code>x = blockIdx.x * blockDim.x + threadIdx.x</code>，<code>y = blockIdx.y * blockDim.y + threadIdx.y</code>。row-major 矩阵中，元素地址是 <code>y * width + x</code>。</p>
+        <p>仓库的矩阵示例让每个有效线程读取一个 <code>m[y * width + x]</code>，并用 <code>atomicAdd(&amp;rows[y], ...)</code> 累加对应行。多个 x 坐标会竞争更新同一行，atomic 保证更新正确但可能形成竞争；二维 launch 不意味着数据只能是二维，一维线程布局同样可以通过除法和取模恢复坐标。</p>
+      </section>
+
+      <section id="code-points">
+        <h2>关键代码</h2>
+        <p>以下均为源文件的缩略节选，只保留本节讨论的计算；完整边界、启动、计时、错误检查和资源释放请查看对应源码。</p>
+
+        <h3>用条件位置构造 coherent / divergent 对照</h3>
+        <div class="code-card">
+          <header>01 · 分支条件对照（改编节选）</header>
+          <pre><code>if (mode == 0) {
+    if (blockIdx.x &amp; 1) x = x * 1.0001f + 1.0f;
+    else x = x * 1.0001f + 1.0f;
+} else {
+    if (threadIdx.x &amp; 1) x = x * 1.0001f + 1.0f;
+    else x = x / 1.0001f - 1.0f;
+}</code></pre>
+        </div>
+        <p>前者在一个 block 内条件一致；后者让相邻线程交替选择路径。两条 divergent 路径的算术不同，所以这里只能作为综合对照。</p>
+        <a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week3/01_warp_divergence.mu">查看源码：01_warp_divergence.mu</a>
+
+        <h3>每轮同步的 shared-memory tree</h3>
+        <div class="code-card">
+          <header>02 · Block 内归约（原码节选）</header>
+          <pre><code>s[tid] = (i &lt; n) ? in[i] : 0.0f;
+__syncthreads();
+for (int stride = blockDim.x / 2; stride &gt; 0; stride &gt;&gt;= 1) {
+    if (tid &lt; stride) s[tid] += s[tid + stride];
+    __syncthreads();
+}
+if (tid == 0) partial[blockIdx.x] = s[0];</code></pre>
+        </div>
+        <p>第一次同步保护 shared load；循环中的同步保证下一轮读取上一轮已经写完的值。这里只得到 block partial。</p>
+        <a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week3/02_reduce_naive.mu">查看源码：02_reduce_naive.mu</a>
+
+        <h3>先做组内 shuffle，再合并各组结果</h3>
+        <div class="code-card">
+          <header>04 · Shuffle 归约（改编的结构伪代码）</header>
+          <pre><code>warp_reduce_sum(v, mask) {
+    // mask 的类型和值必须由目标 MUSA SDK 与设备确认。
+    for (int offset = warpSize / 2; offset &gt; 0; offset &gt;&gt;= 1) {
+        v += __shfl_down_sync(mask, v, offset);
+    }
+    return v;
+}
+
+v = warp_reduce_sum(v, mask);
+int lane = tid % warpSize;
+int warp = tid / warpSize;
+if (lane == 0) warp_sums[warp] = v;
+__syncthreads();
+// warp_sums 的第二阶段归约另行处理，此处省略。</code></pre>
+        </div>
+        <p>这段结构伪代码只保留源文件的数据流；<code>mask</code> 是无类型、无取值的形参占位，必须从目标 MUSA SDK 与设备能力中确认。调用名沿用源码符号，也不代表跨目标可直接使用。链接中的当前源码仍含 CUDA 派生的硬编码 mask，使用前必须审计其 mask、函数签名和 group 宽度，不能从 CUDA 32-lane 习惯反推。</p>
+        <a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week3/04_reduce_shfl.mu">查看源码：04_reduce_shfl.mu</a>
+
+        <h3>从二维线程坐标得到 row-major 地址</h3>
+        <div class="code-card">
+          <header>06 · 二维行求和（原码节选）</header>
+          <pre><code>int x = blockIdx.x * blockDim.x + threadIdx.x;
+int y = blockIdx.y * blockDim.y + threadIdx.y;
+if (x &lt; width &amp;&amp; y &lt; height) {
+    atomicAdd(&amp;rows[y], m[y * width + x]);
+}</code></pre>
+        </div>
+        <p>x 对应列，y 对应行；两个维度都要做边界判断。线性位置 <code>y * width + x</code> 来自 row-major 布局，而不是 launch 语法。</p>
+        <a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week3/06_sum_matrix_2d.mu">查看源码：06_sum_matrix_2d.mu</a>
+      </section>
+
+      <section id="pitfalls">
+        <h2>注意事项</h2>
+        <ul class="pitfall-list">
+          <li>不要硬编码 CUDA 的 32-thread warp、mask 或 reduction 深度并把它们当成 MUSA 通用结论；查询目标设备和 SDK 的实际语义。</li>
+          <li>shared-memory reduction 的 load 后及相邻轮次之间不能漏掉所需同步，否则线程可能读取尚未写完的数据。</li>
+          <li>输入长度不整除 block size 或 unroll 粒度时，每个加载位置都要保护；尤其不能只检查 unroll 后的第一个地址。</li>
+          <li>shuffle 只在 warp/group 范围交换寄存器值，不能替代跨 warp 的 block-wide 协作，更不能同步不同 block。</li>
+          <li>launch 使用一维还是二维只描述线程组织，不决定数据本身的维数；索引公式才决定线程访问哪个元素。</li>
+          <li>当前 <code>05_nested_hello.mu</code> 是 host 同步后的两阶段启动，不应描述成已经实现了 device-side dynamic parallelism。</li>
+        </ul>
+      </section>
+
+      <section id="questions">
+        <h2>精选题目</h2>
+        <p>先独立作答，再展开核对。问题、答案与易错点和完整题库保持一致。</p>
+        <details id="w3-q1">
+          <summary>Warp divergence 的核心问题是什么？</summary>
+          <p>SIMT 执行中，同一 warp 内分支不一致会让路径被分段执行，降低有效并行度。</p>
+          <p>不是所有 if 都严重，关键看同一 warp 内是否分歧。</p>
+        </details>
+        <details id="w3-q2">
+          <summary>MUSA 做 warp-level shuffle/reduce 时，为什么不能照搬 CUDA 的 warp=32 假设？</summary>
+          <p>MUSA warp size 通常按 128 理解，shuffle mask、warp 数量、reduction tree 深度都要重新算。</p>
+          <p>这里的 128 只对应题目采用的示例语境；实际目标的 warp/group 宽度必须向目标设备查询，并结合所用 MUSA SDK 确认。</p>
+          <p>代码语法接近 CUDA，不代表调优参数可以机械照搬。</p>
+        </details>
+        <details id="w3-q7">
+          <summary>为什么 naive reduce 需要 host final reduce 或第二个 kernel？</summary>
+          <p>每个 block 只能安全地产生自己的 partial sum，跨 block 汇总需要新的阶段或专门的全局同步机制。</p>
+          <p>把 block barrier 当成 grid barrier 是 reduce 中最常见的概念错误。</p>
+        </details>
+        <details id="w3-q8">
+          <summary>reduce 的输入长度不是 block size 或 unroll 粒度整数倍时，尾部元素如何处理？</summary>
+          <p>每次加载都做边界判断，越界线程使用 0 或直接退出，不能越界读写。</p>
+          <p>对本页的 shared-memory reduction，越界线程必须写入 0，并继续参加后续所需的 barrier；只有后续协作和同步不再依赖该线程时，才可以提前返回。</p>
+          <p>只检查第一个加载位置而忘记检查 unroll 后的第二个或更多位置。</p>
+        </details>
+        <div class="quiz-preview">
+          <h3>完整自测</h3>
+          <p>进入 <a href="quiz.html">知识自测</a>，选择 Week 3，继续检查 divergence、reduction、shuffle 与二维映射。</p>
+        </div>
+      </section>
+
+      <section id="resources">
+        <h2>延伸入口</h2>
+        <ul>
+          <li><a href="https://github.com/googs1025/musa-learning-notes/tree/main/code/week3/">本周源码目录</a></li>
+          <li><a href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week3/exercises.md">本周练习</a></li>
+        </ul>
+      </section>
+
+      <nav class="pager" aria-label="学习路径翻页">
+        <a href="week2.html" rel="prev">← 上一周：Week 2 · 并发与编排</a>
+        <a href="week4.html" rel="next">下一周：Week 4 · 访存性能 →</a>
+      </nav>
+    </article>
+  </main>
+  <footer class="footer"><p>MUSA Learning Notes · 内容以官方文档和仓库实测为准</p></footer>
+</body>
+</html>

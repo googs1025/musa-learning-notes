@@ -1,7 +1,7 @@
 # GPU / MUSA 术语小词典
 
 > 按字母序,看代码或文档遇到不认识的词来这里查。
-> 想看完整心智模型,看 [`concepts.md`](concepts.md);想查 API,看 [`cuda-vs-musa.md`](cuda-vs-musa.md)。
+> 想看完整心智模型,看 [`concepts.md`](concepts.md);想理解 MPC / MPX / MP,看 [`gpu-hierarchy.md`](gpu-hierarchy.md);想查 API,看 [`cuda-vs-musa.md`](cuda-vs-musa.md)。
 
 ---
 
@@ -87,6 +87,12 @@
 
 **Memcpy** — `musaMemcpy(dst, src, bytes, kind)`。kind 有 4 种:H2D / D2H / D2D / H2H。**默认同步**,会等数据搬完才返回。
 
+**MP (MUSA Processor)** — MUSA 中执行 SIMT 工作的主要处理器，线程块在 MP 上驻留并被组织为 warp 执行。可用 CUDA SM 帮助理解，但两者的具体资源和实现不等同。
+
+**MPC (MUSA Processor Cluster)** — 包含多个 MPX 的较高层硬件分组。数量和共享资源取决于具体 MUSA 架构。
+
+**MPX (MUSA Processor eXecution engine)** — 位于 MPC 与 MP 之间的执行引擎分组，一个 MPX 包含多个 MP，并可共享部分缓存资源。
+
 **MTLink** — 摩尔线程的多卡互连技术,对应 NVLink。
 
 **MTT** — Multi-Thread-Tile,**MUSA 的 warp 单位 = 128 线程**。这是和 CUDA 最显眼的差异。
@@ -162,5 +168,6 @@
 ## 还想看?
 
 - 入门概念心智模型 → [`concepts.md`](concepts.md)
+- MUSA 硬件层级与 CUDA 近似对照 → [`gpu-hierarchy.md`](gpu-hierarchy.md)
 - API 名怎么从 CUDA 翻译过来 → [`cuda-vs-musa.md`](cuda-vs-musa.md)
 - 安装环境 → [`setup.md`](setup.md)

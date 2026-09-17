@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="zh-CN" data-page-kind="week">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Week 6：理解异步错误定位、可复现 error dump、多卡通信和 torch_musa 扩展边界。">
+  <title>Week 6 · 工程系统 | MUSA GPU 编程知识库</title>
+  <link rel="stylesheet" href="assets/knowledge.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="site-nav" aria-label="主导航">
+      <a class="brand" href="index.html">MUSA GPU 编程知识库</a>
+      <ul class="nav-links">
+        <li><a href="index.html#weeks">每周路径</a></li>
+        <li><a href="index.html#topics">知识专题</a></li>
+        <li><a href="quiz.html">知识自测</a></li>
+      </ul>
+    </nav>
+  </header>
+  <main class="page-shell article-layout">
+    <nav class="article-nav" aria-label="本页目录">
+      <p><strong>Week 6 · 工程系统</strong></p>
+      <ul>
+        <li><a href="#goals">本周目标</a></li>
+        <li><a href="#engineering">核心知识</a></li>
+        <li><a href="#debugging">调试与错误记录</a></li>
+        <li><a href="#multi-gpu">多卡通信</a></li>
+        <li><a href="#frameworks">框架与扩展</a></li>
+        <li><a href="#code-points">关键代码</a></li>
+        <li><a href="#pitfalls">注意事项</a></li>
+        <li><a href="#questions">精选题目</a></li>
+      </ul>
+    </nav>
+    <article class="article-content">
+      <header>
+        <p class="tag">Week 6 · 工程系统</p>
+        <h1>怎样把 GPU 程序接入可调试、可验证的系统？</h1>
+        <p>从异步错误的触发位置出发，建立可复现记录，再把 device、stream 和同步边界扩展到多卡通信与 PyTorch 调用链路。</p>
+        <p><a href="quiz.html">进入知识自测，选择 Week 6</a></p>
+      </header>
+
+      <section id="goals">
+        <h2>本周要回答的问题</h2>
+        <ul>
+          <li>为什么 illegal address 经常在后续同步点才报告，怎样定位真正的触发指令？</li>
+          <li>一份 error dump 应配套哪些环境与复现信息？</li>
+          <li>rank、nranks、device 和 communicator 怎样组织一次 AllReduce？</li>
+          <li>torch_musa smoke test 和 custom op 分别需要验证哪些框架边界？</li>
+        </ul>
+      </section>
+
+      <section id="engineering">
+        <h2>核心知识</h2>
+        <div class="knowledge-grid">
+          <section class="knowledge-card">
+            <h3>错误触发与错误报告可能分离</h3>
+            <p>异步 kernel 的 launch 返回后，设备仍可能正在执行。后续 API 报告错误时，应回溯此前提交的工作，结合源码、线程索引和同步边界定位原因。</p>
+          </section>
+          <section class="knowledge-card">
+            <h3>每条链路都要有可检查的结果</h3>
+            <p>多卡通信要核对每个 rank 的输出；框架调用要确认输入输出的 device、dtype、shape 与数值；故障记录要让其他人能重现同一条件。编译、import 或设备发现只覆盖各自的一步。</p>
+          </section>
+        </div>
+        <div class="callout">
+          <p>本周源码包含环境相关的骨架与故意失败的调试样例。MCCL 示例尚未执行 AllReduce，custom op 示例尚未实现自定义 MUSA kernel；真实运行结果需在配套 SDK 和硬件上验证。</p>
+        </div>
+      </section>
+
+      <section id="debugging">
+        <h2>调试：从同步点回到触发指令</h2>
+        <p><code>musaGetLastError()</code> 用于检查 launch 后的错误状态，不能证明异步 kernel 已正确完成；<code>musaDeviceSynchronize()</code> 等待设备工作完成，也可能报告此前执行中的错误。本周样例只分配 1024 个 float，却让 2048 个线程无边界检查地写入，预期在同步时观察到 illegal address。若未触发，也应如实记录，不能把越界行为当作正确。</p>
+        <p>源码级调试需要带调试符号，并使用本机 SDK 支持的优化设置与调试器功能。应结合断点、线程索引、地址和源码行找到失败指令，检查指针与分配范围。默认构建不能自动视为适合调试；具体构建参数和设备端调试能力以对应 SDK 为准。</p>
+        <h3>Error dump 要能对应一次明确的复现</h3>
+        <p>按本机 SDK 文档启用 Error Dump，保留原始 dump/log 与完整标准输出、错误输出，同时记录源码版本、SDK/驱动版本、设备型号与卡数、编译命令、输入规模、运行命令、相关环境变量和复现步骤。用时间戳及文件清单确认文件属于本次运行；未复现错误或未生成 dump 也要写明。具体开关、字段和输出路径随环境核对。</p>
+      </section>
+
+      <section id="multi-gpu">
+        <h2>多卡：身份、设备与 collective 顺序</h2>
+        <p><code>rank</code> 是通信域中当前参与者的逻辑编号，<code>nranks</code> 是参与总数，<code>device</code> 是本进程选择的本地 GPU。多机运行时 global rank 不能直接当本地设备号，必须核对 launcher 提供的映射。<code>communicator</code> 则是所有 rank 共同加入的通信上下文；各 rank 的 device、stream 和 buffer 需要对应。</p>
+        <p>AllReduce 把各 rank 的输入按约定运算归约，并让每个参与者获得归约结果。完整调用流程需要向所有 rank 分发同一个 unique id，选择本地 device、创建 stream 与 buffer，初始化 communicator，再按一致顺序进入 <code>mcclAllReduce</code>。各 rank 的元素数量、类型和归约操作也要匹配，最后同步并核对各自输出。当前骨架仅展示设备与 stream 准备，以及待补齐调用的提示。</p>
+        <p>P2P 是否可用取决于设备能力、互联拓扑和运行环境。两张卡可见并不证明它们能直接互访；先探测并记录支持情况，再讨论 peer access、通信路径和带宽。仓库 CUDA P2P 对照样例的能力不能直接推定为当前 MUSA 环境的能力。</p>
+      </section>
+
+      <section id="frameworks">
+        <h2>框架：沿真实算子链路检查</h2>
+        <p>torch_musa 最小 smoke test 依次加载后端、发现设备、创建 MUSA tensor、执行算子、同步并回 CPU 取样。它将 Python API、后端实现、runtime 和设备执行连接起来。设备可用或 import 成功还不足以覆盖实际算子；一个 ReLU 样例通过也只说明这组输入与算子的链路可用。</p>
+        <h3>Custom op 的四层边界</h3>
+        <p>Schema 定义算子名称、参数与返回值契约；注册让框架找到入口；dispatch 根据设备等条件选择实现；kernel 才负责设备计算。检查时要把这些层与 tensor 的 dtype、shape、device、布局、当前 stream 和返回值一起核对。</p>
+        <p>本周 C++ 文件用 <code>PYBIND11_MODULE</code> 和 <code>m.def</code> 暴露 Python 扩展函数；这不是 PyTorch Dispatcher 的 schema 或 MUSA dispatch 注册。函数只检查 contiguous 后调用 <code>x.clone()</code>，没有显式 MUSA 设备检查，也没有自定义 kernel。要扩展成完整 MUSA 算子，需补齐设备契约、对应注册与实现，并验证 Python 调用、设备执行和错误传播。</p>
+      </section>
+
+      <section id="code-points">
+        <h2>关键代码</h2>
+        <p>以下是依据仓库源码整理的节选或改编节选，省略的环境准备、错误处理与资源释放见完整文件。</p>
+
+        <h3>Rank 配置和本地设备准备</h3>
+        <div class="code-card">
+          <header>01 · MCCL AllReduce 骨架（分段节选）</header>
+          <pre><code>int rank = argc &gt; 1 ? std::atoi(argv[1]) : 0;
+int nranks = argc &gt; 2 ? std::atoi(argv[2]) : 1;
+int device = argc &gt; 3 ? std::atoi(argv[3]) : rank;
+
+// 以下来自找到 MCCL 头文件时的分支：
+CHECK_MUSA(musaSetDevice(device));
+musaStream_t stream;
+CHECK_MUSA(musaStreamCreate(&amp;stream));
+
+printf("Fill SDK-specific mcclUniqueId exchange, mcclCommInitRank, and mcclAllReduce calls.\n");</code></pre>
+        </div>
+        <p>默认 <code>device = rank</code> 只是骨架的便捷设置。最后一行是提示文本，尚未执行 unique id 交换、communicator 初始化或 AllReduce；实际通信需按前述流程补齐并验证各 rank 的顺序与结果。</p>
+        <a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week6/01_mccl_allreduce.cpp">查看源码：01_mccl_allreduce.cpp</a>
+
+        <h3>故意越界，在同步点观察</h3>
+        <div class="code-card">
+          <header>02 / 03 · Illegal address（改编节选，故意失败）</header>
+          <pre><code>__global__ void write_oob(float* out, int n) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    out[i] = float(i);  // 故意缺少 if (i &lt; n)
+}
+
+// 只分配 1024 个 float，却启动 8 × 256 个线程。
+float* d_out = nullptr;
+MUSA_CHECK(musaMalloc(&amp;d_out, 1024 * sizeof(float)));
+write_oob&lt;&lt;&lt;8, 256&gt;&gt;&gt;(d_out, 1024);
+MUSA_CHECK(musaGetLastError());
+MUSA_CHECK(musaDeviceSynchronize());</code></pre>
+        </div>
+        <p>同步点报告的是此前越界写可能造成的错误。02 用于调试器定位，03 用于采集 Error Dump；两者共享故障模型，诊断证据的产物不同。</p>
+        <p><a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week6/02_musa_gdb_demo.mu">查看源码：02_musa_gdb_demo.mu</a> · <a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week6/03_error_dump.mu">查看源码：03_error_dump.mu</a></p>
+
+        <h3>Tensor 创建、运算、同步与 CPU 取样</h3>
+        <div class="code-card">
+          <header>04 · torch_musa smoke test（节选）</header>
+          <pre><code>import torch
+import torch_musa
+
+if torch.musa.is_available():
+    x = torch.randn(1024, device="musa")
+    y = x.relu()
+    torch.musa.synchronize()
+    print("sample", float(y[0].cpu()))</code></pre>
+        </div>
+        <p>回 CPU 打印一个标量验证结果链路可观察；源码没有完整数值断言。进一步验证应使用确定性输入与 CPU 参考值比较，并覆盖所需 dtype、shape；这段取样代码不能用来报告性能。</p>
+        <a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week6/04_torch_musa_minimal.py">查看源码：04_torch_musa_minimal.py</a>
+
+        <h3>Python 绑定与实际 MUSA 实现的边界</h3>
+        <div class="code-card">
+          <header>05 · Custom op 绑定骨架（节选）</header>
+          <pre><code>torch::Tensor identity_musa(torch::Tensor x) {
+    TORCH_CHECK(x.is_contiguous(), "expected contiguous tensor");
+    return x.clone();
+}
+
+PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
+    m.def("identity_musa", &amp;identity_musa, "identity custom op skeleton");
+}</code></pre>
+        </div>
+        <p><code>m.def</code> 把 C++ 函数暴露到 Python 扩展模块，<code>x.clone()</code> 使用已有张量操作。函数名带有 musa 不代表已注册 MUSA dispatch；需要验证输入输出设备、布局限制与数值，再评估真正 kernel 实现的边界。</p>
+        <a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week6/05_torch_musa_custom_op.cpp">查看源码：05_torch_musa_custom_op.cpp</a>
+      </section>
+
+      <section id="pitfalls">
+        <h2>注意事项</h2>
+        <ul class="pitfall-list">
+          <li>后续 API 报错时要回溯先前异步工作，不能把报告错误的同步调用直接认作触发位置。</li>
+          <li>保存 dump 时同时保存环境、命令、输入与复现步骤，避免只留下最后一行错误或误用旧 dump。</li>
+          <li>区分 global rank、local rank 与 device id，核对每个参与者的 communicator、stream 和 buffer 配套关系。</li>
+          <li>使用 P2P 前先检查设备能力与拓扑，不要仅凭卡数推断互访支持或通信带宽。</li>
+          <li>Custom op 验证应覆盖注册、dispatch 和 Python 调用边界；kernel 正确不能替代 dtype、shape、device、布局及返回值检查。</li>
+        </ul>
+      </section>
+
+      <section id="questions">
+        <h2>精选题目</h2>
+        <p>先独立作答，再展开核对。以下问题、答案与易错点逐字取自完整题库。</p>
+        <details id="w6-q2">
+          <summary>为什么调试 illegal address 时，错误经常不是在 kernel launch 这一行立刻报出？</summary>
+          <p>kernel 执行是异步的，运行期错误通常要到后续同步点才暴露。</p>
+          <p>这就是 launch 后同时检查 <code>musaGetLastError()</code> 和 <code>musaDeviceSynchronize()</code> 的原因。</p>
+        </details>
+        <details id="w6-q4">
+          <summary>torch_musa 最小 smoke test 至少应该验证哪条链路？</summary>
+          <p>需要验证设备发现、MUSA tensor、实际算子、同步边界和回 CPU 结果。</p>
+          <p><code>is_available()</code> 为真只能说明设备或后端可见，不能代表完整算子链路已通过。</p>
+        </details>
+        <details id="w6-q5">
+          <summary>MCCL AllReduce 示例中的 rank、nranks 和 device 分别描述什么？</summary>
+          <p>rank 标识当前参与者，nranks 是 collective 的参与总数，device 是本地 GPU 选择。</p>
+          <p>多卡 collective 要求所有 rank 以一致顺序进入同一个通信操作。</p>
+        </details>
+        <details id="w6-q7">
+          <summary>一个可复现的 MUSA error dump 记录至少应包含哪些环境信息？</summary>
+          <p>应记录 SDK/驱动版本、设备型号、编译命令、输入规模、运行命令、错误信息和复现步骤。</p>
+          <p>只保存最后一行错误而不保存环境，通常无法判断是代码、版本还是硬件差异。</p>
+        </details>
+        <details id="w6-q8">
+          <summary>torch_musa custom op 的边界检查为什么不能只看 kernel 本身？</summary>
+          <p>custom op 是框架、C++ 扩展和 MUSA kernel 的边界，类型、设备、注册和返回值都必须正确。</p>
+          <p>底层 kernel 正确不代表框架调用路径和不同输入条件都正确。</p>
+        </details>
+        <div class="quiz-preview">
+          <h3>完整自测</h3>
+          <p>进入 <a href="quiz.html">知识自测</a>，选择 Week 6，继续检查多卡通信、调试证据与框架调用边界。</p>
+        </div>
+      </section>
+
+      <section id="resources">
+        <h2>延伸入口</h2>
+        <ul>
+          <li><a href="https://github.com/googs1025/musa-learning-notes/tree/main/code/week6/">本周源码目录</a></li>
+          <li><a href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week6/exercises.md">本周练习</a></li>
+        </ul>
+      </section>
+
+      <nav class="pager" aria-label="学习路径翻页">
+        <a href="week5.html" rel="prev">← 上一周：Week 5 · 片上复用</a>
+        <a href="index.html#topics">返回知识地图 →</a>
+      </nav>
+    </article>
+  </main>
+  <footer class="footer"><p>MUSA Learning Notes · 内容以官方文档和仓库实测为准</p></footer>
+</body>
+</html>
