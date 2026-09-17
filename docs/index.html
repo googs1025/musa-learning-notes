@@ -44,7 +44,7 @@
       <div class="week-grid">
         <a class="card week-card" href="week1.html" data-search-text="week 1 gpu 层级 hierarchy grid block thread 索引 index 内存 memory 错误 error kernel">
           <span class="card-kicker">Week 1</span>
-          <h3>一个 kernel 怎样启动并落到 GPU 硬件？</h3>
+          <h3>Week 1 · 执行模型</h3>
           <p>建立执行模型、索引方式与 Host/Device 内存边界。</p>
           <span class="tag-list" aria-label="主题标签">
             <span class="tag">GPU 层级</span><span class="tag">索引</span><span class="tag">内存</span><span class="tag">错误</span>
@@ -52,7 +52,7 @@
         </a>
         <a class="card week-card" href="week2.html" data-search-text="week 2 stream event graph pinned 流 事件 图 固页内存 async concurrency timing replay">
           <span class="card-kicker">Week 2</span>
-          <h3>多个 GPU 操作怎样排队、计时和重放？</h3>
+          <h3>Week 2 · 并发与编排</h3>
           <p>理解异步执行、依赖关系、准确计时与图重放。</p>
           <span class="tag-list" aria-label="主题标签">
             <span class="tag">Stream</span><span class="tag">Event</span><span class="tag">Graph</span><span class="tag">Pinned</span>
@@ -60,7 +60,7 @@
         </a>
         <a class="card week-card" href="week3.html" data-search-text="week 3 warp reduce reduction shuffle 2d 线程 协作 归约 二维 计算">
           <span class="card-kicker">Week 3</span>
-          <h3>线程怎样协作完成归约与二维计算？</h3>
+          <h3>Week 3 · 线程协作</h3>
           <p>从 warp 执行走向归约、shuffle 与二维网格设计。</p>
           <span class="tag-list" aria-label="主题标签">
             <span class="tag">Warp</span><span class="tag">Reduce</span><span class="tag">Shuffle</span><span class="tag">2D</span>
@@ -68,7 +68,7 @@
         </a>
         <a class="card week-card" href="week4.html" data-search-text="week 4 coalescing aos soa transpose 合并访存 bank conflict 带宽 利用率 内存访问">
           <span class="card-kicker">Week 4</span>
-          <h3>为什么结果正确但带宽利用率很低？</h3>
+          <h3>Week 4 · 访存性能</h3>
           <p>用访问模式解释吞吐差异，并比较数据布局与转置。</p>
           <span class="tag-list" aria-label="主题标签">
             <span class="tag">Coalescing</span><span class="tag">AoS/SoA</span><span class="tag">Transpose</span>
@@ -76,7 +76,7 @@
         </a>
         <a class="card week-card" href="week5.html" data-search-text="week 5 shared constant gemm mublas 片上存储 数据复用 共享内存 常量内存 矩阵乘">
           <span class="card-kicker">Week 5</span>
-          <h3>怎样用片上存储提高数据复用？</h3>
+          <h3>Week 5 · 片上复用</h3>
           <p>从 shared memory 的复用机制走到分块 GEMM 与库实现。</p>
           <span class="tag-list" aria-label="主题标签">
             <span class="tag">Shared</span><span class="tag">Constant</span><span class="tag">GEMM</span><span class="tag">muBLAS</span>
@@ -84,7 +84,7 @@
         </a>
         <a class="card week-card" href="week6.html" data-search-text="week 6 gdb error dump mccl torch_musa 调试 错误 多卡 通信 框架 扩展 engineering">
           <span class="card-kicker">Week 6</span>
-          <h3>怎样调试并扩展到多卡和框架？</h3>
+          <h3>Week 6 · 工程系统</h3>
           <p>把定位工具、多卡通信与 PyTorch MUSA 扩展串成工程闭环。</p>
           <span class="tag-list" aria-label="主题标签">
             <span class="tag">GDB</span><span class="tag">Error Dump</span><span class="tag">MCCL</span><span class="tag">torch_musa</span>
@@ -108,7 +108,7 @@
           <p>理解 kernel 的组织方式与索引计算。</p>
         </a>
         <a class="knowledge-card" href="week1.html#memory-boundary" data-search-text="host device memory 内存 边界 cpu gpu 拷贝">
-          <h3>Host / Device</h3>
+          <h3>Host / Device 内存</h3>
           <p>厘清地址空间、数据移动与生命周期。</p>
         </a>
         <a class="knowledge-card" href="week2.html#streams" data-search-text="stream event graph 流 事件 图 异步 并发 计时 重放">
@@ -124,7 +124,7 @@
           <p>从访存事务和 bank 映射解释带宽表现。</p>
         </a>
         <a class="knowledge-card" href="week5.html#gemm" data-search-text="shared gemm mublas 共享内存 矩阵乘 分块 片上存储 数据复用">
-          <h3>Shared / GEMM</h3>
+          <h3>Shared Memory / GEMM</h3>
           <p>通过分块和复用构建高效矩阵乘。</p>
         </a>
         <a class="knowledge-card" href="week6.html#engineering" data-search-text="debug gdb error dump mccl torch_musa 调试 多卡 通信 框架 工程 扩展">
@@ -135,7 +135,7 @@
       <p class="empty-state" data-empty-state hidden>没有匹配内容，请换一个关键词。</p>
     </section>
 
-    <section aria-labelledby="usage-title">
+    <section id="how-to-use" aria-labelledby="usage-title">
       <div class="section-heading">
         <h2 id="usage-title">怎样使用这套知识库</h2>
         <p>先建立连续知识结构，再按问题回查，最后用自测暴露盲点。</p>
