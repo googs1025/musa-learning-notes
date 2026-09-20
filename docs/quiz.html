@@ -713,6 +713,18 @@
         pitfall: "代码语法接近 CUDA，不代表调优参数可以机械照搬。"
       },
       {
+        id: "memory-basics-q1",
+        deck: "Week 3",
+        type: "choice",
+        level: "基础",
+        source: "docs/concepts.md",
+        question: "`__syncthreads()` 之后，哪些线程保证能看到彼此对 shared memory 的写入？",
+        choices: ["同一个 block 中到达该 barrier 的线程", "同一个 grid 中所有正在运行的线程", "同一个 SM 上的所有 block", "所有已经启动的 kernel 中的线程"],
+        answerIndex: 0,
+        answer: "`__syncthreads()` 是 block-local 的同步与可见性边界：同一 block 中到达 barrier 的线程可以看到彼此此前对 shared memory 的写入；它不能协调不同 block。",
+        pitfall: "不要把 barrier 放在会让同一 block 线程分歧的分支里，否则部分线程到不了 barrier，可能死锁或产生未定义行为。"
+      },
+      {
         id: "w4-q1",
         deck: "Week 4",
         type: "choice",
@@ -733,6 +745,18 @@
         question: "Shared memory transpose 为什么常用 padding？",
         answer: "padding 改变 shared memory 行跨度，降低多个线程访问同一 bank 的概率。",
         pitfall: "padding 多一个元素看似浪费一点空间，但常能换来更少 bank conflict。"
+      },
+      {
+        id: "memory-basics-q2",
+        deck: "Week 4",
+        type: "choice",
+        level: "基础",
+        source: "docs/concepts.md",
+        question: "`global_add` 已经算出正确结果后，要宣称 global memory 访问高效，还必须检查什么？",
+        choices: ["相邻线程的地址模式，以及测得的有效带宽", "只检查输出数值是否正确", "host CPU 的时钟频率", "调用了多少次 printf"],
+        answerIndex: 0,
+        answer: "正确结果只说明计算逻辑正确；还要检查相邻线程是否访问相邻地址，并用测得的有效带宽判断实际访问表现。",
+        pitfall: "输出数值正确并不能证明访问模式高效；仍要检查线程地址序列和实际带宽。"
       },
       {
         id: "w5-q1",
@@ -760,6 +784,30 @@
         question: "Tiled GEMM 中两次 `__syncthreads()` 分别保护什么？",
         answer: "第一次等所有线程把 tile 装进 shared；第二次等本轮计算读完 shared，再允许下一轮覆盖 tile。",
         pitfall: "漏掉任意一个同步点都可能产生数据竞态和偶发错误。"
+      },
+      {
+        id: "memory-basics-q3",
+        deck: "Week 5",
+        type: "choice",
+        level: "核心",
+        source: "docs/concepts.md",
+        question: "一个 block 执行结束后，关于它写入的 shared memory 内容，哪项说法正确？",
+        choices: ["其他 block 不能读取它，也不能在下一次 kernel 中依赖它；它只是 block 私有的临时存储", "同一 grid 中其他 block 可以直接读取它", "下一次 kernel 会从 global cache 自动恢复它", "它会自动成为所有 kernel 都可写的全局数据"],
+        answerIndex: 0,
+        answer: "shared memory 仅供同一个 block 在该次 kernel 执行中使用。block 结束后，其他 block 不能读取它，后续 kernel 也不能把它当作可依赖的数据来源。",
+        pitfall: "不要把 block 私有的 shared memory 当成跨 block 或跨 kernel 的 global cache。"
+      },
+      {
+        id: "memory-basics-q4",
+        deck: "Week 5",
+        type: "choice",
+        level: "核心",
+        source: "docs/concepts.md",
+        question: "`__constant__` 符号中的数据通常如何更新？",
+        choices: ["主机在 kernel 启动前复制或更新 device symbol；kernel 只读它，不写它", "kernel 通过普通可写 device 指针直接更新它", "任何 block 都可把它当作 shared memory 写入", "它会在每次 kernel 启动时自动从输出数组更新"],
+        answerIndex: 0,
+        answer: "constant symbol 通常由主机在 kernel 启动前复制或更新；kernel 可以读取它，但不能把它当作普通可写的 device 指针。",
+        pitfall: "constant symbol 不是由 kernel 随意写入的普通 device 指针。"
       },
       {
         id: "w6-q1",

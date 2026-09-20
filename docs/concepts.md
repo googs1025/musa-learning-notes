@@ -129,11 +129,78 @@ Host     │  CPU RAM │  通过 musaMemcpy 搬   ← PCIe 慢得多
 常见误区：
 
 - "**Local memory**" 不是真的快内存,它就是给寄存器装不下的局部变量在 global 上开辟的空间,慢。
-- "**Constant memory**" 只在所有线程**读同一地址**时通过专用 cache 飞快;每个线程读不同地址就退化成 global。
+- "**Constant memory**" 中，同一地址读取可利用广播和 constant cache；读取不同地址会失去广播优势，性能取决于实际访问模式和设备，不能一概等同于 global memory。
 - 优化访存时主要检查三件事：
   1. **Coalesced**:同 warp 相邻线程访问相邻地址(week4)
   2. **Shared 替代 Global**:把多次复用的数据搬进 shared(week5 GEMM)
   3. **避免 Bank Conflict**:shared memory 分 32 个 bank,同 warp 内同 bank 不同地址会串行化
+
+### 全局、共享与常量内存：先判断数据该放哪里
+
+先从数据的读写者和生命周期出发，再考虑优化。下面的对比描述的是作用域与访问方式；具体设备和 SDK 的实现细节会有差异，不能据此推导固定容量、延迟或性能结论。
+
+| 内存 | 谁能访问 | 读写行为 | 适合的数据 | 首先检查什么 |
+| --- | --- | --- | --- | --- |
+| Global（全局内存） | kernel 中的线程 | 可读、可写 | 输入、输出、跨 block 的中间结果 | 相邻线程是否访问相邻的 global 地址 |
+| Shared（共享内存） | 同一 block 的线程 | 可读、可写 | block 内反复使用的 tile、部分和 | 屏障是否安全、是否有 bank conflict |
+| Constant（常量内存） | kernel 中的线程 | 设备端只读，由主机更新 | 小型只读数据，且同一批线程经常读取同一地址 | 是否呈现广播式（同地址）访问 |
+
+选择顺序可以固定为四步：
+
+1. 跨 block 共享或一般可写的中间结果 → global；需要跨 kernel 存活的数据通常也放在 global，除非它是适合 constant 的小型只读常量符号。
+2. 小型、只读、适合广播的参数 → constant。
+3. 同一 block 内会被反复消费的数据 → shared。
+4. 其他情况先从 global 开始，再测量。
+
+下面三个 MUSA/CUDA 风格片段只说明作用域和访问模式；它们不构成可移植的性能结论，也不替代 Week 4、Week 5 中可运行的示例。
+
+```cpp
+__global__ void global_add(float* out, const float* a, const float* b, int n) {
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  if (i < n) out[i] = a[i] + b[i];
+}
+```
+
+`global_add` 通过全局索引读写 global 指针指向的元素，并用 `if (i < n)` 保护尾部线程。
+
+```cpp
+__global__ void block_sum(const float* x, float* partial, int n) {
+  __shared__ float s[256];
+  int t = threadIdx.x;
+  if (blockDim.x != 256 || blockDim.y != 1 || blockDim.z != 1) return;
+  int i = blockIdx.x * 256 + t;
+  s[t] = (i < n) ? x[i] : 0.0f;
+  __syncthreads();
+  if (t == 0) {
+    float sum = 0.0f;
+    for (int j = 0; j < 256; ++j) sum += s[j];
+    partial[blockIdx.x] = sum;
+  }
+}
+```
+
+`block_sum` 要求以一维、恰好 256 线程的 block 启动；若 `blockDim.x != 256`、`blockDim.y != 1` 或 `blockDim.z != 1`，所有线程会在访问 `s` 前一致返回。正常路径中，每个线程先写入 shared 数组，越界元素填零，所有线程无条件到达 `__syncthreads()`，再由 thread 0 对恰好 256 个元素求和并写出每个 block 的部分和。
+
+```cpp
+__constant__ float c_scale;
+
+__global__ void scale(float* out, const float* in, int n) {
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  if (i < n) out[i] = in[i] * c_scale;
+}
+```
+
+`scale` 从设备端只读的 `c_scale` 读取缩放参数；主机负责在启动 kernel 前更新该常量。
+
+读代码时，可以逐项检查：
+
+1. 指针实际驻留在哪一种内存中？
+2. 谁会读取、谁会写入这份数据？
+3. 每个 block 的每个线程是否都能到达屏障？
+4. global 访问是否呈现相邻地址模式？
+5. 尾部线程是否受到边界保护？
+
+继续学习时，可先阅读 [Week 3：同步前提](../code/week3/learning-notes.md)，再结合 [Week 4：global memory 优化](../code/week4/learning-notes.md) 和 [Week 5：shared/constant 与复用](../code/week5/learning-notes.md) 的可运行示例理解这些选择。
 
 ---
 
