@@ -31,7 +31,7 @@ const commentLink = (href) => (html) => html.replace(/<a\b[^>]*>[\s\S]*?<\/a>/g,
   (link) => link.includes(`href="${href}"`) ? `<!--${link}-->` : link);
 
 test("baseline validates all pages and 136 local links", () => {
-  assert.deepEqual(runChecker(), ["quiz questions: 150", "learning materials: ok", "knowledge pages: 9", "local links: 136"]);
+  assert.deepEqual(runChecker(), ["quiz questions: 154", "learning materials: ok", "knowledge pages: 9", "local links: 136"]);
 });
 
 const invalidCases = [
