@@ -1,16 +1,16 @@
 # Week 3 记录
 
-> 真实结果在 MUSA 环境运行后填写。
+## 2026-10-02 · MTT S4000 · MUSA SDK 3.1.0
 
-| 示例 | 时间 | 正确性 | 观察 |
-|---|---:|---|---|
-| warp divergence | | | |
-| reduce naive | | | |
-| reduce unrolling | | | |
-| reduce shfl | | | |
-| nested hello | | | |
-| sum matrix 2d | | | 矩阵按行求和对比；实际数字依设备实测 |
-| sum matrix 1d | | | 与 06_sum_matrix_2d 都是矩阵按行求和对比；实际数字依设备实测 |
+| 目标 | 结果 | 关键观察 | 证据 |
+|---|---|---|---|
+| `01_warp_divergence` | PASS | coherent 0.322 ms，divergent 0.325 ms；仅代表本次输入 | [日志](../validation/raw/2026-10-02-s4000/week3/01_warp_divergence.log) |
+| `02_reduce_naive` | PASS | sum=4,194,304，kernel 1.484 ms | [日志](../validation/raw/2026-10-02-s4000/week3/02_reduce_naive.log) |
+| `03_reduce_unrolling` | PASS | sum=4,194,304，kernel 0.562 ms | [日志](../validation/raw/2026-10-02-s4000/week3/03_reduce_unrolling.log) |
+| `04_reduce_shfl` | NOT_RUN（修复后） | 旧版得到正确 sum 并报告 `warpSize=32`，但发现 shared 分配写死 128；修复后未复测 | [旧版日志](../validation/raw/2026-10-02-s4000/week3/04_reduce_shfl.log) |
+| `05_nested_hello` | PASS | 当前 SDK/设备支持示例中的动态并行 | [日志](../validation/raw/2026-10-02-s4000/week3/05_nested_hello.log) |
+| `06_sum_matrix_2d` | PASS | CPU/GPU 总和一致，最大行误差为 0 | [日志](../validation/raw/2026-10-02-s4000/week3/06_sum_matrix_2d.log) |
+| `07_sum_matrix_1d` | PASS | CPU/GPU 总和一致，最大行误差为 0 | [日志](../validation/raw/2026-10-02-s4000/week3/07_sum_matrix_1d.log) |
 
 ## 统一运行记录模板
 

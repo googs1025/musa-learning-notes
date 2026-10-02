@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="source-sha256" content="95a44467887289938fcd28d339e414995d82a7d4be1b57d4d42dbad8418cd6cc">
+  <meta name="source-sha256" content="5d229f3232db2a359c7a05f95aae15bf4ba55dd2f03848fafe9fefa7d0c53630">
   <title>Week 2 完整练习 · MUSA GPU 编程知识库</title>
   <link rel="stylesheet" href="../assets/knowledge.css">
   <script src="../assets/knowledge.js" defer></script>
@@ -35,7 +35,7 @@ OK ✓
 kernel time = ... ms</code></pre>
 <p><code>blocksPerGrid = ceil(1048576 / threadsPerBlock)</code>，所以应为：</p>
 <div class="table-wrap"><table><thead><tr><th>threadsPerBlock</th><th>blocksPerGrid</th></tr></thead><tbody><tr><td>32</td><td>32768</td></tr><tr><td>64</td><td>16384</td></tr><tr><td>128</td><td>8192</td></tr><tr><td>256</td><td>4096</td></tr><tr><td>512</td><td>2048</td></tr><tr><td>1024</td><td>1024</td></tr></tbody></table></div>
-<p>时间不会严格单调；<code>32</code> 通常较差，因为小于 MUSA <code>warpSize=128</code>，一个 warp 填不满。</p>
+<p>时间不会严格单调，也不能只根据某个固定 warp 宽度预测快慢。先用 <code>03_device_info</code> 查询目标设备的 <code>warpSize</code>，再比较 block size 是否为其整数倍，并结合实际测量解释结果。</p>
 <h2>E2.2 pinned 收益随 N 的变化（动手）</h2>
 <p>修改 <code>02_vector_add_pinned.mu</code>，把 <code>N</code> 依次设成 <code>1&lt;&lt;16 / 1&lt;&lt;18 / 1&lt;&lt;20 / 1&lt;&lt;22 / 1&lt;&lt;24</code>。</p>
 <div class="table-wrap"><table><thead><tr><th>N</th><th>bytes</th><th>pageable H2D (GB/s)</th><th>pinned H2D (GB/s)</th><th>speedup</th></tr></thead><tbody><tr><td>1&lt;&lt;16</td><td>256 KB</td><td>?</td><td>?</td><td>?</td></tr><tr><td>...</td><td>...</td><td>...</td><td>...</td><td>...</td></tr><tr><td>1&lt;&lt;24</td><td>64 MB</td><td>?</td><td>?</td><td>?</td></tr></tbody></table></div>

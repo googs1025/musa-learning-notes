@@ -1,11 +1,14 @@
 # Week 6 记录
 
-| Topic | Command / Setup | Result | Log path |
+## 2026-10-02 · MTT S4000 · MUSA SDK 3.1.0
+
+| 目标 | 结果 | 关键观察 | 证据 |
 |---|---|---|---|
-| MUSA SDK 调试器 | | | |
-| Error Dump | | | |
-| MCCL AllReduce | | | |
-| torch_musa minimal | | | |
+| `01_mccl_allreduce` | ENV_LIMITED | 编译成功；单卡环境不具备多 rank collective 验证条件 | [日志](../validation/raw/2026-10-02-s4000/week6/01_mccl_allreduce.log) |
+| `02_musa_gdb_demo` | NOT_RUN | 编译成功；故障注入未在无人值守批处理中执行 | [日志](../validation/raw/2026-10-02-s4000/week6/02_musa_gdb_demo.log) |
+| `03_error_dump` | NOT_RUN | 编译成功；需要显式配置 Error Dump 后交互执行 | [日志](../validation/raw/2026-10-02-s4000/week6/03_error_dump.log) |
+| `04_torch_musa_minimal` | PASS | PyTorch 2.2.0，MUSA available，sample=0.0 | [日志](../validation/raw/2026-10-02-s4000/week6/04_torch_musa_minimal.log) |
+| `05_torch_musa_custom_op` | BUILD_FAIL | Makefile 未提供所需 PyTorch C++ extension 头文件路径 | [日志](../validation/raw/2026-10-02-s4000/week6/05_torch_musa_custom_op.log) |
 
 ## 统一运行记录模板
 

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="source-sha256" content="c3aff34288f53eb432b884c64e4590d51a5d871077b2d690f2c8783869ec136c">
+  <meta name="source-sha256" content="3648e97c0e3d932e8392971b7cc986df93b83447488bb3cd9a6206e0685907b9">
   <title>Week 3 完整练习 · MUSA GPU 编程知识库</title>
   <link rel="stylesheet" href="../assets/knowledge.css">
   <script src="../assets/knowledge.js" defer></script>
@@ -37,7 +37,7 @@
 <p>两个版本的 <code>sum</code> 都应等于 <code>expected</code>；unrolling 版本通常更快，因为每个线程处理更多元素，减少 block 数和部分全局内存访问开销。</p>
 <ol><li>确认 <code>04_reduce_shfl</code> 在当前 SDK 下的 shuffle mask 写法。</li></ol>
 <p>预计输出 / 预期现象：</p>
-<pre><code class="language-text">   sum=1048576 expected=1048576 warpSize=128</code></pre>
+<pre><code class="language-text">   sum=1048576 expected=1048576 warpSize=&lt;设备报告值&gt;</code></pre>
 <p>正确时 <code>sum == expected</code>。如果 mask 或 warp size 假设不匹配，可能编译失败，或运行结果小于 expected。</p>
 <ol><li>运行 <code>05_nested_hello</code>，记录当前 SDK 是否支持动态并行。</li></ol>
 <p>预计输出 / 预期现象：</p>

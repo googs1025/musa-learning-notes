@@ -1,13 +1,15 @@
 # Week 4 记录
 
-| 示例 | 关键参数 | 时间 / 带宽 | 观察 |
-|---|---|---:|---|
-| saxpy bandwidth | | | |
-| offset access | | | |
-| offset unrolling | | | |
-| AoS vs SoA | | | |
-| transpose naive | | | |
-| transpose padded | | | |
+## 2026-10-02 · MTT S4000 · MUSA SDK 3.1.0
+
+| 目标 | 结果 | 关键观察 | 证据 |
+|---|---|---|---|
+| `01_saxpy_bandwidth` | PASS | 0.353 ms，569.82 GB/s | [日志](../validation/raw/2026-10-02-s4000/week4/01_saxpy_bandwidth.log) |
+| `02_offset_access` | PASS | 所有配置完成；offset 16/31 均约 0.317 ms | [日志](../validation/raw/2026-10-02-s4000/week4/02_offset_access.log) |
+| `03_offset_unrolling` | PASS | 所有配置完成；结果依当前输入与设备解释 | [日志](../validation/raw/2026-10-02-s4000/week4/03_offset_unrolling.log) |
+| `04_aos_vs_soa` | PASS | AoS 0.487 ms，SoA 0.318 ms，本次约 1.53x | [日志](../validation/raw/2026-10-02-s4000/week4/04_aos_vs_soa.log) |
+| `05_transpose_naive` | PASS | 朴素转置约 0.097 ms | [日志](../validation/raw/2026-10-02-s4000/week4/05_transpose_naive.log) |
+| `06_transpose_padded` | PASS | padded 转置约 0.099 ms；本次未显示加速 | [日志](../validation/raw/2026-10-02-s4000/week4/06_transpose_padded.log) |
 
 ## 统一运行记录模板
 

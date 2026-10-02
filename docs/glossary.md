@@ -95,7 +95,7 @@
 
 **MTLink** — 摩尔线程的多卡互连技术,对应 NVLink。
 
-**MTT** — Multi-Thread-Tile,**MUSA 的 warp 单位 = 128 线程**。这是和 CUDA 最显眼的差异。
+**MTT** — Multi-Thread-Tile，部分 MUSA 架构资料使用的线程执行分组术语。不要把它简化成所有设备都固定为 128-thread warp；以目标设备的 `warpSize` 和对应 SDK 文档为准。
 
 **muBLAS / muDNN / muFFT** — MUSA 加速库,对应 cuBLAS / cuDNN / cuFFT。
 
@@ -129,7 +129,7 @@
 
 **Shared Memory** — block 内共享的快速内存(~30 周期),`__shared__` 修饰。优化大头(week5 GEMM 的核心)。
 
-**Shuffle (shfl)** — warp 内线程之间直接交换寄存器值的指令(`__shfl_sync` 等),不经过 shared memory。MUSA 上 mask 是 128 bit。
+**Shuffle (shfl)** — warp 内线程之间直接交换寄存器值的指令（`__shfl_sync` 等），不经过 shared memory。mask 和 width 语义必须按当前 SDK 与设备 warp 宽度确认。
 
 **SIMT (Single Instruction, Multiple Thread)** — GPU 执行模型。同 warp 内的线程锁步执行同一条指令。
 
@@ -153,7 +153,7 @@
 
 ## W
 
-**Warp** — GPU 调度的最小单位。**MUSA = 128 线程,CUDA = 32 线程**。同 warp 内线程指令同步执行。
+**Warp** — GPU 调度的执行分组。同 warp 内线程执行同一条指令；宽度必须从设备属性查询，不能仅根据 CUDA/MUSA 名称写死。
 
 **Warp Divergence** — 同 warp 内线程走了不同的 if/else 分支,硬件串行执行各分支 → 性能下降。
 

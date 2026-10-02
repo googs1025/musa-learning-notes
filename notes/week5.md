@@ -1,10 +1,16 @@
 # Week 5 记录
 
-| Method | Shape | Time (ms) | GFLOPS | Notes |
-|---|---|---:|---:|---|
-| naive GEMM | | | | |
-| tiled GEMM | | | | |
-| muBLAS SGEMM | | | | |
+## 2026-10-02 · MTT S4000 · MUSA SDK 3.1.0
+
+| 目标 | 结果 | 关键观察 | 证据 |
+|---|---|---|---|
+| `01_shared_basics` | PASS | shared memory 基础示例完成 | [日志](../validation/raw/2026-10-02-s4000/week5/01_shared_basics.log) |
+| `02_reduce_shared` | PASS | sum=4,194,304，kernel 0.418 ms | [日志](../validation/raw/2026-10-02-s4000/week5/02_reduce_shared.log) |
+| `03_transpose_shared` | PASS | padded shared transpose 约 0.317 ms | [日志](../validation/raw/2026-10-02-s4000/week5/03_transpose_shared.log) |
+| `04_stencil_constant` | PASS | constant stencil 完成 | [日志](../validation/raw/2026-10-02-s4000/week5/04_stencil_constant.log) |
+| `05_naive_gemm` | PASS | 1024³，7.69 ms，279.1 GFLOPS，结果正确 | [日志](../validation/raw/2026-10-02-s4000/week5/05_naive_gemm.log) |
+| `06_tiled_gemm` | PASS | 1024³、TS=16，1.35 ms，1590.6 GFLOPS，结果正确 | [日志](../validation/raw/2026-10-02-s4000/week5/06_tiled_gemm.log) |
+| `07_mublas_sgemm` | ENV_LIMITED | 当前仍是调用骨架，没有执行真实 muBLAS SGEMM | [日志](../validation/raw/2026-10-02-s4000/week5/07_mublas_sgemm.log) |
 
 ## 统一运行记录模板
 

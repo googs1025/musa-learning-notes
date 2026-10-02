@@ -19,7 +19,7 @@
       <p>课程内容完整度与硬件验证状态分开记录。本页只展示 MUSA SDK 3.1.0、驱动 2.7.0、MTT S4000 48 GiB 上真实采集的结果。</p>
     </header>
     <section class="knowledge-grid" aria-label="验证状态统计">
-      <article class="card"><h2>PASS</h2><p>34 个目标</p></article><article class="card"><h2>BUILD_FAIL</h2><p>1 个目标</p></article><article class="card"><h2>RUN_FAIL</h2><p>0 个目标</p></article><article class="card"><h2>ENV_LIMITED</h2><p>2 个目标</p></article><article class="card"><h2>NOT_RUN</h2><p>2 个目标</p></article>
+      <article class="card"><h2>PASS</h2><p>33 个目标</p></article><article class="card"><h2>BUILD_FAIL</h2><p>1 个目标</p></article><article class="card"><h2>RUN_FAIL</h2><p>0 个目标</p></article><article class="card"><h2>ENV_LIMITED</h2><p>2 个目标</p></article><article class="card"><h2>NOT_RUN</h2><p>3 个目标</p></article>
     </section>
     <p class="callout">当前环境只有 1 张 GPU，不能据此宣称多卡 MCCL 或 P2P 行为已经验证。故障注入示例也不会在无人值守批处理中自动执行。</p>
     
@@ -128,8 +128,8 @@
             <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week3/03_reduce_unrolling.log">validation/raw/2026-10-02-s4000/week3/03_reduce_unrolling.log</a></td>
           </tr><tr>
             <td><code>04_reduce_shfl</code></td>
-            <td><strong>PASS</strong></td>
-            <td>Shuffle reduction matched the expected sum and reported runtime warpSize 32.</td>
+            <td><strong>NOT_RUN</strong></td>
+            <td>The original revision matched the expected sum and reported warpSize 32, then review found its host-side shared allocation assumed 128.<br><small>The allocation now derives from warpSize, but the corrected revision was not rerun before the validation machine was released.</small></td>
             <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week3/04_reduce_shfl.log">validation/raw/2026-10-02-s4000/week3/04_reduce_shfl.log</a></td>
           </tr><tr>
             <td><code>05_nested_hello</code></td>

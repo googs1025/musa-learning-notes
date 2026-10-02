@@ -92,6 +92,6 @@ fmaxf fminf expf erff                  不变(device 数学库同名)
 
 ## 下一步
 
-- Medium / Hard 题目会再开一个章节,涉及 shared memory tile、warp-level intrinsic,
-  那时候 MUSA warp=128 跟 CUDA warp=32 的差异就要显式处理了
+- Medium / Hard 题目会再开一个章节，涉及 shared memory tile、warp-level intrinsic；
+  那时必须读取目标设备 `warpSize`，显式处理 lane、mask 和归约边界
 - 这个 Easy 章节定位是"会写 kernel 的最低门槛",刷完 18 题对照 roadmap 就有了 ~50% 的肌肉记忆

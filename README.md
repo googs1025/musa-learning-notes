@@ -6,14 +6,14 @@
 
 ## 六周学习地图
 
-| 周次 | 要回答的问题 | 重点知识 | 入口 | 状态 |
-|---|---|---|---|---|
-| Week 1 | 一个 kernel 是怎样启动和完成的？ | `grid/block/thread`、索引、Host/Device、显存、错误、异步 | [`code/week1/README.md`](code/week1/README.md) | ✅ |
-| Week 2 | 多个 GPU 操作怎样排队、计时和重放？ | pinned memory、统一内存、stream、event、graph、callback | [`code/week2/README.md`](code/week2/README.md) | 🧪 |
-| Week 3 | 线程如何协作完成一个归约？ | warp divergence、reduce、unroll、shuffle、2D grid、动态并行 | [`code/week3/README.md`](code/week3/README.md) | ⏳ |
-| Week 4 | 为什么结果正确但带宽利用率很低？ | coalesced access、offset、AoS/SoA、transpose、bank conflict | [`code/week4/README.md`](code/week4/README.md) | ⏳ |
-| Week 5 | 怎样让数据在片上重复利用？ | shared/constant memory、naive GEMM、tiled GEMM、muBLAS | [`code/week5/README.md`](code/week5/README.md) | ⏳ |
-| Week 6 | 怎样定位错误并扩展到多卡和框架？ | MUSA GDB、error dump、MCCL、torch_musa、自定义算子 | [`code/week6/README.md`](code/week6/README.md) | ⏳ |
+| 周次 | 要回答的问题 | 重点知识 | 入口 | 内容 | S4000 / MUSA 3.1 实测 |
+|---|---|---|---|---|---|
+| Week 1 | 一个 kernel 是怎样启动和完成的？ | `grid/block/thread`、索引、Host/Device、显存、错误、异步 | [`code/week1/README.md`](code/week1/README.md) | ✅ | 6/6 PASS |
+| Week 2 | 多个 GPU 操作怎样排队、计时和重放？ | pinned memory、统一内存、stream、event、graph、callback | [`code/week2/README.md`](code/week2/README.md) | ✅ | 8/8 PASS；prefetch 不支持时按设计跳过 |
+| Week 3 | 线程如何协作完成一个归约？ | warp divergence、reduce、unroll、shuffle、2D grid、动态并行 | [`code/week3/README.md`](code/week3/README.md) | ✅ | 6 PASS；shuffle 修复后待复测；实测 `warpSize=32` |
+| Week 4 | 为什么结果正确但带宽利用率很低？ | coalesced access、offset、AoS/SoA、transpose、bank conflict | [`code/week4/README.md`](code/week4/README.md) | ✅ | 6/6 PASS |
+| Week 5 | 怎样让数据在片上重复利用？ | shared/constant memory、naive GEMM、tiled GEMM、muBLAS | [`code/week5/README.md`](code/week5/README.md) | ✅ | 6 PASS；muBLAS 骨架受限 |
+| Week 6 | 怎样定位错误并扩展到多卡和框架？ | MUSA GDB、error dump、MCCL、torch_musa、自定义算子 | [`code/week6/README.md`](code/week6/README.md) | ✅ | torch_musa PASS；其余按单卡、安全和依赖条件分类 |
 
 完整路线和每周文件清单见 [`docs/roadmap.md`](docs/roadmap.md)。
 
@@ -97,6 +97,7 @@ cmake --build build -j
 - GPU 架构与库调用案例：[`code/gpu-architecture-practice/`](code/gpu-architecture-practice/)
 - 学习记录和实测结果：[`notes/`](notes/)
 - 在线自测题库：[`docs/index.html`](docs/index.html)
+- 真机验证清单：[`docs/validation.html`](docs/validation.html)
 
 ## 仓库结构
 

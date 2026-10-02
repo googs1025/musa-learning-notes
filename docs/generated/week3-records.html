@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="source-sha256" content="b781e40fd998db3dc642b85f95c7ae8b553bc5ca1724616cb3981a04785dafcc">
+  <meta name="source-sha256" content="78374de3bcc01422b52ecceb141968914bbc1f1d390fdc9c452f7082573269be">
   <title>Week 3 真机记录 · MUSA GPU 编程知识库</title>
   <link rel="stylesheet" href="../assets/knowledge.css">
   <script src="../assets/knowledge.js" defer></script>
@@ -22,8 +22,8 @@
       <p>本页由仓库中的规范 Markdown 自动生成。学习记录和性能数字只有在真实设备运行后才会写入。</p>
       <p><a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/notes/week3.md">查看原始 Markdown</a></p>
       <h1>Week 3 记录</h1>
-<blockquote><p>真实结果在 MUSA 环境运行后填写。</p></blockquote>
-<div class="table-wrap"><table><thead><tr><th>示例</th><th>时间</th><th>正确性</th><th>观察</th></tr></thead><tbody><tr><td>warp divergence</td><td></td><td></td><td></td></tr><tr><td>reduce naive</td><td></td><td></td><td></td></tr><tr><td>reduce unrolling</td><td></td><td></td><td></td></tr><tr><td>reduce shfl</td><td></td><td></td><td></td></tr><tr><td>nested hello</td><td></td><td></td><td></td></tr><tr><td>sum matrix 2d</td><td></td><td></td><td>矩阵按行求和对比；实际数字依设备实测</td></tr><tr><td>sum matrix 1d</td><td></td><td></td><td>与 06_sum_matrix_2d 都是矩阵按行求和对比；实际数字依设备实测</td></tr></tbody></table></div>
+<h2>2026-10-02 · MTT S4000 · MUSA SDK 3.1.0</h2>
+<div class="table-wrap"><table><thead><tr><th>目标</th><th>结果</th><th>关键观察</th><th>证据</th></tr></thead><tbody><tr><td><code>01_warp_divergence</code></td><td>PASS</td><td>coherent 0.322 ms，divergent 0.325 ms；仅代表本次输入</td><td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week3/01_warp_divergence.log">日志</a></td></tr><tr><td><code>02_reduce_naive</code></td><td>PASS</td><td>sum=4,194,304，kernel 1.484 ms</td><td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week3/02_reduce_naive.log">日志</a></td></tr><tr><td><code>03_reduce_unrolling</code></td><td>PASS</td><td>sum=4,194,304，kernel 0.562 ms</td><td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week3/03_reduce_unrolling.log">日志</a></td></tr><tr><td><code>04_reduce_shfl</code></td><td>NOT_RUN（修复后）</td><td>旧版得到正确 sum 并报告 <code>warpSize=32</code>，但发现 shared 分配写死 128；修复后未复测</td><td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week3/04_reduce_shfl.log">旧版日志</a></td></tr><tr><td><code>05_nested_hello</code></td><td>PASS</td><td>当前 SDK/设备支持示例中的动态并行</td><td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week3/05_nested_hello.log">日志</a></td></tr><tr><td><code>06_sum_matrix_2d</code></td><td>PASS</td><td>CPU/GPU 总和一致，最大行误差为 0</td><td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week3/06_sum_matrix_2d.log">日志</a></td></tr><tr><td><code>07_sum_matrix_1d</code></td><td>PASS</td><td>CPU/GPU 总和一致，最大行误差为 0</td><td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week3/07_sum_matrix_1d.log">日志</a></td></tr></tbody></table></div>
 <h2>统一运行记录模板</h2>
 <p>本模板只填写真实执行结果；没有 SDK、编译器或设备时填写“未运行”，不填估计性能。</p>
 <div class="table-wrap"><table><thead><tr><th>日期</th><th>主机 / 设备</th><th>CUDA Toolkit 或 MUSA SDK</th><th>编译器</th><th>架构</th><th>backend</th><th>target</th><th>输入规模</th><th>正确性</th><th>耗时 / 带宽</th><th>是否真实运行</th></tr></thead><tbody><tr><td>YYYY-MM-DD</td><td>host；GPU 型号</td><td>CUDA x.y / MUSA x.y；或未安装</td><td>nvcc / mcc；版本</td><td>sm_XX / mp_XX</td><td>cuda / musa</td><td><code>chapterXX__name</code></td><td>N、grid/block、warp 等</td><td>PASS/FAIL/未验证</td><td>实测值；无实测填“未运行”</td><td>是 / 未运行</td></tr></tbody></table></div>

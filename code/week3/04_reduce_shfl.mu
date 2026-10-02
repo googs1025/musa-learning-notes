@@ -1,5 +1,5 @@
 // 预计输出：
-//   sum=1048576 expected=1048576 warpSize=128
+//   sum=1048576 expected=1048576 warpSize=<device reported value>
 // 注意：如果当前 SDK 的 shuffle mask / warpSize 语义不同，可能需要调整实现。
 
 #include "musa_common.h"
@@ -7,7 +7,8 @@
 #include <cstdlib>
 
 __inline__ __device__ float warp_reduce_sum(float v) {
-    // MUSA warp size is often 128. Confirm shuffle mask/signature with the local SDK.
+    // Do not hard-code a vendor-wide warp size. Confirm warpSize and mask/signature
+    // with the target device and local SDK.
     // shuffle 在 warp 内直接交换寄存器值，不需要 shared memory 和 __syncthreads。
     // 归约示意（以 8-lane group 为简化图）：
     //
@@ -62,7 +63,7 @@ int main() {
     MUSA_CHECK(musaMalloc(&d, N * sizeof(float)));
     MUSA_CHECK(musaMalloc(&p, blocks * sizeof(float)));
     MUSA_CHECK(musaMemcpy(d, h, N * sizeof(float), musaMemcpyHostToDevice));
-    int shared = ((threads + 127) / 128) * sizeof(float);
+    int shared = ((threads + warpSize - 1) / warpSize) * sizeof(float);
     reduce_shfl<<<blocks, threads, shared>>>(d, p, N);
     MUSA_CHECK_KERNEL();
     MUSA_CHECK(musaMemcpy(hp, p, blocks * sizeof(float), musaMemcpyDeviceToHost));

@@ -37,7 +37,7 @@
 //
 //      name                   设备名（字符串）
 //      multiProcessorCount    SM 数量
-//      warpSize               一个 warp 多少线程（NV=32, MUSA=128）
+//      warpSize               一个 warp 多少线程（以当前设备报告值为准）
 //      maxThreadsPerBlock     一个 block 最多多少线程
 //      sharedMemPerBlock      每 block shared memory 字节数
 //      totalGlobalMem         显存总大小
@@ -67,7 +67,7 @@
 //
 //      Device 0: <device name>
 //        SM count                 : ...
-//        Warp size                : 128
+//        Warp size                : <设备报告值>
 //        Max threads per block    : ...
 //        Shared memory per block  : ... KB
 //        Total global memory      : ... MB

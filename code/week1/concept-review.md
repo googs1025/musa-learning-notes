@@ -79,7 +79,7 @@ int idx = row * width + col;
 
 ### Q10. block 和 warp 的区别是什么？
 
-短答：block 是调度和协作边界；warp 是硬件实际执行的一组线程。MUSA warp size 通常按 128 理解，CUDA 常见是 32。
+短答：block 是调度和协作边界；warp 是硬件实际执行的一组线程。warp 宽度必须从目标设备查询；本仓库 S4000/MUSA SDK 3.1.0 实测为 32。
 
 易错点：Week 1 的 elementwise kernel 暂时不需要手写 warp 逻辑，但后面做 shuffle、warp reduce、occupancy 时必须重新考虑 MUSA 的 warp size。
 

@@ -35,7 +35,7 @@
    预计输出 / 预期现象：
 
    ```text
-   sum=1048576 expected=1048576 warpSize=128
+   sum=1048576 expected=1048576 warpSize=<设备报告值>
    ```
 
    正确时 `sum == expected`。如果 mask 或 warp size 假设不匹配，可能编译失败，或运行结果小于 expected。

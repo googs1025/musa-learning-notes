@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="source-sha256" content="5c3667810df4156eeac8b933a6f1488f258f45c0b25560d1326db52da32b154b">
+  <meta name="source-sha256" content="04d01e771698451c72653d9f59469b681922200cc7a80814127be735262ff836">
   <title>Week 2 真机记录 · MUSA GPU 编程知识库</title>
   <link rel="stylesheet" href="../assets/knowledge.css">
   <script src="../assets/knowledge.js" defer></script>
@@ -23,6 +23,8 @@
       <p><a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/notes/week2.md">查看原始 Markdown</a></p>
       <h1>Week 2 运行记录</h1>
 <p>本文件只记录真实执行结果。没有对应 SDK、编译器或设备时，明确填写“未运行”，不要填写估计性能。</p>
+<h2>2026-10-02 · MTT S4000 · MUSA SDK 3.1.0</h2>
+<div class="table-wrap"><table><thead><tr><th>目标</th><th>结果</th><th>关键观察</th><th>证据</th></tr></thead><tbody><tr><td><code>01_vector_add_runtime</code></td><td>PASS</td><td>1,048,576 个元素校验通过</td><td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week2/01_vector_add_runtime.log">日志</a></td></tr><tr><td><code>02_vector_add_pinned</code></td><td>PASS</td><td>Pinned H2D 约 0.602 ms、25.95 GB/s</td><td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week2/02_vector_add_pinned.log">日志</a></td></tr><tr><td><code>03_vector_add_timer</code></td><td>PASS</td><td>Event 计时约 0.1243 ms</td><td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week2/03_vector_add_timer.log">日志</a></td></tr><tr><td><code>04_vector_add_unified</code></td><td>PASS</td><td>计算校验通过；本设备不支持 prefetch，示例按设计跳过</td><td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week2/04_vector_add_unified.log">日志</a></td></tr><tr><td><code>05_multi_stream</code></td><td>PASS</td><td>四流流水线约 5.284 ms，结果正确</td><td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week2/05_multi_stream.log">日志</a></td></tr><tr><td><code>06_stream_event_dep</code></td><td>PASS</td><td>跨流依赖校验 <code>bad=0</code></td><td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week2/06_stream_event_dep.log">日志</a></td></tr><tr><td><code>07_musa_graph</code></td><td>PASS</td><td>5,000 次重放结果为预期 25,000</td><td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week2/07_musa_graph.log">日志</a></td></tr><tr><td><code>08_stream_callback</code></td><td>PASS</td><td>4 个 callback 全部完成</td><td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week2/08_stream_callback.log">日志</a></td></tr></tbody></table></div>
 <h2>统一运行记录模板</h2>
 <div class="table-wrap"><table><thead><tr><th>日期</th><th>主机 / 设备</th><th>CUDA Toolkit 或 MUSA SDK</th><th>编译器</th><th>架构</th><th>backend</th><th>target</th><th>输入规模</th><th>正确性</th><th>耗时 / 带宽</th><th>是否真实运行</th></tr></thead><tbody><tr><td>YYYY-MM-DD</td><td>host；GPU 型号</td><td>CUDA x.y / MUSA x.y；或未安装</td><td>nvcc / mcc；版本</td><td>sm_XX / mp_XX</td><td>cuda / musa</td><td><code>chapterXX__name</code></td><td>N、内存类型、stream 数等</td><td>PASS/FAIL/未验证</td><td>实测值；无实测填“未运行”</td><td>是 / 未运行</td></tr></tbody></table></div>
 <p>运行命令：</p>

@@ -149,3 +149,36 @@ test("validation page renders known states and evidence links", () => {
   assert.match(html, /ENV_LIMITED/);
   assert.match(html, /validation\/raw\/2026-10-02-s4000/);
 });
+
+test("warp width guidance stays device and SDK scoped", () => {
+  const files = [
+    "docs/concepts.md",
+    "docs/cuda-vs-musa.md",
+    "docs/glossary.md",
+    "docs/roadmap.md",
+    "docs/leetgpu-easy.md",
+    "docs/articles/01-first-musa-code.md",
+    "docs/articles/02-stream-graph.md",
+    "docs/quiz.html",
+    "docs/week3.html",
+    "code/week1/01_hello_world.mu",
+    "code/week1/03_device_info.mu",
+    "code/week1/concept-review.md",
+    "code/week2/01_vector_add_runtime.mu",
+    "code/week2/exercises.md",
+    "code/week3/README.md",
+    "code/week3/04_reduce_shfl.mu",
+    "code/week3/exercises.md",
+    "code/leetgpu/easy/README.md",
+    "code/leetgpu/easy/01_vector_add.mu",
+  ];
+  const absoluteClaim = /MUSA.{0,20}warp(?:Size| size|\s+宽度)?\s*(?:=|为|通常按|就是)\s*128|MUSA\s+上就是\s+128/iu;
+  for (const file of files) {
+    const text = fs.readFileSync(path.join(root, file), "utf8");
+    assert.doesNotMatch(text, absoluteClaim, file);
+  }
+  assert.match(fs.readFileSync(path.join(root, "docs/concepts.md"), "utf8"), /musaDeviceProp\.warpSize/);
+  const shuffleSource = fs.readFileSync(path.join(root, "code/week3/04_reduce_shfl.mu"), "utf8");
+  assert.doesNotMatch(shuffleSource, /\(threads \+ 127\) \/ 128/);
+  assert.match(shuffleSource, /\(threads \+ warpSize - 1\) \/ warpSize/);
+});
