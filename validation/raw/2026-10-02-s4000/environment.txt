@@ -9,13 +9,13 @@ Fri Oct  2 10:55:45 2026
 ---------------------------------------------------------------
     mthreads-gmi:1.14.0          Driver Version:2.7.0
 ---------------------------------------------------------------
-ID   Name           |PCIe                |%GPU  Mem            
-     Device Type    |Pcie Lane Width     |Temp  MPC Capable    
-                                         |      ECC Mode       
+ID   Name           |PCIe                |%GPU  Mem
+     Device Type    |Pcie Lane Width     |Temp  MPC Capable
+                                         |      ECC Mode
 +-------------------------------------------------------------+
 0    MTT S4000      |00000000:28:00.0    |0%    4MiB(49152MiB)
-     Physical       |16x(16x)            |41C   YES            
-                                         |      N/A            
+     Physical       |16x(16x)            |41C   YES
+                                         |      N/A
 ---------------------------------------------------------------
 
 ---------------------------------------------------------------

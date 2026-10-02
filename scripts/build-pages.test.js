@@ -48,6 +48,8 @@ test("generates eighteen deterministic weekly pages, validation and detects stal
   assert.equal(written.length, 19);
   assert.equal(written.filter((file) => file.includes(`${path.sep}generated${path.sep}`)).length, 18);
   assert.ok(fs.statSync(path.join(docsRoot, "validation.html")).isFile());
+  const validationHtml = fs.readFileSync(path.join(docsRoot, "validation.html"), "utf8");
+  assert.doesNotMatch(validationHtml, /[ \t]+$/m, "validation page must not contain trailing whitespace");
 
   for (let week = 1; week <= 6; week += 1) {
     for (const kind of ["learning", "exercises", "records"]) {

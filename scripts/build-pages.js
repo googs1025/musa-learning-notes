@@ -40,8 +40,7 @@ function validationDocument(manifest) {
     targets.filter((target) => target.status === status).length,
   ]));
   const evidenceUrl = (evidence) => `https://github.com/googs1025/musa-learning-notes/blob/main/${evidence}`;
-  const weekTables = manifest.weeks.map((week) => `
-      <section aria-labelledby="week${week.week}-title">
+  const weekTables = manifest.weeks.map((week) => `      <section aria-labelledby="week${week.week}-title">
         <h2 id="week${week.week}-title">Week ${week.week}</h2>
         <div class="table-wrap"><table>
           <thead><tr><th>目标</th><th>状态</th><th>结果</th><th>证据</th></tr></thead>
@@ -52,7 +51,7 @@ function validationDocument(manifest) {
             <td><a href="${evidenceUrl(target.evidence)}">${escapeHtml(target.evidence)}</a></td>
           </tr>`).join("")}</tbody>
         </table></div>
-      </section>`).join("");
+      </section>`).join("\n");
 
   return `<!doctype html>
 <html lang="zh-CN" data-page-kind="validation">
@@ -78,7 +77,7 @@ function validationDocument(manifest) {
       ${statuses.map((status) => `<article class="card"><h2>${status}</h2><p>${counts[status]} 个目标</p></article>`).join("")}
     </section>
     <p class="callout">当前环境只有 ${manifest.environment.gpuCount} 张 GPU，不能据此宣称多卡 MCCL 或 P2P 行为已经验证。故障注入示例也不会在无人值守批处理中自动执行。</p>
-    ${weekTables}
+${weekTables}
     <nav class="pager" aria-label="页面导航"><a href="index.html">← 返回知识库首页</a><a href="quiz.html">进入完整自测 →</a></nav>
   </main>
   <footer class="footer"><p>MUSA Learning Notes · 内容以官方文档和仓库实测为准</p></footer>
