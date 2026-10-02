@@ -182,3 +182,13 @@ test("warp width guidance stays device and SDK scoped", () => {
   assert.doesNotMatch(shuffleSource, /\(threads \+ 127\) \/ 128/);
   assert.match(shuffleSource, /\(threads \+ warpSize - 1\) \/ warpSize/);
 });
+
+test("CI checks generated Pages freshness before documentation", () => {
+  for (const workflow of [".github/workflows/docs-check.yml", ".github/workflows/pages.yml"]) {
+    const text = fs.readFileSync(path.join(root, workflow), "utf8");
+    const freshness = text.indexOf("node scripts/build-pages.js --check");
+    const docsCheck = text.indexOf("node scripts/check-docs.js");
+    assert.ok(freshness >= 0, `${workflow} must check generated Pages freshness`);
+    assert.ok(freshness < docsCheck, `${workflow} must check freshness before documentation`);
+  }
+});
