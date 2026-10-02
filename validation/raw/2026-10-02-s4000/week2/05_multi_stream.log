@@ -1,0 +1,10 @@
+TARGET=05_multi_stream
+WEEK=week2
+START=2026-10-02T10:57:42+08:00
+mcc -O2 -std=c++17 -I/usr/local/musa/include -I../include 05_multi_stream.mu -o 05_multi_stream -L/usr/local/musa/lib -lmusa -lmusart
+BUILD_EXIT_CODE=0
+[A] single stream serial :   7.277 ms
+[B] 4-stream pipeline    :   5.284 ms
+verify: OK ✓
+RUN_EXIT_CODE=0
+END=2026-10-02T10:58:01+08:00

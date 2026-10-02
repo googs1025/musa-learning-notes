@@ -8,6 +8,13 @@ const { test } = require("node:test");
 
 const root = path.resolve(__dirname, "..");
 const checker = fs.readFileSync(path.join(__dirname, "check-docs.js"), "utf8");
+const validation = JSON.parse(fs.readFileSync(path.join(root, "validation/musa-3.1.0-s4000.json"), "utf8"));
+const validationStatuses = validation.weeks.flatMap((week) => week.targets).map((target) => target.status);
+const validationCounts = Object.fromEntries([...new Set(validationStatuses)].sort().map((status) => [
+  status,
+  validationStatuses.filter((candidate) => candidate === status).length,
+]));
+const validationSummary = `validation targets: ${validationStatuses.length} ${JSON.stringify(validationCounts)}`;
 
 // Override reads in memory so regression cases never modify the documentation.
 function runChecker(changes = {}) {
@@ -30,8 +37,14 @@ const append = (markup) => (html) => html.replace("</main>", `${markup}</main>`)
 const commentLink = (href) => (html) => html.replace(/<a\b[^>]*>[\s\S]*?<\/a>/g,
   (link) => link.includes(`href="${href}"`) ? `<!--${link}-->` : link);
 
-test("baseline validates all pages and 136 local links", () => {
-  assert.deepEqual(runChecker(), ["quiz questions: 154", "learning materials: ok", "knowledge pages: 9", "local links: 136"]);
+test("baseline validates all pages, evidence and 136 local links", () => {
+  assert.deepEqual(runChecker(), [
+    "quiz questions: 154",
+    "learning materials: ok",
+    validationSummary,
+    "knowledge pages: 9",
+    "local links: 136",
+  ]);
 });
 
 const invalidCases = [
@@ -82,3 +95,27 @@ const validCases = [
 for (const [name, markup, count] of validCases) {
   test(name, () => assert.equal(runChecker({ "docs/index.html": append(markup) }).at(-1), `local links: ${count}`));
 }
+
+test("rejects an unknown validation status", () => {
+  const mutate = (text) => {
+    const data = JSON.parse(text);
+    data.weeks[0].targets[0].status = "MAYBE";
+    return JSON.stringify(data);
+  };
+  assert.throws(
+    () => runChecker({ "validation/musa-3.1.0-s4000.json": mutate }),
+    /unknown validation status MAYBE/,
+  );
+});
+
+test("requires evidence for passing targets", () => {
+  const mutate = (text) => {
+    const data = JSON.parse(text);
+    data.weeks[0].targets[0].evidence = "validation/raw/2026-10-02-s4000/missing.log";
+    return JSON.stringify(data);
+  };
+  assert.throws(
+    () => runChecker({ "validation/musa-3.1.0-s4000.json": mutate }),
+    /missing validation evidence/,
+  );
+});

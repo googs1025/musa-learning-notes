@@ -1,0 +1,17 @@
+TARGET=03_device_info
+WEEK=week1
+START=2026-10-02T10:56:03+08:00
+mcc -O2 -std=c++17 03_device_info.mu -o 03_device_info -L/usr/local/musa-3.1.0/lib -lmusa -lmusart
+BUILD_EXIT_CODE=0
+Detected 1 MUSA device(s)
+
+Device 0: MTT S4000
+  SM count                 : 56
+  Warp size                : 128
+  Max threads per block    : 1024
+  Shared memory per block  : 72 KB
+  Total global memory      : 49061 MB
+  Compute capability       : 2.2
+
+RUN_EXIT_CODE=0
+END=2026-10-02T10:56:04+08:00

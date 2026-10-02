@@ -1,0 +1,83 @@
+{
+  "runId": "2026-10-02-s4000",
+  "observedAt": "2026-10-02",
+  "sourceRevision": "da0c6ee515ebec72bcc79fc7f8e10be9180a5e4b",
+  "environment": {
+    "gpu": "MTT S4000 48 GiB",
+    "musaSdk": "3.1.0",
+    "driver": "2.7.0",
+    "gpuCount": 1,
+    "os": "Ubuntu 22.04"
+  },
+  "weeks": [
+    {
+      "week": 1,
+      "targets": [
+        { "name": "01_hello_world", "status": "PASS", "buildExitCode": 0, "runExitCode": 0, "summary": "CPU and five GPU threads printed successfully.", "evidence": "validation/raw/2026-10-02-s4000/week1/01_hello_world.log" },
+        { "name": "02_thread_index", "status": "PASS", "buildExitCode": 0, "runExitCode": 0, "summary": "Two blocks produced the expected global thread indices 0 through 7.", "evidence": "validation/raw/2026-10-02-s4000/week1/02_thread_index.log" },
+        { "name": "03_device_info", "status": "PASS", "buildExitCode": 0, "runExitCode": 0, "summary": "The runtime detected the MTT S4000 and reported its device properties.", "evidence": "validation/raw/2026-10-02-s4000/week1/03_device_info.log" },
+        { "name": "04_memory_basics", "status": "PASS", "buildExitCode": 0, "runExitCode": 0, "summary": "Device allocation, copy, kernel update and host verification passed.", "evidence": "validation/raw/2026-10-02-s4000/week1/04_memory_basics.log" },
+        { "name": "05_error_check", "status": "PASS", "buildExitCode": 0, "runExitCode": 0, "summary": "Runtime and launch error-checking paths completed as designed.", "evidence": "validation/raw/2026-10-02-s4000/week1/05_error_check.log" },
+        { "name": "06_async_kernel", "status": "PASS", "buildExitCode": 0, "runExitCode": 0, "summary": "Asynchronous launch and synchronized completion were observed successfully.", "evidence": "validation/raw/2026-10-02-s4000/week1/06_async_kernel.log" }
+      ]
+    },
+    {
+      "week": 2,
+      "targets": [
+        { "name": "01_vector_add_runtime", "status": "PASS", "buildExitCode": 0, "runExitCode": 0, "summary": "Runtime API vector addition verified 1,048,576 elements.", "evidence": "validation/raw/2026-10-02-s4000/week2/01_vector_add_runtime.log" },
+        { "name": "02_vector_add_pinned", "status": "PASS", "buildExitCode": 0, "runExitCode": 0, "summary": "Pinned-memory transfer completed and reported a measured H2D result.", "evidence": "validation/raw/2026-10-02-s4000/week2/02_vector_add_pinned.log" },
+        { "name": "03_vector_add_timer", "status": "PASS", "buildExitCode": 0, "runExitCode": 0, "summary": "CPU synchronized timing and MUSA event timing completed successfully.", "evidence": "validation/raw/2026-10-02-s4000/week2/03_vector_add_timer.log" },
+        { "name": "04_vector_add_unified", "status": "PASS", "buildExitCode": 0, "runExitCode": 0, "summary": "Unified-memory computation verified; prefetch was reported unsupported and skipped.", "evidence": "validation/raw/2026-10-02-s4000/week2/04_vector_add_unified.log" },
+        { "name": "05_multi_stream", "status": "PASS", "buildExitCode": 0, "runExitCode": 0, "summary": "The four-stream pipeline completed with correct output.", "evidence": "validation/raw/2026-10-02-s4000/week2/05_multi_stream.log" },
+        { "name": "06_stream_event_dep", "status": "PASS", "buildExitCode": 0, "runExitCode": 0, "summary": "Cross-stream event dependency completed with zero bad values.", "evidence": "validation/raw/2026-10-02-s4000/week2/06_stream_event_dep.log" },
+        { "name": "07_musa_graph", "status": "PASS", "buildExitCode": 0, "runExitCode": 0, "summary": "Graph replay completed 5,000 steps and matched the expected result.", "evidence": "validation/raw/2026-10-02-s4000/week2/07_musa_graph.log" },
+        { "name": "08_stream_callback", "status": "PASS", "buildExitCode": 0, "runExitCode": 0, "summary": "All four stream callbacks completed and updated the expected counter.", "evidence": "validation/raw/2026-10-02-s4000/week2/08_stream_callback.log" }
+      ]
+    },
+    {
+      "week": 3,
+      "targets": [
+        { "name": "01_warp_divergence", "status": "PASS", "buildExitCode": 0, "runExitCode": 0, "summary": "Coherent and divergent paths ran and reported a 1.01x measured ratio.", "evidence": "validation/raw/2026-10-02-s4000/week3/01_warp_divergence.log" },
+        { "name": "02_reduce_naive", "status": "PASS", "buildExitCode": 0, "runExitCode": 0, "summary": "Naive reduction matched the expected sum of 4,194,304.", "evidence": "validation/raw/2026-10-02-s4000/week3/02_reduce_naive.log" },
+        { "name": "03_reduce_unrolling", "status": "PASS", "buildExitCode": 0, "runExitCode": 0, "summary": "Unrolled reduction matched the expected sum of 4,194,304.", "evidence": "validation/raw/2026-10-02-s4000/week3/03_reduce_unrolling.log" },
+        { "name": "04_reduce_shfl", "status": "PASS", "buildExitCode": 0, "runExitCode": 0, "summary": "Shuffle reduction matched the expected sum and reported runtime warpSize 32.", "evidence": "validation/raw/2026-10-02-s4000/week3/04_reduce_shfl.log" },
+        { "name": "05_nested_hello", "status": "PASS", "buildExitCode": 0, "runExitCode": 0, "summary": "Dynamic parallelism launched child blocks successfully on this SDK and device.", "evidence": "validation/raw/2026-10-02-s4000/week3/05_nested_hello.log" },
+        { "name": "06_sum_matrix_2d", "status": "PASS", "buildExitCode": 0, "runExitCode": 0, "summary": "2D matrix row sums matched the CPU reference with zero reported error.", "evidence": "validation/raw/2026-10-02-s4000/week3/06_sum_matrix_2d.log" },
+        { "name": "07_sum_matrix_1d", "status": "PASS", "buildExitCode": 0, "runExitCode": 0, "summary": "1D matrix row sums matched the CPU reference with zero reported error.", "evidence": "validation/raw/2026-10-02-s4000/week3/07_sum_matrix_1d.log" }
+      ]
+    },
+    {
+      "week": 4,
+      "targets": [
+        { "name": "01_saxpy_bandwidth", "status": "PASS", "buildExitCode": 0, "runExitCode": 0, "summary": "SAXPY completed and reported 0.353 ms and 569.82 GB/s for this run.", "evidence": "validation/raw/2026-10-02-s4000/week4/01_saxpy_bandwidth.log" },
+        { "name": "02_offset_access", "status": "PASS", "buildExitCode": 0, "runExitCode": 0, "summary": "All configured offset-access cases completed successfully.", "evidence": "validation/raw/2026-10-02-s4000/week4/02_offset_access.log" },
+        { "name": "03_offset_unrolling", "status": "PASS", "buildExitCode": 0, "runExitCode": 0, "summary": "All configured unrolled offset-access cases completed successfully.", "evidence": "validation/raw/2026-10-02-s4000/week4/03_offset_unrolling.log" },
+        { "name": "04_aos_vs_soa", "status": "PASS", "buildExitCode": 0, "runExitCode": 0, "summary": "AoS and SoA paths completed; the measured run reported 1.53x for SoA.", "evidence": "validation/raw/2026-10-02-s4000/week4/04_aos_vs_soa.log" },
+        { "name": "05_transpose_naive", "status": "PASS", "buildExitCode": 0, "runExitCode": 0, "summary": "Naive transpose completed successfully.", "evidence": "validation/raw/2026-10-02-s4000/week4/05_transpose_naive.log" },
+        { "name": "06_transpose_padded", "status": "PASS", "buildExitCode": 0, "runExitCode": 0, "summary": "Padded shared-memory transpose completed successfully.", "evidence": "validation/raw/2026-10-02-s4000/week4/06_transpose_padded.log" }
+      ]
+    },
+    {
+      "week": 5,
+      "targets": [
+        { "name": "01_shared_basics", "status": "PASS", "buildExitCode": 0, "runExitCode": 0, "summary": "Shared-memory basics completed successfully.", "evidence": "validation/raw/2026-10-02-s4000/week5/01_shared_basics.log" },
+        { "name": "02_reduce_shared", "status": "PASS", "buildExitCode": 0, "runExitCode": 0, "summary": "Shared-memory reduction matched the expected sum of 4,194,304.", "evidence": "validation/raw/2026-10-02-s4000/week5/02_reduce_shared.log" },
+        { "name": "03_transpose_shared", "status": "PASS", "buildExitCode": 0, "runExitCode": 0, "summary": "Padded shared-memory transpose completed successfully.", "evidence": "validation/raw/2026-10-02-s4000/week5/03_transpose_shared.log" },
+        { "name": "04_stencil_constant", "status": "PASS", "buildExitCode": 0, "runExitCode": 0, "summary": "Constant-memory stencil completed successfully.", "evidence": "validation/raw/2026-10-02-s4000/week5/04_stencil_constant.log" },
+        { "name": "05_naive_gemm", "status": "PASS", "buildExitCode": 0, "runExitCode": 0, "summary": "Naive 1024 cubed GEMM verified C[0] and reported 279.1 GFLOPS.", "evidence": "validation/raw/2026-10-02-s4000/week5/05_naive_gemm.log" },
+        { "name": "06_tiled_gemm", "status": "PASS", "buildExitCode": 0, "runExitCode": 0, "summary": "Tiled 1024 cubed GEMM verified C[0] and reported 1590.6 GFLOPS.", "evidence": "validation/raw/2026-10-02-s4000/week5/06_tiled_gemm.log" },
+        { "name": "07_mublas_sgemm", "status": "ENV_LIMITED", "buildExitCode": 0, "runExitCode": 0, "summary": "The teaching skeleton ran but did not invoke a real muBLAS SGEMM.", "reason": "The source still requires an SDK-specific SGEMM invocation before a library measurement is valid.", "evidence": "validation/raw/2026-10-02-s4000/week5/07_mublas_sgemm.log" }
+      ]
+    },
+    {
+      "week": 6,
+      "targets": [
+        { "name": "01_mccl_allreduce", "status": "ENV_LIMITED", "buildExitCode": 0, "runExitCode": null, "summary": "MCCL AllReduce compiled successfully but was not executed.", "reason": "The validation host exposes one GPU, so it cannot validate the intended multi-rank collective.", "evidence": "validation/raw/2026-10-02-s4000/week6/01_mccl_allreduce.log" },
+        { "name": "02_musa_gdb_demo", "status": "NOT_RUN", "buildExitCode": 0, "runExitCode": null, "summary": "The intentional out-of-bounds debugger demo compiled successfully.", "reason": "Fault-injection binaries were excluded from the unattended batch and require an interactive debugger session.", "evidence": "validation/raw/2026-10-02-s4000/week6/02_musa_gdb_demo.log" },
+        { "name": "03_error_dump", "status": "NOT_RUN", "buildExitCode": 0, "runExitCode": null, "summary": "The intentional error-dump demo compiled successfully.", "reason": "Fault-injection binaries were excluded from the unattended batch and require explicit dump configuration.", "evidence": "validation/raw/2026-10-02-s4000/week6/03_error_dump.log" },
+        { "name": "04_torch_musa_minimal", "status": "PASS", "buildExitCode": null, "runExitCode": 0, "summary": "PyTorch 2.2.0 reported MUSA available and returned a sample value.", "evidence": "validation/raw/2026-10-02-s4000/week6/04_torch_musa_minimal.log" },
+        { "name": "05_torch_musa_custom_op", "status": "BUILD_FAIL", "buildExitCode": 2, "runExitCode": null, "summary": "The custom-op teaching skeleton did not compile in the base environment.", "reason": "The required PyTorch C++ extension headers are not present in the Makefile include path.", "evidence": "validation/raw/2026-10-02-s4000/week6/05_torch_musa_custom_op.log" }
+      ]
+    }
+  ]
+}

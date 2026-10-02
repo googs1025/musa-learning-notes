@@ -1,0 +1,11 @@
+TARGET=05_nested_hello
+WEEK=week3
+START=2026-10-02T10:59:05+08:00
+mcc -O2 -std=c++17 -I/usr/local/musa/include -I../include 05_nested_hello.mu -o 05_nested_hello -L/usr/local/musa/lib -lmusa -lmusart
+BUILD_EXIT_CODE=0
+parent block=0 finished
+parent block=1 finished
+child block=0
+child block=1
+RUN_EXIT_CODE=0
+END=2026-10-02T10:59:18+08:00

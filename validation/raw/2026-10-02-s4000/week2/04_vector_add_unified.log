@@ -1,0 +1,16 @@
+TARGET=04_vector_add_unified
+WEEK=week2
+START=2026-10-02T10:57:08+08:00
+mcc -O2 -std=c++17 -I/usr/local/musa/include -I../include 04_vector_add_unified.mu -o 04_vector_add_unified -L/usr/local/musa/lib -lmusa -lmusart
+BUILD_EXIT_CODE=0
+Unified memory, N = 4194304 (16.0 MB per buffer)
+[run 1] 冷启动:
+  no  prefetch         kernel 1.6916 ms  (verify ✓)
+  [info] musaMemPrefetchAsync 不被本设备支持,跳过 prefetch
+  want prefetch (n/a)  kernel 1.4051 ms  (verify ✓)
+[run 2] 热启动:
+  no  prefetch         kernel 1.4303 ms  (verify ✓)
+  [info] musaMemPrefetchAsync 不被本设备支持,跳过 prefetch
+  want prefetch (n/a)  kernel 1.4155 ms  (verify ✓)
+RUN_EXIT_CODE=0
+END=2026-10-02T10:57:42+08:00

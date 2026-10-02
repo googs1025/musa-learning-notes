@@ -1,0 +1,8 @@
+TARGET=01_warp_divergence
+WEEK=week3
+START=2026-10-02T10:58:42+08:00
+mcc -O2 -std=c++17 -I/usr/local/musa/include -I../include 01_warp_divergence.mu -o 01_warp_divergence -L/usr/local/musa/lib -lmusa -lmusart
+BUILD_EXIT_CODE=0
+coherent=0.322 ms divergent=0.325 ms slowdown=1.01x
+RUN_EXIT_CODE=0
+END=2026-10-02T10:58:46+08:00

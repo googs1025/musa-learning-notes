@@ -1,0 +1,12 @@
+TARGET=05_torch_musa_custom_op
+WEEK=week6
+START=2026-10-02T11:03:10+08:00
+g++ -O2 -std=c++17 -I/usr/local/musa/include -I../include 05_torch_musa_custom_op.cpp -o 05_torch_musa_custom_op -L/usr/local/musa/lib -lmusa -lmusart
+05_torch_musa_custom_op.cpp:2:10: fatal error: torch/extension.h: No such file or directory
+    2 | #include <torch/extension.h>
+      |          ^~~~~~~~~~~~~~~~~~~
+compilation terminated.
+make: *** [Makefile:22: 05_torch_musa_custom_op] Error 1
+BUILD_EXIT_CODE=2
+RUN_EXIT_CODE=NOT_RUN
+END=2026-10-02T11:03:10+08:00

@@ -1,0 +1,8 @@
+TARGET=03_transpose_shared
+WEEK=week5
+START=2026-10-02T11:01:39+08:00
+mcc -O2 -std=c++17 -I/usr/local/musa/include -I../include 03_transpose_shared.mu -o 03_transpose_shared -L/usr/local/musa/lib -lmusa -lmusart
+BUILD_EXIT_CODE=0
+transpose shared padded 0.317 ms
+RUN_EXIT_CODE=0
+END=2026-10-02T11:01:43+08:00

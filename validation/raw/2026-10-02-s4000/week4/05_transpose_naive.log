@@ -1,0 +1,8 @@
+TARGET=05_transpose_naive
+WEEK=week4
+START=2026-10-02T10:59:52+08:00
+mcc -O2 -std=c++17 -I/usr/local/musa/include -I../include 05_transpose_naive.mu -o 05_transpose_naive -L/usr/local/musa/lib -lmusa -lmusart
+BUILD_EXIT_CODE=0
+transpose naive 0.097 ms
+RUN_EXIT_CODE=0
+END=2026-10-02T11:00:04+08:00

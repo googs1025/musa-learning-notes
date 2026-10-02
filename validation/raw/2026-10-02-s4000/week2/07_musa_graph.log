@@ -1,0 +1,10 @@
+TARGET=07_musa_graph
+WEEK=week2
+START=2026-10-02T10:58:06+08:00
+mcc -O2 -std=c++17 -I/usr/local/musa/include -I../include 07_musa_graph.mu -o 07_musa_graph -L/usr/local/musa/lib -lmusa -lmusart
+BUILD_EXIT_CODE=0
+[A] direct launch  5000 steps × 5 ops = 25000 launches : 465.951 ms  (18.64 µs/launch)
+[B] graph  launch  5000 steps (each = 5 ops in graph)        : 1360.890 ms  (272.18 µs/step)
+verify x[0] = 25000.0   (expect 25000)   OK ✓
+RUN_EXIT_CODE=0
+END=2026-10-02T10:58:13+08:00

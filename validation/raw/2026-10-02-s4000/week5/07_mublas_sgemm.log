@@ -1,0 +1,13 @@
+TARGET=07_mublas_sgemm
+WEEK=week5
+START=2026-10-02T11:02:41+08:00
+mcc -O2 -std=c++17 -I/usr/local/musa/include -I../include 07_mublas_sgemm.mu -o 07_mublas_sgemm -L/usr/local/musa/lib -lmusa -lmusart -lmublas
+BUILD_EXIT_CODE=0
+Week 5 muBLAS SGEMM comparison skeleton
+Shape: M=1024 N=1024 K=1024
+
+muBLAS header found.
+Fill SDK-specific SGEMM invocation here before measuring.
+Record: naive GFLOPS, tiled GFLOPS, muBLAS GFLOPS, ratio to tiled.
+RUN_EXIT_CODE=0
+END=2026-10-02T11:02:44+08:00

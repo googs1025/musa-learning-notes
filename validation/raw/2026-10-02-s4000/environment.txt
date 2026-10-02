@@ -1,0 +1,27 @@
+2026-10-02T10:55:45+08:00
+da0c6ee515ebec72bcc79fc7f8e10be9180a5e4b
+Linux autodl-container-c0ab469cf4-12fa1be2 5.15.0-105-generic #115-Ubuntu SMP Mon Apr 15 09:52:04 UTC 2024 x86_64 x86_64 x86_64 GNU/Linux
+clang version 14.0.0 (git@sh-code.mthreads.com:sw/mtcc.git baf70da0ba9f1a95a844726d8b2c28a1365b886a)
+Target: x86_64-unknown-linux-gnu
+Thread model: posix
+InstalledDir: /usr/local/musa/bin
+Fri Oct  2 10:55:45 2026
+---------------------------------------------------------------
+    mthreads-gmi:1.14.0          Driver Version:2.7.0
+---------------------------------------------------------------
+ID   Name           |PCIe                |%GPU  Mem            
+     Device Type    |Pcie Lane Width     |Temp  MPC Capable    
+                                         |      ECC Mode       
++-------------------------------------------------------------+
+0    MTT S4000      |00000000:28:00.0    |0%    4MiB(49152MiB)
+     Physical       |16x(16x)            |41C   YES            
+                                         |      N/A            
+---------------------------------------------------------------
+
+---------------------------------------------------------------
+Processes:
+ID   PID       Process name                         GPU Memory
+                                                         Usage
++-------------------------------------------------------------+
+   No running processes found
+---------------------------------------------------------------

@@ -1,0 +1,14 @@
+TARGET=02_offset_access
+WEEK=week4
+START=2026-10-02T10:59:38+08:00
+mcc -O2 -std=c++17 -I/usr/local/musa/include -I../include 02_offset_access.mu -o 02_offset_access -L/usr/local/musa/lib -lmusa -lmusart
+BUILD_EXIT_CODE=0
+offset= 0 time=0.321 ms
+offset= 1 time=0.317 ms
+offset= 2 time=0.317 ms
+offset= 4 time=0.317 ms
+offset= 8 time=0.317 ms
+offset=16 time=0.317 ms
+offset=31 time=0.317 ms
+RUN_EXIT_CODE=0
+END=2026-10-02T10:59:43+08:00
