@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="zh-CN" data-page-kind="validation">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>真机验证 · MUSA GPU 编程知识库</title>
+  <link rel="stylesheet" href="assets/knowledge.css">
+  <script src="assets/knowledge.js" defer></script>
+</head>
+<body>
+  <header class="site-header"><nav class="site-nav" aria-label="主导航">
+    <a class="brand" href="index.html">MUSA GPU 编程知识库</a>
+    <ul><li><a href="index.html#weeks">每周路径</a></li><li><a href="quiz.html">知识自测</a></li></ul>
+  </nav></header>
+  <main class="page-shell">
+    <header class="hero">
+      <p class="tag">Hardware Validation</p>
+      <h1>MTT S4000 真机验证</h1>
+      <p>课程内容完整度与硬件验证状态分开记录。本页只展示 MUSA SDK 3.1.0、驱动 2.7.0、MTT S4000 48 GiB 上真实采集的结果。</p>
+    </header>
+    <section class="knowledge-grid" aria-label="验证状态统计">
+      <article class="card"><h2>PASS</h2><p>33 个目标</p></article><article class="card"><h2>BUILD_FAIL</h2><p>1 个目标</p></article><article class="card"><h2>RUN_FAIL</h2><p>0 个目标</p></article><article class="card"><h2>ENV_LIMITED</h2><p>2 个目标</p></article><article class="card"><h2>NOT_RUN</h2><p>3 个目标</p></article>
+    </section>
+    <p class="callout">当前环境只有 1 张 GPU，不能据此宣称多卡 MCCL 或 P2P 行为已经验证。故障注入示例也不会在无人值守批处理中自动执行。</p>
+      <section aria-labelledby="week1-title">
+        <h2 id="week1-title">Week 1</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>目标</th><th>状态</th><th>结果</th><th>证据</th></tr></thead>
+          <tbody><tr>
+            <td><code>01_hello_world</code></td>
+            <td><strong>PASS</strong></td>
+            <td>CPU and five GPU threads printed successfully.</td>
+            <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week1/01_hello_world.log">validation/raw/2026-10-02-s4000/week1/01_hello_world.log</a></td>
+          </tr><tr>
+            <td><code>02_thread_index</code></td>
+            <td><strong>PASS</strong></td>
+            <td>Two blocks produced the expected global thread indices 0 through 7.</td>
+            <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week1/02_thread_index.log">validation/raw/2026-10-02-s4000/week1/02_thread_index.log</a></td>
+          </tr><tr>
+            <td><code>03_device_info</code></td>
+            <td><strong>PASS</strong></td>
+            <td>The runtime detected the MTT S4000 and reported its device properties.</td>
+            <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week1/03_device_info.log">validation/raw/2026-10-02-s4000/week1/03_device_info.log</a></td>
+          </tr><tr>
+            <td><code>04_memory_basics</code></td>
+            <td><strong>PASS</strong></td>
+            <td>Device allocation, copy, kernel update and host verification passed.</td>
+            <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week1/04_memory_basics.log">validation/raw/2026-10-02-s4000/week1/04_memory_basics.log</a></td>
+          </tr><tr>
+            <td><code>05_error_check</code></td>
+            <td><strong>PASS</strong></td>
+            <td>Runtime and launch error-checking paths completed as designed.</td>
+            <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week1/05_error_check.log">validation/raw/2026-10-02-s4000/week1/05_error_check.log</a></td>
+          </tr><tr>
+            <td><code>06_async_kernel</code></td>
+            <td><strong>PASS</strong></td>
+            <td>Asynchronous launch and synchronized completion were observed successfully.</td>
+            <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week1/06_async_kernel.log">validation/raw/2026-10-02-s4000/week1/06_async_kernel.log</a></td>
+          </tr></tbody>
+        </table></div>
+      </section>
+      <section aria-labelledby="week2-title">
+        <h2 id="week2-title">Week 2</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>目标</th><th>状态</th><th>结果</th><th>证据</th></tr></thead>
+          <tbody><tr>
+            <td><code>01_vector_add_runtime</code></td>
+            <td><strong>PASS</strong></td>
+            <td>Runtime API vector addition verified 1,048,576 elements.</td>
+            <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week2/01_vector_add_runtime.log">validation/raw/2026-10-02-s4000/week2/01_vector_add_runtime.log</a></td>
+          </tr><tr>
+            <td><code>02_vector_add_pinned</code></td>
+            <td><strong>PASS</strong></td>
+            <td>Pinned-memory transfer completed and reported a measured H2D result.</td>
+            <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week2/02_vector_add_pinned.log">validation/raw/2026-10-02-s4000/week2/02_vector_add_pinned.log</a></td>
+          </tr><tr>
+            <td><code>03_vector_add_timer</code></td>
+            <td><strong>PASS</strong></td>
+            <td>CPU synchronized timing and MUSA event timing completed successfully.</td>
+            <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week2/03_vector_add_timer.log">validation/raw/2026-10-02-s4000/week2/03_vector_add_timer.log</a></td>
+          </tr><tr>
+            <td><code>04_vector_add_unified</code></td>
+            <td><strong>PASS</strong></td>
+            <td>Unified-memory computation verified; prefetch was reported unsupported and skipped.</td>
+            <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week2/04_vector_add_unified.log">validation/raw/2026-10-02-s4000/week2/04_vector_add_unified.log</a></td>
+          </tr><tr>
+            <td><code>05_multi_stream</code></td>
+            <td><strong>PASS</strong></td>
+            <td>The four-stream pipeline completed with correct output.</td>
+            <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week2/05_multi_stream.log">validation/raw/2026-10-02-s4000/week2/05_multi_stream.log</a></td>
+          </tr><tr>
+            <td><code>06_stream_event_dep</code></td>
+            <td><strong>PASS</strong></td>
+            <td>Cross-stream event dependency completed with zero bad values.</td>
+            <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week2/06_stream_event_dep.log">validation/raw/2026-10-02-s4000/week2/06_stream_event_dep.log</a></td>
+          </tr><tr>
+            <td><code>07_musa_graph</code></td>
+            <td><strong>PASS</strong></td>
+            <td>Graph replay completed 5,000 steps and matched the expected result.</td>
+            <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week2/07_musa_graph.log">validation/raw/2026-10-02-s4000/week2/07_musa_graph.log</a></td>
+          </tr><tr>
+            <td><code>08_stream_callback</code></td>
+            <td><strong>PASS</strong></td>
+            <td>All four stream callbacks completed and updated the expected counter.</td>
+            <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week2/08_stream_callback.log">validation/raw/2026-10-02-s4000/week2/08_stream_callback.log</a></td>
+          </tr></tbody>
+        </table></div>
+      </section>
+      <section aria-labelledby="week3-title">
+        <h2 id="week3-title">Week 3</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>目标</th><th>状态</th><th>结果</th><th>证据</th></tr></thead>
+          <tbody><tr>
+            <td><code>01_warp_divergence</code></td>
+            <td><strong>PASS</strong></td>
+            <td>Coherent and divergent paths ran and reported a 1.01x measured ratio.</td>
+            <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week3/01_warp_divergence.log">validation/raw/2026-10-02-s4000/week3/01_warp_divergence.log</a></td>
+          </tr><tr>
+            <td><code>02_reduce_naive</code></td>
+            <td><strong>PASS</strong></td>
+            <td>Naive reduction matched the expected sum of 4,194,304.</td>
+            <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week3/02_reduce_naive.log">validation/raw/2026-10-02-s4000/week3/02_reduce_naive.log</a></td>
+          </tr><tr>
+            <td><code>03_reduce_unrolling</code></td>
+            <td><strong>PASS</strong></td>
+            <td>Unrolled reduction matched the expected sum of 4,194,304.</td>
+            <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week3/03_reduce_unrolling.log">validation/raw/2026-10-02-s4000/week3/03_reduce_unrolling.log</a></td>
+          </tr><tr>
+            <td><code>04_reduce_shfl</code></td>
+            <td><strong>NOT_RUN</strong></td>
+            <td>The original revision matched the expected sum and reported warpSize 32, then review found its host-side shared allocation assumed 128.<br><small>The allocation now derives from warpSize, but the corrected revision was not rerun before the validation machine was released.</small></td>
+            <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week3/04_reduce_shfl.log">validation/raw/2026-10-02-s4000/week3/04_reduce_shfl.log</a></td>
+          </tr><tr>
+            <td><code>05_nested_hello</code></td>
+            <td><strong>PASS</strong></td>
+            <td>Dynamic parallelism launched child blocks successfully on this SDK and device.</td>
+            <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week3/05_nested_hello.log">validation/raw/2026-10-02-s4000/week3/05_nested_hello.log</a></td>
+          </tr><tr>
+            <td><code>06_sum_matrix_2d</code></td>
+            <td><strong>PASS</strong></td>
+            <td>2D matrix row sums matched the CPU reference with zero reported error.</td>
+            <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week3/06_sum_matrix_2d.log">validation/raw/2026-10-02-s4000/week3/06_sum_matrix_2d.log</a></td>
+          </tr><tr>
+            <td><code>07_sum_matrix_1d</code></td>
+            <td><strong>PASS</strong></td>
+            <td>1D matrix row sums matched the CPU reference with zero reported error.</td>
+            <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week3/07_sum_matrix_1d.log">validation/raw/2026-10-02-s4000/week3/07_sum_matrix_1d.log</a></td>
+          </tr></tbody>
+        </table></div>
+      </section>
+      <section aria-labelledby="week4-title">
+        <h2 id="week4-title">Week 4</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>目标</th><th>状态</th><th>结果</th><th>证据</th></tr></thead>
+          <tbody><tr>
+            <td><code>01_saxpy_bandwidth</code></td>
+            <td><strong>PASS</strong></td>
+            <td>SAXPY completed and reported 0.353 ms and 569.82 GB/s for this run.</td>
+            <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week4/01_saxpy_bandwidth.log">validation/raw/2026-10-02-s4000/week4/01_saxpy_bandwidth.log</a></td>
+          </tr><tr>
+            <td><code>02_offset_access</code></td>
+            <td><strong>PASS</strong></td>
+            <td>All configured offset-access cases completed successfully.</td>
+            <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week4/02_offset_access.log">validation/raw/2026-10-02-s4000/week4/02_offset_access.log</a></td>
+          </tr><tr>
+            <td><code>03_offset_unrolling</code></td>
+            <td><strong>PASS</strong></td>
+            <td>All configured unrolled offset-access cases completed successfully.</td>
+            <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week4/03_offset_unrolling.log">validation/raw/2026-10-02-s4000/week4/03_offset_unrolling.log</a></td>
+          </tr><tr>
+            <td><code>04_aos_vs_soa</code></td>
+            <td><strong>PASS</strong></td>
+            <td>AoS and SoA paths completed; the measured run reported 1.53x for SoA.</td>
+            <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week4/04_aos_vs_soa.log">validation/raw/2026-10-02-s4000/week4/04_aos_vs_soa.log</a></td>
+          </tr><tr>
+            <td><code>05_transpose_naive</code></td>
+            <td><strong>PASS</strong></td>
+            <td>Naive transpose completed successfully.</td>
+            <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week4/05_transpose_naive.log">validation/raw/2026-10-02-s4000/week4/05_transpose_naive.log</a></td>
+          </tr><tr>
+            <td><code>06_transpose_padded</code></td>
+            <td><strong>PASS</strong></td>
+            <td>Padded shared-memory transpose completed successfully.</td>
+            <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week4/06_transpose_padded.log">validation/raw/2026-10-02-s4000/week4/06_transpose_padded.log</a></td>
+          </tr></tbody>
+        </table></div>
+      </section>
+      <section aria-labelledby="week5-title">
+        <h2 id="week5-title">Week 5</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>目标</th><th>状态</th><th>结果</th><th>证据</th></tr></thead>
+          <tbody><tr>
+            <td><code>01_shared_basics</code></td>
+            <td><strong>PASS</strong></td>
+            <td>Shared-memory basics completed successfully.</td>
+            <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week5/01_shared_basics.log">validation/raw/2026-10-02-s4000/week5/01_shared_basics.log</a></td>
+          </tr><tr>
+            <td><code>02_reduce_shared</code></td>
+            <td><strong>PASS</strong></td>
+            <td>Shared-memory reduction matched the expected sum of 4,194,304.</td>
+            <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week5/02_reduce_shared.log">validation/raw/2026-10-02-s4000/week5/02_reduce_shared.log</a></td>
+          </tr><tr>
+            <td><code>03_transpose_shared</code></td>
+            <td><strong>PASS</strong></td>
+            <td>Padded shared-memory transpose completed successfully.</td>
+            <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week5/03_transpose_shared.log">validation/raw/2026-10-02-s4000/week5/03_transpose_shared.log</a></td>
+          </tr><tr>
+            <td><code>04_stencil_constant</code></td>
+            <td><strong>PASS</strong></td>
+            <td>Constant-memory stencil completed successfully.</td>
+            <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week5/04_stencil_constant.log">validation/raw/2026-10-02-s4000/week5/04_stencil_constant.log</a></td>
+          </tr><tr>
+            <td><code>05_naive_gemm</code></td>
+            <td><strong>PASS</strong></td>
+            <td>Naive 1024 cubed GEMM verified C[0] and reported 279.1 GFLOPS.</td>
+            <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week5/05_naive_gemm.log">validation/raw/2026-10-02-s4000/week5/05_naive_gemm.log</a></td>
+          </tr><tr>
+            <td><code>06_tiled_gemm</code></td>
+            <td><strong>PASS</strong></td>
+            <td>Tiled 1024 cubed GEMM verified C[0] and reported 1590.6 GFLOPS.</td>
+            <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week5/06_tiled_gemm.log">validation/raw/2026-10-02-s4000/week5/06_tiled_gemm.log</a></td>
+          </tr><tr>
+            <td><code>07_mublas_sgemm</code></td>
+            <td><strong>ENV_LIMITED</strong></td>
+            <td>The teaching skeleton ran but did not invoke a real muBLAS SGEMM.<br><small>The source still requires an SDK-specific SGEMM invocation before a library measurement is valid.</small></td>
+            <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week5/07_mublas_sgemm.log">validation/raw/2026-10-02-s4000/week5/07_mublas_sgemm.log</a></td>
+          </tr></tbody>
+        </table></div>
+      </section>
+      <section aria-labelledby="week6-title">
+        <h2 id="week6-title">Week 6</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>目标</th><th>状态</th><th>结果</th><th>证据</th></tr></thead>
+          <tbody><tr>
+            <td><code>01_mccl_allreduce</code></td>
+            <td><strong>ENV_LIMITED</strong></td>
+            <td>MCCL AllReduce compiled successfully but was not executed.<br><small>The validation host exposes one GPU, so it cannot validate the intended multi-rank collective.</small></td>
+            <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week6/01_mccl_allreduce.log">validation/raw/2026-10-02-s4000/week6/01_mccl_allreduce.log</a></td>
+          </tr><tr>
+            <td><code>02_musa_gdb_demo</code></td>
+            <td><strong>NOT_RUN</strong></td>
+            <td>The intentional out-of-bounds debugger demo compiled successfully.<br><small>Fault-injection binaries were excluded from the unattended batch and require an interactive debugger session.</small></td>
+            <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week6/02_musa_gdb_demo.log">validation/raw/2026-10-02-s4000/week6/02_musa_gdb_demo.log</a></td>
+          </tr><tr>
+            <td><code>03_error_dump</code></td>
+            <td><strong>NOT_RUN</strong></td>
+            <td>The intentional error-dump demo compiled successfully.<br><small>Fault-injection binaries were excluded from the unattended batch and require explicit dump configuration.</small></td>
+            <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week6/03_error_dump.log">validation/raw/2026-10-02-s4000/week6/03_error_dump.log</a></td>
+          </tr><tr>
+            <td><code>04_torch_musa_minimal</code></td>
+            <td><strong>PASS</strong></td>
+            <td>PyTorch 2.2.0 reported MUSA available and returned a sample value.</td>
+            <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week6/04_torch_musa_minimal.log">validation/raw/2026-10-02-s4000/week6/04_torch_musa_minimal.log</a></td>
+          </tr><tr>
+            <td><code>05_torch_musa_custom_op</code></td>
+            <td><strong>BUILD_FAIL</strong></td>
+            <td>The custom-op teaching skeleton did not compile in the base environment.<br><small>The required PyTorch C++ extension headers are not present in the Makefile include path.</small></td>
+            <td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week6/05_torch_musa_custom_op.log">validation/raw/2026-10-02-s4000/week6/05_torch_musa_custom_op.log</a></td>
+          </tr></tbody>
+        </table></div>
+      </section>
+    <nav class="pager" aria-label="页面导航"><a href="index.html">← 返回知识库首页</a><a href="quiz.html">进入完整自测 →</a></nav>
+  </main>
+  <footer class="footer"><p>MUSA Learning Notes · 内容以官方文档和仓库实测为准</p></footer>
+</body>
+</html>

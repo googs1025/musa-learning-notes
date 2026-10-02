@@ -1,0 +1,11 @@
+TARGET=03_offset_unrolling
+WEEK=week4
+START=2026-10-02T10:59:43+08:00
+mcc -O2 -std=c++17 -I/usr/local/musa/include -I../include 03_offset_unrolling.mu -o 03_offset_unrolling -L/usr/local/musa/lib -lmusa -lmusart
+BUILD_EXIT_CODE=0
+offset= 0 unroll4=1.067 ms
+offset= 1 unroll4=1.064 ms
+offset= 8 unroll4=1.082 ms
+offset=31 unroll4=1.064 ms
+RUN_EXIT_CODE=0
+END=2026-10-02T10:59:47+08:00

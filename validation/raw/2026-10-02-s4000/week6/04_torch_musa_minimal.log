@@ -1,0 +1,11 @@
+TARGET=04_torch_musa_minimal
+WEEK=week6
+START=2026-10-02T11:03:10+08:00
+Python 3.10.8
+torch 2.2.0
+IMPORT_EXIT_CODE=0
+torch 2.2.0
+musa available True
+sample 0.0
+RUN_EXIT_CODE=0
+END=2026-10-02T11:03:47+08:00

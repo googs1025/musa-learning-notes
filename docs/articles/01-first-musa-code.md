@@ -42,7 +42,7 @@
 
 - 日常应用主要和 Runtime API 打交道。Driver API 多用在 JIT 和动态加载 kernel 模块的场景，第一周暂时不需要碰。
 - 跟 CUDA 几乎是一对一映射:`cuda*` 改 `musa*`,`nvcc` 改 `mcc`,`nvidia-smi` 改 `mthreads-gmi`,基本就完成大半翻译。
-- CUDA 的 warp 是 32 线程，MUSA 是 **128 线程**（摩尔线程内部叫 MTT, Multi-Thread-Tile）。涉及 warp-level 操作时坐标系会变，我先标记下来，等到 Week 4 性能优化再回头看。
+- warp-level 操作不能只按 CUDA/MUSA 名称决定宽度。应读取设备属性；本次 S4000/MUSA SDK 3.1.0 实测 `warpSize=32`，而部分旧架构资料会出现 128。
 
 ---
 
@@ -113,15 +113,15 @@ block 之间相互独立，不能直接同步，也可能被调度到不同 SM �
 `musaGetDeviceProperties` 能问到一堆字段,我跑出来记录了下:
 
 ```
-SM count            : ?       (我那台 S4000 跑出来是 ?,你跑了告诉我)
-Warp size           : 128     ← MUSA 这里和 CUDA 不一样
+MP count            : 64
+Warp size           : 32      ← S4000 / MUSA SDK 3.1.0 本次实测
 Max threads/block   : 1024
 Shared mem/block    : 48 KB   (常见值)
 ```
 
 这些数字平时记不住,但写优化代码时处处依赖:
 
-- block size 应该是 warpSize 的倍数 → MUSA 上就是 128 / 256 / 512 / 1024;
+- block size 通常先取 `warpSize` 的倍数，再根据寄存器、shared memory 和实测结果调整；
 - shared memory 用量受限 → 决定 tile 大小;
 - 算理论显存带宽:`bw = 2 × memoryClockRate × memoryBusWidth / 8 / 1e6`(系数 2 是 DDR,每周期传两次)。
 
@@ -238,7 +238,7 @@ nvidia-smi            →  mthreads-gmi
 
 留个清单,后面学到的时候回来填:
 
-1. MTT (warp) = 128 在 occupancy 计算里怎么影响 block size 的选择？Week 3 看 Ch9 时再回来补。
+1. 不同设备报告的 `warpSize` 为什么可能不同，它怎样影响 occupancy 与 block size？Week 3 结合设备属性继续验证。
 2. `musaMallocManaged`（统一内存）和普通 `musaMalloc` 的代价差多少？准备拿同一个 vectorAdd 跑两版对比。
 3. Driver API 在什么场景下值得用？下周用 Driver API 重写一遍 vectorAdd，看看代码量差异。
 4. MUSA 的 mcc 是否和 nvcc 一样，把编译流程分成 host/device 两路？想 dump 中间产物看一下。

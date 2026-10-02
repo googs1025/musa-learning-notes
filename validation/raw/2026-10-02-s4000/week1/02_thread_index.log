@@ -1,0 +1,15 @@
+TARGET=02_thread_index
+WEEK=week1
+START=2026-10-02T10:55:57+08:00
+mcc -O2 -std=c++17 02_thread_index.mu -o 02_thread_index -L/usr/local/musa-3.1.0/lib -lmusa -lmusart
+BUILD_EXIT_CODE=0
+block=0 thread=0 (blockDim=4) -> global=0
+block=0 thread=1 (blockDim=4) -> global=1
+block=0 thread=2 (blockDim=4) -> global=2
+block=0 thread=3 (blockDim=4) -> global=3
+block=1 thread=0 (blockDim=4) -> global=4
+block=1 thread=1 (blockDim=4) -> global=5
+block=1 thread=2 (blockDim=4) -> global=6
+block=1 thread=3 (blockDim=4) -> global=7
+RUN_EXIT_CODE=0
+END=2026-10-02T10:56:03+08:00

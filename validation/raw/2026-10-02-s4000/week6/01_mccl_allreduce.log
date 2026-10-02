@@ -1,0 +1,7 @@
+TARGET=01_mccl_allreduce
+WEEK=week6
+START=2026-10-02T11:03:10+08:00
+g++ -O2 -std=c++17 -I/usr/local/musa/include -I../include 01_mccl_allreduce.cpp -o 01_mccl_allreduce -L/usr/local/musa/lib -lmusa -lmusart -lmccl
+BUILD_EXIT_CODE=0
+RUN_EXIT_CODE=NOT_RUN
+END=2026-10-02T11:03:10+08:00

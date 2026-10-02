@@ -709,7 +709,7 @@
         level: "进阶",
         source: "code/week3/README.md",
         question: "MUSA 做 warp-level shuffle/reduce 时，为什么不能照搬 CUDA 的 warp=32 假设？",
-        answer: "MUSA warp size 通常按 128 理解，shuffle mask、warp 数量、reduction tree 深度都要重新算。",
+        answer: "MUSA warp size 必须从目标设备查询；shuffle mask、warp 数量和 reduction tree 深度都要由实际 warpSize 推导。",
         pitfall: "代码语法接近 CUDA，不代表调优参数可以机械照搬。"
       },
       {
@@ -983,7 +983,7 @@
         ],
         answerIndex: 0,
         answer: "block 是调度和协作边界；warp 是硬件实际执行的一组线程。",
-        pitfall: "MUSA warp size 通常按 128 理解，CUDA 常见是 32。"
+        pitfall: "不能按厂商写死 warp size；本仓库 S4000 实测为 32，部分旧架构资料会出现 128。"
       },
       {
         id: "w1-q10",

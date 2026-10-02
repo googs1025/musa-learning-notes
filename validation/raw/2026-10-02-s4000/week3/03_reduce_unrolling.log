@@ -1,0 +1,8 @@
+TARGET=03_reduce_unrolling
+WEEK=week3
+START=2026-10-02T10:58:50+08:00
+mcc -O2 -std=c++17 -I/usr/local/musa/include -I../include 03_reduce_unrolling.mu -o 03_reduce_unrolling -L/usr/local/musa/lib -lmusa -lmusart
+BUILD_EXIT_CODE=0
+sum=4194304 expected=4194304 kernel=0.562 ms partial_blocks=8192
+RUN_EXIT_CODE=0
+END=2026-10-02T10:58:54+08:00

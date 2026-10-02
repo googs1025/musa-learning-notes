@@ -7,7 +7,7 @@
 
 ## 迁移范围
 
-API 前缀和工具链名称通常可以直接替换。`warp = 128` 涉及的同步原语、专有库名（muBLAS / muDNN）和调优参数需要单独检查。
+API 前缀和工具链名称通常可以直接替换。warp 宽度、同步原语、专有库名（muBLAS / muDNN）和调优参数需要按目标设备与 SDK 单独检查。
 
 ---
 
@@ -127,19 +127,16 @@ API 前缀和工具链名称通常可以直接替换。`warp = 128` 涉及的同
 
 ## 主要差异
 
-### 1. Warp size:128 vs 32 ⚠️
+### 1. Warp size 必须在目标设备查询 ⚠️
 
-```
-CUDA  warp = 32  线程
-MUSA  warp = 128 线程  (摩尔线程内部叫 MTT, Multi-Thread-Tile)
-```
+CUDA 常见设备的 warp 是 32。MUSA 不能用一个厂商级常数概括：旧版官方 S3000 示例报告 128，本仓库的 S4000/MUSA SDK 3.1.0 实测为 32，官方 S5000 示例也报告 32。迁移时应读取 `musaDeviceProp.warpSize`，device 代码使用内置 `warpSize`。
 
 影响:
 
-- **Warp shuffle / shfl 指令**:`__shfl_sync(mask, ...)` 的 mask 含义会变。CUDA 上 `0xffffffff` 表示 32 线程全活,MUSA 上要用 `0xffffffffffffffffffffffffffffffff`(128 bit)。
-- **Reduce / Scan 算法**:跨 warp 那一层的循环边界从 32 变成 128。
-- **Occupancy 计算**:每 SM 能驻留多少 warp,公式里的 32 换成 128。
-- **Block size 推荐值**:`128 / 256 / 512 / 1024` 仍然好,因为它们都是 128 的倍数;`64 / 96` 这种**在 MUSA 上不再是整 warp 倍数**,要避免。
+- **Warp shuffle / shfl 指令**：mask、lane 范围和可选 width 都必须与当前 SDK 的 API 定义和实际 `warpSize` 一致。
+- **Reduce / Scan 算法**：循环边界、warp 数量和 shared partial 数量从 `warpSize` 推导，不能把 32 或 128 散落在代码中。
+- **Occupancy 计算**：使用设备属性里的 warp 宽度、最大驻留线程数、寄存器和 shared memory 限制。
+- **Block size 推荐值**：先选择 `warpSize` 的整数倍，再用实际测量决定 128、256 或其他配置。
 
 ### 2. Compute Capability vs MTT 架构号
 
@@ -182,7 +179,7 @@ mcc -O2 src/main.mu -o main -lmusart
 
 剩下的会编不过 / 运行报错的,大概率落在:
 
-1. warp size 写死了 32 的地方(查所有 `32` / `0xffffffff`)
+1. warp size 写死为 32 或 128 的地方（查所有常数和固定 mask）
 2. PTX 内联汇编(MUSA IR 不一样,要重写)
 3. 用了 CUDA 独有库(cuTENSOR / cuGraphics / OptiX,MUSA 暂无对等)
 4. 调用了 `sm_xx` 这种 NVIDIA 架构字符串
@@ -192,7 +189,7 @@ mcc -O2 src/main.mu -o main -lmusart
 ## 不要自动化的地方
 
 - `-arch=sm_xx` 必须换成 MUSA 工具链实际支持的架构号。
-- warp 边界从 32 改到 128 会改变算法语义，需要重新检查算法，不能只改数字。
+- warp 宽度变化会改变算法语义，需要从目标设备查询并重新检查算法，不能机械替换数字。
 - 错误日志和 CMake 变量名中的 `cuda` 可能不需要替换，应先确认它的用途。
 
 ---

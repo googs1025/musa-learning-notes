@@ -1,0 +1,11 @@
+TARGET=02_vector_add_pinned
+WEEK=week2
+START=2026-10-02T10:56:21+08:00
+mcc -O2 -std=c++17 -I/usr/local/musa/include -I../include 02_vector_add_pinned.mu -o 02_vector_add_pinned -L/usr/local/musa/lib -lmusa -lmusart
+BUILD_EXIT_CODE=0
+bytes        = 16.0 MB   iters = 6 (avg of last 5)
+pageable H2D :   1.909 ms   8.19 GB/s
+pinned   H2D :   0.602 ms   25.95 GB/s
+speedup      : ×3.17
+RUN_EXIT_CODE=0
+END=2026-10-02T10:56:33+08:00

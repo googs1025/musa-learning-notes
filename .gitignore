@@ -26,6 +26,9 @@ __pycache__/
 venv/
 .venv/
 
+# Isolated implementation worktrees
+.worktrees/
+
 # Local notes / scratch
 notes/scratch/
 

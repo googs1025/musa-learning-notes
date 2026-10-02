@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN" data-page-kind="generated">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="source-sha256" content="0fdf867dab4018c6d03aacf3b94c71131fc51cbdd796085b36fc8d0f0ce08747">
+  <title>Week 6 完整练习 · MUSA GPU 编程知识库</title>
+  <link rel="stylesheet" href="../assets/knowledge.css">
+  <script src="../assets/knowledge.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <nav class="site-nav" aria-label="主导航">
+      <a class="brand" href="../index.html">MUSA GPU 编程知识库</a>
+      <ul><li><a href="../week6.html">Week 6</a></li><li><a href="../quiz.html">知识自测</a></li></ul>
+    </nav>
+  </header>
+  <main class="page-shell">
+    <article class="article-content generated-content">
+      <p class="eyebrow">Week 6 · 完整练习</p>
+      <h1>Week 6 完整练习</h1>
+      <p>本页由仓库中的规范 Markdown 自动生成。学习记录和性能数字只有在真实设备运行后才会写入。</p>
+      <p><a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week6/exercises.md">查看原始 Markdown</a></p>
+      <ol><li>运行 <code>02_musa_gdb_demo</code>，记录第一个报错 API 和错误码。</li></ol>
+<p>预计输出 / 预期现象：</p>
+<pre><code class="language-text">   Launching intentionally broken kernel: allocated=1024 floats, launched=2048 threads
+   MUSA error ... at 02_musa_gdb_demo.mu:...</code></pre>
+<p>第一个 launch configuration 错误可能由 <code>musaGetLastError</code> 暴露；真正的 illegal address 往往在 <code>musaDeviceSynchronize</code> 处暴露。以实际第一条报错为准。</p>
+<ol><li>用 MUSA SDK 调试器单步定位越界线程。</li></ol>
+<p>预计输出 / 预期现象：</p>
+<pre><code class="language-text">   thread/block: ...
+   idx &gt;= allocated</code></pre>
+<p>应能定位到写越界的线程索引。记录触发越界的 <code>blockIdx/threadIdx</code>、计算出的全局索引和分配数组长度。</p>
+<ol><li>按官方文档开启 Error Dump，运行 <code>03_error_dump</code>。</li></ol>
+<p>预计输出 / 预期现象：</p>
+<pre><code class="language-text">   Launching intentionally broken kernel: allocated=1024 floats, launched=2048 threads
+   MUSA error ... at 03_error_dump.mu:...</code></pre>
+<p>开启 Error Dump 后，应额外生成 SDK 指定的 dump / log 文件。记录文件路径、错误类型和能否从 dump 中定位到越界位置。</p>
+<ol><li>在多卡环境补齐并运行 <code>01_mccl_allreduce.cpp</code>。</li></ol>
+<p>预计输出 / 预期现象：</p>
+<pre><code class="language-text">   MCCL AllReduce skeleton (Week 6)
+   rank=0 nranks=... device=...
+   MCCL header found.</code></pre>
+<p>如果没有 MCCL 头文件，会看到 <code>MCCL header not found</code>。补齐真实 allreduce 后，各 rank 的输出 buffer 应得到所有 rank 输入之和。</p>
+<ol><li>运行 <code>04_torch_musa_minimal.py</code>，记录 torch/torch_musa 版本。</li></ol>
+<p>预计输出 / 预期现象：</p>
+<pre><code class="language-text">   torch ...
+   musa available: True
+   sample ...</code></pre>
+<p>如果环境没装 <code>torch_musa</code> 或没有可用 MUSA 设备，会在 import 或 availability 检查处失败；记录 <code>torch.__version__</code>、<code>torch_musa</code> 包版本和错误信息。</p>
+<h2>CUDA reference 实验</h2>
+<ol><li>在 <code>code/week6/cuda-reference</code> 运行 <code>make -n BACKEND=cuda</code> 与 <code>make -n BACKEND=musa MUSA_ARCH=mp_31</code>，记录编译器和架构参数；dry-run 不等于真实编译。</li></ol>
+<ol><li>运行 <code>chapter09__simpleMultiGPU</code>，记录 device count、实际 GPU 数和每卡切片大小；改变 GPU 数与 ishift，确认每卡结果和 host reference 一致。</li></ol>
+<ol><li>在两卡机器上运行 <code>chapter09__simpleP2P_PingPong</code>，记录 peer capability、P2P enable、拓扑和 event 带宽；<code>simpleP2P.c</code> 仅作 source-only 阅读/外部 MPI C toolchain 实验，确认 <code>mpi.h</code>、world size 为 2，并区分 host staging 与 peer access。</li></ol>
+<ol><li>为 cublas、cusparse、cufft 建立依赖表：头文件、链接库、库版本、输入输出验证方法。CUDA 与 MUSA 分开记录，缺库时保留原始错误。</li></ol>
+<ol><li>对 <code>chapter10__debug-segfault</code> 和 <code>chapter10__debug-segfault.fixed</code> 做调试对照；记录 launch 配置、同步点、错误码、调试器行号以及修复版结果。故障版只在隔离环境运行。</li></ol>
+<ol><li>对 <code>chapter10__crypt.parallelized</code> 或 <code>chapter10__crypt.overlap</code> 做 encrypt→decrypt round-trip，记录输入长度、key 文件格式、输出 hash、stream 数和计时边界；明确这是 IDEA 教学样例。</li></ol>
+    </article>
+    <nav class="pager" aria-label="材料导航">
+      <a href="../week6.html">← 返回 Week 6</a>
+      <a href="../quiz.html">进入完整自测 →</a>
+    </nav>
+  </main>
+  <footer class="footer"><p>MUSA Learning Notes · 内容以官方文档和仓库实测为准</p></footer>
+</body>
+</html>

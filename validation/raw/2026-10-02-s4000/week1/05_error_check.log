@@ -1,0 +1,23 @@
+TARGET=05_error_check
+WEEK=week1
+START=2026-10-02T10:56:08+08:00
+mcc -O2 -std=c++17 05_error_check.mu -o 05_error_check -L/usr/local/musa-3.1.0/lib -lmusa -lmusart
+BUILD_EXIT_CODE=0
+  ↳ ok
+  ↳ ok
+  ↳ MUSA error 9 at 05_error_check.mu:142
+  ↳ ok
+  ↳ ok
+  ↳ MUSA error 999 at 05_error_check.mu:149
+  ↳ musaMalloc failed as expected, code=2
+=== 1) 正常 launch（应当 ok）===
+
+=== 2) 配置非法：block 超过 maxThreadsPerBlock ===
+
+=== 3) 异步错误：kernel 写 null 指针 ===
+
+=== 4) 显存分配失败：申请 100 TB ===
+
+=== done ===
+RUN_EXIT_CODE=0
+END=2026-10-02T10:56:12+08:00

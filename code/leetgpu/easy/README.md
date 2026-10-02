@@ -84,10 +84,10 @@ PART III  MUSA vs CUDA 的差异点 / 易踩的坑 / 后续优化空间
 | `threadIdx` / `blockIdx` / `blockDim` / `gridDim` | 完全相同 | 索引 |
 | `fmaxf` / `expf` / `erff` / `fminf` | 完全相同 | 数学库 |
 
-**warp size 差异**(本目录 18 题不涉及,先记着):
+**warp size 差异**（本目录 18 题不涉及，先记着）：
 
-- CUDA: warp = 32
-- MUSA: warp = 128
+- CUDA 常见设备：warp = 32
+- MUSA：读取目标设备的 `warpSize`，不同架构不能写死为同一数值
 - 一旦你的 kernel 用到 `__shfl_*` / `__ballot_*` / warp-level 归约,要重新算
   warp 数量、shared mem padding 大小,以及 reduction tree 的深度。
 

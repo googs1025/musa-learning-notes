@@ -8,6 +8,14 @@ const { test } = require("node:test");
 
 const root = path.resolve(__dirname, "..");
 const checker = fs.readFileSync(path.join(__dirname, "check-docs.js"), "utf8");
+const validation = JSON.parse(fs.readFileSync(path.join(root, "validation/musa-3.1.0-s4000.json"), "utf8"));
+const validationStatuses = validation.weeks.flatMap((week) => week.targets).map((target) => target.status);
+const validationCounts = Object.fromEntries([...new Set(validationStatuses)].sort().map((status) => [
+  status,
+  validationStatuses.filter((candidate) => candidate === status).length,
+]));
+const validationSummary = `validation targets: ${validationStatuses.length} ${JSON.stringify(validationCounts)}`;
+const baselineLocalLinks = 270;
 
 // Override reads in memory so regression cases never modify the documentation.
 function runChecker(changes = {}) {
@@ -30,8 +38,14 @@ const append = (markup) => (html) => html.replace("</main>", `${markup}</main>`)
 const commentLink = (href) => (html) => html.replace(/<a\b[^>]*>[\s\S]*?<\/a>/g,
   (link) => link.includes(`href="${href}"`) ? `<!--${link}-->` : link);
 
-test("baseline validates all pages and 136 local links", () => {
-  assert.deepEqual(runChecker(), ["quiz questions: 154", "learning materials: ok", "knowledge pages: 9", "local links: 136"]);
+test("baseline validates all pages, evidence and 270 local links", () => {
+  assert.deepEqual(runChecker(), [
+    "quiz questions: 154",
+    "learning materials: ok",
+    validationSummary,
+    "knowledge pages: 28",
+    `local links: ${baselineLocalLinks}`,
+  ]);
 });
 
 const invalidCases = [
@@ -67,18 +81,114 @@ for (const [name, page, mutate, expected] of invalidCases) {
 }
 
 const validCases = [
-  ["src text inside pre is ignored", '<pre> src="assets/missing.js"</pre>', 136],
-  ["commented script is ignored", '<!-- <script src="assets/missing.js"></script> -->', 136],
-  ["script body is not parsed for src", '<script>const sample = \'<script src="assets/missing.js">\';</script>', 136],
-  ["external and protocol script sources are ignored", '<script src="https://example.com/app.js"></script><script src="//example.com/app.js"></script><script src="data:text/javascript,void(0)"></script>', 136],
-  ["encoded local script path is valid", '<script src="assets/knowledge%2Ejs?q=1&amp;v=2"></script>', 136],
-  ["href and rel text inside pre are ignored", '<pre> href="missing.html" rel="prev"</pre>', 136],
-  ["href text in a title is ignored", '<span title=\'nested href="missing.html"\'>text</span>', 136],
-  ["encoded path query and fragment resolve", '<a href="week%31.html?q=a&amp;b=2#execution%2Dmodel">encoded</a>', 137],
-  ["directory index fragment resolves", '<a href="./?q=1#weeks">directory</a>', 137],
-  ["named and numeric entities in href and id resolve", '<div id="a&amp;b&quot;c&apos;d&lt;e&gt;f&#49;&#x32;"></div><a href="#a&#38;b%22c%27d%3Ce%3Ef12">entities</a>', 137],
-  ["external links and pure hash are ignored", '<a href="https://example.com/">web</a><a href="mailto:a@example.com">email</a><a href="#">top</a>', 136],
+  ["src text inside pre is ignored", '<pre> src="assets/missing.js"</pre>', 0],
+  ["commented script is ignored", '<!-- <script src="assets/missing.js"></script> -->', 0],
+  ["script body is not parsed for src", '<script>const sample = \'<script src="assets/missing.js">\';</script>', 0],
+  ["external and protocol script sources are ignored", '<script src="https://example.com/app.js"></script><script src="//example.com/app.js"></script><script src="data:text/javascript,void(0)"></script>', 0],
+  ["encoded local script path is valid", '<script src="assets/knowledge%2Ejs?q=1&amp;v=2"></script>', 0],
+  ["href and rel text inside pre are ignored", '<pre> href="missing.html" rel="prev"</pre>', 0],
+  ["href text in a title is ignored", '<span title=\'nested href="missing.html"\'>text</span>', 0],
+  ["encoded path query and fragment resolve", '<a href="week%31.html?q=a&amp;b=2#execution%2Dmodel">encoded</a>', 1],
+  ["directory index fragment resolves", '<a href="./?q=1#weeks">directory</a>', 1],
+  ["named and numeric entities in href and id resolve", '<div id="a&amp;b&quot;c&apos;d&lt;e&gt;f&#49;&#x32;"></div><a href="#a&#38;b%22c%27d%3Ce%3Ef12">entities</a>', 1],
+  ["external links and pure hash are ignored", '<a href="https://example.com/">web</a><a href="mailto:a@example.com">email</a><a href="#">top</a>', 0],
 ];
-for (const [name, markup, count] of validCases) {
-  test(name, () => assert.equal(runChecker({ "docs/index.html": append(markup) }).at(-1), `local links: ${count}`));
+for (const [name, markup, addedLinks] of validCases) {
+  test(name, () => assert.equal(
+    runChecker({ "docs/index.html": append(markup) }).at(-1),
+    `local links: ${baselineLocalLinks + addedLinks}`,
+  ));
 }
+
+test("rejects an unknown validation status", () => {
+  const mutate = (text) => {
+    const data = JSON.parse(text);
+    data.weeks[0].targets[0].status = "MAYBE";
+    return JSON.stringify(data);
+  };
+  assert.throws(
+    () => runChecker({ "validation/musa-3.1.0-s4000.json": mutate }),
+    /unknown validation status MAYBE/,
+  );
+});
+
+test("requires evidence for passing targets", () => {
+  const mutate = (text) => {
+    const data = JSON.parse(text);
+    data.weeks[0].targets[0].evidence = "validation/raw/2026-10-02-s4000/missing.log";
+    return JSON.stringify(data);
+  };
+  assert.throws(
+    () => runChecker({ "validation/musa-3.1.0-s4000.json": mutate }),
+    /missing validation evidence/,
+  );
+});
+
+test("homepage links the hardware validation overview", () => {
+  const home = fs.readFileSync(path.join(root, "docs/index.html"), "utf8");
+  assert.match(home, /href="validation\.html"/);
+});
+
+test("weekly pages expose completion criteria and all local materials", () => {
+  for (let week = 1; week <= 6; week += 1) {
+    const html = fs.readFileSync(path.join(root, `docs/week${week}.html`), "utf8");
+    assert.match(html, /本周通关标准/, `Week ${week} completion heading`);
+    assert.match(html, new RegExp(`href="generated/week${week}-learning\\.html"`));
+    assert.match(html, new RegExp(`href="generated/week${week}-exercises\\.html"`));
+    assert.match(html, new RegExp(`href="generated/week${week}-records\\.html"`));
+    assert.equal((html.match(/class="completion-item"/g) || []).length, 5);
+  }
+});
+
+test("validation page renders known states and evidence links", () => {
+  const validationPath = path.join(root, "docs/validation.html");
+  assert.ok(fs.existsSync(validationPath), "validation page must exist");
+  const html = fs.readFileSync(validationPath, "utf8");
+  assert.match(html, /data-page-kind="validation"/);
+  assert.match(html, /PASS/);
+  assert.match(html, /ENV_LIMITED/);
+  assert.match(html, /validation\/raw\/2026-10-02-s4000/);
+});
+
+test("warp width guidance stays device and SDK scoped", () => {
+  const files = [
+    "docs/concepts.md",
+    "docs/cuda-vs-musa.md",
+    "docs/glossary.md",
+    "docs/roadmap.md",
+    "docs/leetgpu-easy.md",
+    "docs/articles/01-first-musa-code.md",
+    "docs/articles/02-stream-graph.md",
+    "docs/quiz.html",
+    "docs/week3.html",
+    "code/week1/01_hello_world.mu",
+    "code/week1/03_device_info.mu",
+    "code/week1/concept-review.md",
+    "code/week2/01_vector_add_runtime.mu",
+    "code/week2/exercises.md",
+    "code/week3/README.md",
+    "code/week3/04_reduce_shfl.mu",
+    "code/week3/exercises.md",
+    "code/leetgpu/easy/README.md",
+    "code/leetgpu/easy/01_vector_add.mu",
+  ];
+  const absoluteClaim = /MUSA.{0,20}warp(?:Size| size|\s+宽度)?\s*(?:=|为|通常按|就是)\s*128|MUSA\s+上就是\s+128/iu;
+  for (const file of files) {
+    const text = fs.readFileSync(path.join(root, file), "utf8");
+    assert.doesNotMatch(text, absoluteClaim, file);
+  }
+  assert.match(fs.readFileSync(path.join(root, "docs/concepts.md"), "utf8"), /musaDeviceProp\.warpSize/);
+  const shuffleSource = fs.readFileSync(path.join(root, "code/week3/04_reduce_shfl.mu"), "utf8");
+  assert.doesNotMatch(shuffleSource, /\(threads \+ 127\) \/ 128/);
+  assert.match(shuffleSource, /\(threads \+ warpSize - 1\) \/ warpSize/);
+});
+
+test("CI checks generated Pages freshness before documentation", () => {
+  for (const workflow of [".github/workflows/docs-check.yml", ".github/workflows/pages.yml"]) {
+    const text = fs.readFileSync(path.join(root, workflow), "utf8");
+    const freshness = text.indexOf("node scripts/build-pages.js --check");
+    const docsCheck = text.indexOf("node scripts/check-docs.js");
+    assert.ok(freshness >= 0, `${workflow} must check generated Pages freshness`);
+    assert.ok(freshness < docsCheck, `${workflow} must check freshness before documentation`);
+  }
+});

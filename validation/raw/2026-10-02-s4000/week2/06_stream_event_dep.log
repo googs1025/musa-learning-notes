@@ -1,0 +1,8 @@
+TARGET=06_stream_event_dep
+WEEK=week2
+START=2026-10-02T10:58:01+08:00
+mcc -O2 -std=c++17 -I/usr/local/musa/include -I../include 06_stream_event_dep.mu -o 06_stream_event_dep -L/usr/local/musa/lib -lmusa -lmusart
+BUILD_EXIT_CODE=0
+verify: OK ✓   (bad = 0)
+RUN_EXIT_CODE=0
+END=2026-10-02T10:58:06+08:00

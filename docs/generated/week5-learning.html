@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="zh-CN" data-page-kind="generated">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="source-sha256" content="606709977c2c90f0b968a01769c902725becf61d0eb2fa3060f4c0e522e56738">
+  <title>Week 5 完整学习材料 · MUSA GPU 编程知识库</title>
+  <link rel="stylesheet" href="../assets/knowledge.css">
+  <script src="../assets/knowledge.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <nav class="site-nav" aria-label="主导航">
+      <a class="brand" href="../index.html">MUSA GPU 编程知识库</a>
+      <ul><li><a href="../week5.html">Week 5</a></li><li><a href="../quiz.html">知识自测</a></li></ul>
+    </nav>
+  </header>
+  <main class="page-shell">
+    <article class="article-content generated-content">
+      <p class="eyebrow">Week 5 · 完整学习材料</p>
+      <h1>Week 5 完整学习材料</h1>
+      <p>本页由仓库中的规范 Markdown 自动生成。学习记录和性能数字只有在真实设备运行后才会写入。</p>
+      <p><a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week5/learning-notes.md">查看原始 Markdown</a></p>
+      <p>Week 5 进入片上内存和 GEMM。主线是从 global memory 直接访问，逐步引入 shared memory、constant memory 和 tiled GEMM，再用 muBLAS 建立库函数性能基准。</p>
+<h2>阅读顺序</h2>
+<ol><li><code>01_shared_basics.mu</code>: 先学 static/dynamic shared memory 写法。</li><li><code>02_reduce_shared.mu</code>: 用 shared memory 改写 reduce。</li><li><code>03_transpose_shared.mu</code>: 用 shared tile 处理 transpose。</li><li><code>04_stencil_constant.mu</code>: 用 constant memory 放小型只读参数。</li><li><code>05_naive_gemm.mu</code>: 建立 GEMM 正确性和性能基线。</li><li><code>06_tiled_gemm.mu</code>: 用 shared tile 降低 global memory 访问。</li><li><code>07_mublas_sgemm.mu</code>: 和库实现对照。</li></ol>
+<h2>核心知识点</h2>
+<div class="table-wrap"><table><thead><tr><th>示例</th><th>必须掌握</th><th>常见误区</th></tr></thead><tbody><tr><td><code>01_shared_basics.mu</code></td><td><code>__shared__</code>、动态 shared、block 内可见性</td><td>把 shared memory 当全局缓存</td></tr><tr><td><code>02_reduce_shared.mu</code></td><td>shared reduce、<code>__syncthreads()</code></td><td>忘记同步导致读到旧值</td></tr><tr><td><code>03_transpose_shared.mu</code></td><td>tile 读写、padding</td><td>shared 访问也可能 bank conflict</td></tr><tr><td><code>04_stencil_constant.mu</code></td><td>constant memory 适合小型广播只读数据</td><td>把任意大数组塞进 constant</td></tr><tr><td><code>05_naive_gemm.mu</code></td><td>每线程算一个 C 元素</td><td>只追求正确不算 GFLOPS</td></tr><tr><td><code>06_tiled_gemm.mu</code></td><td>A/B tile 复用、同步边界</td><td>tile 边界没有处理非整除尺寸</td></tr><tr><td><code>07_mublas_sgemm.mu</code></td><td>自写版和库版对比</td><td>期望入门 tiled GEMM 接近库性能</td></tr></tbody></table></div>
+<h2>代码阅读抓手</h2>
+<p>GEMM 阅读重点：</p>
+<ul><li>每个 thread 负责哪个 <code>C[row, col]</code>。</li><li>每轮 tile 从 global memory 读了哪些 A/B 元素。</li><li><code>__syncthreads()</code> 放在 tile 加载后和下一轮覆盖 shared 前。</li><li>边界判断是否覆盖非 16/32 整除的矩阵尺寸。</li></ul>
+<h2>高频混淆点</h2>
+<ul><li><strong>shared memory 是手动管理的缓存</strong>: 数据不会自动进 shared, 必须显式从 global load, 用完前还要保证线程同步。</li><li><strong><code>__syncthreads()</code> 放错位置比不写还危险</strong>: tile 加载后要同步, 下一轮覆盖 shared 前也要确认上一轮计算用完。分支里调用 <code>__syncthreads()</code> 要保证 block 内所有线程都能走到。</li><li><strong>shared 也可能慢</strong>: bank conflict 会让 shared memory 访问串行化。transpose 里 padding 的目的就是改变 bank 映射。</li><li><strong>constant memory 适合广播, 不适合大数组乱读</strong>: 所有线程读同一个常量很快; 每个线程读不同地址时, 常量缓存优势会下降。</li><li><strong>GEMM 的 row/col 和库布局容易混</strong>: 手写 kernel 常按 row-major 想, BLAS 接口常按 column-major 语义解释 <code>lda/ldb/ldc</code>。对拍小矩阵是最直接的排错方式。</li><li><strong>入门 tiled GEMM 不该和库硬比</strong>: muBLAS 是高度优化实现。手写版本先用来理解 tile、复用和同步边界。</li></ul>
+<h2>逐示例课文</h2>
+<h3>1. <code>01_shared_basics.mu</code>：看清 shared memory 的作用域与生命周期</h3>
+<h4>示例目标</h4>
+<p>这个 smoke test 不追求算法产出，而是把 shared memory 的两个声明形式跑通：静态 shared 在编译期确定大小，动态 shared 在 kernel launch 时由第三个执行配置参数给出大小。重点是建立“它是 block 私有的片上临时存储，不是整个程序的全局缓存”的直觉。</p>
+<h4>代码结构</h4>
+<p><code>static_shared</code> 声明 <code>__shared__ float s[256]</code>，每个线程写入自己的线程号，再反向读出到 <code>out</code>。<code>dynamic_shared</code> 使用 <code>extern __shared__ float s[]</code>，launch 时传入 <code>256 * sizeof(float)</code>，线程写入 <code>2 * threadIdx.x</code>，同步后累加到 <code>out</code>。主机端先分配一个 256 元素的 device buffer，依次启动两个 kernel。</p>
+<h4>核心知识点</h4>
+<p>静态数组的布局和大小由编译器知道，适合固定 tile 或固定临时区；动态数组的字节数由每次 launch 决定，适合运行时才知道的 tile/缓冲区。两者都不是跨 block 共享：每个 block 获得自己的一份存储，block 结束后这份存储的内容和生命周期都结束，下一次 kernel launch 不能依赖它仍然存在。<code>__syncthreads()</code> 是 block 内的同步和内存可见性边界；这里必须等全 block 写完，反向读取或累加才不会读到未完成的数据。它不能让不同 block 互相通信。</p>
+<h4>执行流程</h4>
+<p>主机分配 <code>d</code> 后，静态 kernel 在一个 block 中完成“写 shared → 同步 → 读 shared”；返回后再启动动态 kernel，第三个配置参数为该 block 预留动态 shared 字节数。两个 kernel 都用 <code>MUSA_CHECK_KERNEL()</code> 检查启动/执行错误，最后打印完成标记并释放 device 内存。</p>
+<h4>常见错误与实验</h4>
+<p>常见错误包括忘记为动态 shared 传字节数、把元素个数误当成字节数、让线程数超过数组长度，或以为 shared 的值能被另一个 block 读取。可实验：把动态 shared 的 launch 大小改小观察越界风险；把同步去掉观察结果是否不稳定；将线程数和数组长度改成不一致并补上显式边界判断。性能实验要记录设备、block 配置和实际测量，不应从这个 smoke test 推断 shared 必然更快。</p>
+<h4>与本周其他示例的关系</h4>
+<p>这是后续 reduce、transpose 和 tiled GEMM 的语义前置：<code>02</code> 复用动态 shared 做归约，<code>03</code> 使用静态二维 shared tile，<code>06</code> 用静态 tile 保存 A/B 的分块。<code>04</code> 则展示另一种只读存储——constant memory；<code>05</code> 的朴素 GEMM提供不使用 shared 的对照。</p>
+<h3>2. <code>02_reduce_shared.mu</code>：用 shared 完成 block 内归约</h3>
+<h4>示例目标</h4>
+<p>把长度为 <code>N</code> 的输入先归约成每个 block 一个 partial sum，再由主机把 partial 结果相加。示例目标是理解 shared reduce 的树形数据流、每轮同步的位置，以及非整除输入如何补零，而不是展示一个完整的多级 device reduction 库实现。</p>
+<h4>代码结构</h4>
+<p><code>reduce_shared</code> 使用动态 shared <code>s[]</code>。线程根据 <code>blockIdx.x * blockDim.x + threadIdx.x</code> 计算全局索引，读入一个输入值；越过 <code>n</code> 的线程写入 <code>0.0f</code>。随后以 <code>stride = blockDim.x / 2</code> 逐轮折半，较小线程号把后半段加到前半段，线程 0 将 <code>s[0]</code> 写到 <code>partial[blockIdx.x]</code>。主机分配输入和 partial 数组，填充全 1，拷回 partial 后用 CPU 得到最终和。</p>
+<h4>核心知识点</h4>
+<p>shared 让同一 block 的线程反复交换中间结果，减少对 global 的往返；但每轮读写都必须在 <code>__syncthreads()</code> 形成同步边界，否则某线程可能读到上一轮尚未写完的值。该写法要求 block 线程数适合这种二分树（通常为 2 的幂）；如果改用任意线程数，需要重新设计配对和边界。跨 block 的最终归约没有在 kernel 中完成，所以 <code>partial</code> 的合并由主机串行执行；这也是结果正确性和总耗时含义的一部分。</p>
+<h4>执行流程</h4>
+<p><code>N = 1 &lt;&lt; 22</code>、每 block 256 线程，因此 grid 为向上取整后的 block 数，并按 256 个 float 传入动态 shared 大小。kernel 启动后测量 kernel 时间，拷回 <code>partial</code>，CPU 累加并打印 <code>sum</code>、期望值、kernel 时间和 partial 数。输入全为 1 时，越界补零保证最后一个 block 仍可参加同一棵归约树。</p>
+<h4>常见错误与实验</h4>
+<p>常见错误是漏掉加载后的同步、漏掉每轮累加后的同步、未给越界线程补零，或试图在没有额外协调的情况下让一个 block 读取另一个 block 的 shared。可把 <code>N</code> 改成不能被 256 整除的值，验证 partial 仍正确；比较不同 block size；再实现第二个 kernel 在 device 上继续归约，区分“kernel 时间”和“端到端时间”。不要只凭 shared 版本就断言一定加速，主机合并、同步和 occupancy 都会影响结果。</p>
+<h4>与本周其他示例的关系</h4>
+<p>它把 <code>01</code> 中“动态 shared + block 内同步”变成实际算法。<code>03</code> 同样先协同加载、同步、再使用 shared，但目标是改变布局；<code>06</code> 也有“每轮使用完再覆盖”的双同步边界。<code>05</code> 没有 block 内共享归约，可作为访存组织的反例。</p>
+<h3>3. <code>03_transpose_shared.mu</code>：用 shared tile 改变读写方向</h3>
+<h4>示例目标</h4>
+<p>理解矩阵转置为什么适合先连续读入 tile、再交换索引写出，并观察 padding 对 shared bank 映射的影响。示例固定 <code>TILE = 32</code>，重点是访问模式和边界，而不是保证某一设备上的绝对速度。</p>
+<h4>代码结构</h4>
+<p>kernel 为每个 block 声明 <code>__shared__ float tile[32][33]</code>。第一阶段以 <code>(x, y)</code> 定位输入，满足边界时把 row-major 的 <code>in[y * w + x]</code> 写入 <code>tile[threadIdx.y][threadIdx.x]</code>；同步后，block 的 x/y 角色交换，读取 <code>tile[threadIdx.x][threadIdx.y]</code>，以 <code>out[y * h + x]</code> 写入转置后的 <code>h × w</code> 结果。主机使用二维 grid 覆盖输入，并先 warmup，再重复 20 次测平均 kernel 时间。</p>
+<h4>核心知识点</h4>
+<p>输入 tile 的协同加载让相邻线程按输入行连续读取，转置后的写出也通过 shared 把原本不友好的方向隔开。第二维多出的 1 个元素是 padding：它改变相邻行的 stride，通常可避免转置读取时一整个 warp 落到相同 bank；这不是“shared 天生无冲突”，也不保证所有硬件/访问模式都得到相同收益。加载完成后的同步是硬边界：任何线程都不能提前读取别人的 tile 数据。非整除尺寸时，读写两侧都分别判断边界；本文件的 <code>W/H</code> 恰好整除只是默认实验值，不应成为 kernel 正确性的前提。</p>
+<h4>执行流程</h4>
+<p>grid 的 x 方向覆盖宽度、y 方向覆盖高度。每个 block 先把有效输入元素放入 tile，所有线程同步，再用交换后的 block 坐标计算输出位置并写回。第一次启动用于预热，之后的 20 次由事件计时，最后显式设备同步并打印平均时间；代码没有初始化或校验输出，因此正确性实验应自行准备可辨识输入并检查转置关系。</p>
+<h4>常见错误与实验</h4>
+<p>常见错误包括把输出索引仍按输入的 <code>w</code> 计算、只在加载侧做边界判断、去掉加载后的同步，或误以为 <code>+1</code> padding 对所有访问都有效。可将尺寸改为 <code>W=2050、H=2047</code>，用 <code>in[y*w+x] = y*w+x</code> 检查 <code>out[x*h+y]</code>；复制一份不 padding 的版本比较 profiler 的 bank conflict；同时比较朴素转置的连续/跨步访问和端到端时间。结果快慢需以实测为准。</p>
+<h4>与本周其他示例的关系</h4>
+<p>它是 <code>01</code> 的静态二维 shared 用法和 <code>02</code> 的同步模式的结合。<code>04</code> 不搬运 tile，而是把小权重放进 constant；<code>05</code> 直接按元素计算 GEMM；<code>06</code> 将 tile 复用从一次转置扩展到 K 方向多轮乘加。</p>
+<h3>4. <code>04_stencil_constant.mu</code>：用 constant memory 广播小型只读参数</h3>
+<h4>示例目标</h4>
+<p>通过一维五点 stencil 认识 constant memory 的适用边界：权重数组很小、kernel 中许多线程读取相同的只读值时，硬件可能利用广播和 constant cache。这里验证的是符号拷贝和启动链路，不是完整的 stencil 性能结论。</p>
+<h4>代码结构</h4>
+<p>文件定义 <code>__constant__ float c_w[5]</code>。<code>stencil5</code> 为每个线程计算一个位置 <code>i</code>，对 <code>i-2</code> 到 <code>i+2</code> 的输入做加权和，权重从 <code>c_w[k+2]</code> 读取。主机在 device 分配输入/输出，用 <code>musaMemcpyToSymbol(c_w, w, sizeof(w))</code> 把五个 host 权重写入 constant symbol，再以 256 线程 block 启动一维 grid。</p>
+<h4>核心知识点</h4>
+<p>constant memory 的数据由 host 显式拷贝到 device 端符号，kernel 只能读它；它适合小型、只读、线程间有相同地址访问的参数，硬件可以广播同一值。若线程访问不同地址，广播优势会下降；大数组或随机访问不应机械地放进 constant。该 stencil 只对 <code>2 &lt;= i &lt; n-2</code> 写输出，因此两端四个元素保持未定义/未写入状态，调用者必须决定边界策略，不能把它当作完整初始化的输出。</p>
+<h4>执行流程</h4>
+<p>主机先构造五点权重 <code>{0.0625, 0.25, 0.375, 0.25, 0.0625}</code>，申请输入输出，再执行 host-to-constant symbol 拷贝。kernel 内每个有效线程读取五个输入点和同一组权重，完成后检查 kernel 错误并打印完成标记，最后释放两个 global buffer。示例没有初始化输入，也没有校验数值，所以输出标记只说明链路完成。</p>
+<h4>常见错误与实验</h4>
+<p>常见错误是把 <code>musaMemcpyToSymbol</code> 当普通 device 指针拷贝、把 constant 当作任意大小的全局数组、忽略 <code>i</code> 两端边界，或用不同权重访问模式却仍预期广播收益。可初始化输入为常数并验证内部输出为权重和；改写边界为复制、零填充或单独 kernel；比较权重放在 global、constant 和每线程局部变量的版本，并分别记录吞吐和输入规模。不要从单次运行推出 constant 一定更快。</p>
+<h4>与本周其他示例的关系</h4>
+<p>它与 shared 的共同点是都需要明确的数据放置策略，但 constant 是 kernel 间可由符号更新、kernel 内只读的参数空间，不是 block 私有 scratchpad。<code>02/03/06</code> 主要解决 block 内数据复用与同步，<code>05</code> 则提供不依赖这两类片上存储的 GEMM 基线。</p>
+<h3>5. <code>05_naive_gemm.mu</code>：建立 row-major GEMM 的正确性和性能基线</h3>
+<h4>示例目标</h4>
+<p>先用最直接的映射实现 <code>C = A × B</code>，明确一个线程对应一个 <code>C[row, col]</code>，再用事件计时和 GFLOPS 量化重复 global 读取的代价。它是后续 tiled GEMM 和 muBLAS 对比时的基准，不是最终优化实现。</p>
+<h4>代码结构</h4>
+<p><code>gemm_naive</code> 使用二维 grid/block：<code>blockIdx.y/threadIdx.y</code> 得到 row，<code>blockIdx.x/threadIdx.x</code> 得到 col；有效线程在 <code>k=0..K-1</code> 上累加 <code>A[row*K+k] * B[k*N+col]</code>，最后写 <code>C[row*N+col]</code>。主机以 row-major 方式填充 A 为 1、B 为 2，warmup 后重复 10 次，用事件求平均时间、按 <code>2*M*N*K</code> 计算 GFLOPS，并检查 <code>C[0] = 2*K</code>。</p>
+<h4>核心知识点</h4>
+<p>该文件的 row-major 约定是 A 的 leading dimension 为 K，B 为 N，C 为 N；数学式为 <code>C[M×N] = A[M×K] × B[K×N]</code>。每个线程独立从 global 读取 K 个 A 和 K 个 B，同一 block 内不同线程会重复取相同数据，尤其 B 的列方向访问不如连续行访问友好。GFLOPS 是按约定的操作数和 kernel 时间算出的指标，必须和 warmup、重复次数、是否包含拷贝等测量范围一起解释。BLAS 接口常见的 column-major 语义不能直接套用这些索引。</p>
+<h4>执行流程</h4>
+<p>主机申请并填充三块 host 矩阵、三块 device 矩阵，拷贝 A/B 后以 <code>16×16</code> block 覆盖 M×N。先启动一次并同步预热，再记录事件包围的 10 次 kernel，拷回 C，打印时间、GFLOPS 和首元素，最后释放资源。默认矩阵元素是常数，适合先做形状和结果 sanity check；要验证一般矩阵，应替换输入并加入 CPU 参考结果。</p>
+<h4>常见错误与实验</h4>
+<p>常见错误是交换 M/N 的 grid 计算、漏掉 <code>row &lt; M || col &lt; N</code> 边界、混淆 <code>B[k*N+col]</code> 与 column-major 索引，或把 event 时间和 host-to-device/device-to-host 拷贝时间混为一谈。可把 M/N/K 改成互不相同且不被 16 整除的尺寸，和 CPU 参考逐元素对拍；扫描矩阵大小并记录 GFLOPS；与 <code>06</code> 比较 global 读取和同步开销。朴素版的数值正确不代表性能高。</p>
+<h4>与本周其他示例的关系</h4>
+<p>它是 <code>06</code> 的同一数学问题、同一 row-major 数据布局和同一首元素校验的无 tile 基线；<code>06</code> 将重复的 A/B 读取搬入 shared 并在 K 方向复用。<code>07</code> 计划把相同问题交给 muBLAS，但库调用和布局参数必须另行确认；<code>01/02/03/04</code> 提供构成这些优化的存储与同步概念。</p>
+<h3>6. <code>06_tiled_gemm.mu</code>：沿 K 方向装载并复用 A/B tile</h3>
+<h4>示例目标</h4>
+<p>在不改变 GEMM 数学定义和 row-major 布局的前提下，让一个 block 协同加载 <code>TS×TS</code> 的 A/B 子块，并让 block 内线程重复使用它们。学习重点是复用、同步和非整除边界；tile 只是可能改善访存行为的组织方式，不是对所有设备和尺寸的加速承诺。</p>
+<h4>代码结构</h4>
+<p>每个 block 声明 <code>tileA[TS][TS]</code> 与 <code>tileB[TS][TS]</code>，一个线程负责加载一个 A 元素和一个 B 元素。<code>row = blockIdx.y*TS + threadIdx.y</code>、<code>col = blockIdx.x*TS + threadIdx.x</code> 确定 C 元素；外层循环将 K 切成 <code>numTiles = (K+TS-1)/TS</code> 段。每段把 <code>A[row*K+aCol]</code> 和 <code>B[bRow*N+col]</code> 放入 shared，计算 <code>TS</code> 次乘加，再写回有效 C 元素。</p>
+<h4>核心知识点</h4>
+<p>一个 tile 被 block 内多个线程消费：<code>tileA[threadIdx.y][k]</code> 和 <code>tileB[k][threadIdx.x]</code> 让同一 global 元素在计算阶段被复用，从而降低 global 读取需求；shared 读取本身仍可能受 bank conflict、访问模式、寄存器和 occupancy 影响。这里有两个不可互换的同步边界：加载后同步，确保所有 tile 元素就绪；计算后同步，确保没有线程仍在读旧 tile，下一轮才能覆盖 shared。两个边界都必须由整个 block 一致到达，不能把 barrier 放进只有部分线程进入的分支。<code>TS=16</code> 还要同时满足 <code>TS²</code> 线程数和 shared 容量约束。</p>
+<h4>执行流程</h4>
+<p>grid 覆盖 M×N，block 为 <code>16×16</code>。每轮先计算本轮 K 片段的 A/B 地址；越过 M、N 或 K 的加载写入 0，这使最后一个不完整 tile 仍可参与固定长度的内层循环。同步后每线程累加 <code>TS</code> 项，再同步，进入下一轮；循环完成后只有有效 <code>(row,col)</code> 才写 C。主机 warmup，再重复 10 次测 kernel 平均时间，拷回并打印 <code>C[0]</code> 与 GFLOPS。</p>
+<h4>常见错误与实验</h4>
+<p>常见错误包括只给有效线程写 shared 却不为无效位置清零、遗漏任一同步、把 <code>tileB</code> 的行索引写成 col、把 K 不是 TS 整数倍时的越界访问漏掉，以及任意增大 TS 导致线程数超过设备上限或 occupancy 下降。可用 M=37、N=29、K=23 与 CPU 参考对拍；扫描 TS=8/16/32，记录线程数、shared 用量、GFLOPS 和错误情况；比较加 padding 与不 padding 的 profiler 指标。不要把理论复用率直接等同于实际加速，也不要承诺手写 GEMM 接近库性能。</p>
+<h4>与本周其他示例的关系</h4>
+<p>它把 <code>01</code> 的静态 shared、<code>03</code> 的 tile 协同加载和 <code>02</code> 的同步边界组合到矩阵乘法；<code>05</code> 是直接 global 访问的基线，最适合做同形状对拍。<code>07</code> 是 muBLAS 调用骨架/待实测基线入口，后续可用真实库结果观察生产实现中更复杂的分块、寄存器分块和硬件特定优化。</p>
+<h3>7. <code>07_mublas_sgemm.mu</code>：muBLAS 调用骨架与待实测基线入口</h3>
+<h4>示例目标</h4>
+<p>为“朴素 kernel、入门 tiled kernel、官方库实现”提供未来可比的入口，同时认识 SDK/API 可用性本身是实验前提。这个文件只是 muBLAS 调用骨架/待实测基线入口：源码当前只检查 <code>mublas.h</code> 是否可包含并打印提示，没有 SGEMM 调用、计时或结果校验，因此尚未建立或完成库性能基线。</p>
+<h4>代码结构</h4>
+<p>文件先包含 <code>musa_runtime.h</code>，用 <code>__has_include(&lt;mublas.h&gt;)</code> 检测头文件；存在时才包含并设置 <code>HAVE_MUBLAS_HEADER</code>。主函数固定打印 <code>M=N=K=1024</code>。没有头文件时报告缺失并列出确认 include path、补齐 handle/create/SGEMM/destroy 和对比记录的步骤；有头文件时仍只打印“需要依据 SDK API 补齐调用”的提示。也就是说，示例没有分配矩阵、执行 SGEMM 或输出真实性能。</p>
+<h4>核心知识点</h4>
+<p>muBLAS 后续可能提供经过库作者优化的 SGEMM 实现，但当前源码只做头文件探测和提示，不能把它称为已经建立的库性能基线。补齐调用前必须确认本机 SDK 的头文件、库名、函数签名、句柄生命周期、数据类型和布局约定。SGEMM 通常涉及 <code>alpha</code>、<code>beta</code>、leading dimension 以及转置标志；本周 <code>05/06</code> 的 A/B/C 是 C 风格 row-major，而 BLAS 接口常按 column-major 解释，因此直接复制索引会得到转置或错误结果。待实测时，库、naive 和 tiled 的比较必须统一矩阵形状、数据类型、编译器与编译选项、warmup、重复次数和计时范围，并加入结果校验；任何性能或相对快慢结论都依赖这些条件和具体设备、尺寸，必须通过实测验证，手写入门 GEMM 不应承诺接近库性能。</p>
+<h4>执行流程</h4>
+<p>运行时先打印固定 shape，再走头文件存在性分支。无头文件路径立即返回，告诉学习者如何在有 MUSA SDK 的机器上继续；有头文件路径目前也立即返回，因为真实函数签名需要以本地官方 API 参考为准。可按 README 的 <code>make optional</code>（或单独的 <code>make 07_mublas_sgemm</code>）构建入口；这仍不会自动产生 SGEMM、计时或校验结果。补齐后才应按“创建 handle → 准备/拷贝矩阵 → 调用 SGEMM → 同步和计时 → 校验结果 → 销毁 handle/释放内存”的顺序实现，并在统一设备、尺寸、编译器和计时条件下分别记录 naive、tiled、muBLAS 的时间和 GFLOPS。</p>
+<h4>常见错误与实验</h4>
+<p>常见错误是把“找到 <code>mublas.h</code>”误当成“已经链接并能调用库”、忽略库链接参数、handle 未销毁、leading dimension 传错、row-major/column-major 和 transpose 标志不匹配，或只比较一次冷启动时间。可在 SDK 机器上依据官方 API 补齐最小 SGEMM，先用小型非方阵和 CPU 参考验证布局，再对 <code>1024³</code> 做 warmup 与多次事件计时；记录三种实现的绝对 GFLOPS、相对比值、编译/链接环境和校验误差。若 SDK 不可用，记录“未测得”比编造库结果更可靠。</p>
+<h4>与本周其他示例的关系</h4>
+<p>它承接 <code>05</code> 的朴素基线和 <code>06</code> 的 tiled 版本，比较时应保持相同的 GEMM 形状与布局语义；同时把 <code>01</code> 的资源生命周期意识扩展到库 handle，把 <code>04</code> 的“先确认存储/API 适用范围”原则扩展到 SDK。最终目的不是替代前两个 kernel，而是用库实现帮助判断手写优化距离成熟实现还有哪些层次。</p>
+<h2>CUDA_Freshman 对照</h2>
+<ul><li><code>24_shared_memory_read_data</code>: shared memory 基础。</li><li><code>25_reduce_integer_shared_memory</code>: shared reduce。</li><li><code>26_transform_shared_memory</code>: shared transpose。</li><li><code>27_stencil_1d_constant_read_only</code>: constant/read-only cache。</li></ul>
+<p>GEMM 进阶可参考 SGEMM_CUDA: &lt;https://github.com/siboehm/SGEMM_CUDA&gt;。</p>
+<p>完整映射见 <a href="https://github.com/googs1025/musa-learning-notes/blob/main/docs/cuda-example-map.md"><code>../../docs/cuda-example-map.md</code></a>。</p>
+<h2>CUDA reference：Ch5/Ch7 对照阅读</h2>
+<p>本组 <code>.cu</code> 文件保留上游 CUDA 写法，用来和本周 MUSA 主线并排阅读。要把 三类证据分开：源码中出现的 API、索引、同步和算法流程是“源码事实”；能否 被 nvcc 或 mcc/MUSA Mapping 接受是“编译验证”；bank conflict、atomic 竞争、 误差大小和 float/double 速度是“设备实测”，不能从源码或一次 dry-run 推断。</p>
+<h3>Shared 生命周期、同步与 constant broadcast/stencil</h3>
+<p><code>checkSmemSquare.cu</code> 和 <code>checkSmemRectangle.cu</code> 分别用方形、矩形 block 展示 static/dynamic shared 的布局、转置式读写和 padding。源码事实是 shared 属于 block，在 kernel 执行期间由 block 内线程共同使用；写入后读取前需要 <code>__syncthreads()</code>。padding 只改变地址到 bank 的映射，是否减少冲突、是否更快 必须用 profiler 或计时实测。</p>
+<p><code>constantReadOnly.cu</code> 对比 constant symbol 和只读指针，<code>constantStencil.cu</code> 用小型系数完成 stencil。源码事实是 host 通过 symbol copy 初始化只读系数， kernel 读取它们；constant broadcast 是否命中、分散访问是否退化，属于目标 GPU 的设备行为。stencil 的 halo 和边界也要单独检查，不能因为结果打印完成 就认为所有输出元素都被正确初始化。</p>
+<h3>Reduce、atomic ordering 与 custom atomic</h3>
+<p><code>reduceInteger.cu</code> 展示 global/shared reduction、循环展开和 partial sum。源码 事实包括每轮归约的同步、block size 假设以及 block 间结果需要后续合并；输入 规模不是 block size 整数倍时，越界补零和最终校验是关键。<code>reduceIntegerShfl.cu</code> 使用 <code>__shfl_xor</code>、<code>warpSize</code> 和 CUDA 32-lane 假设，因此 Makefile 默认将其列为 optional；MUSA 是否能保留相同 lane/mask 语义，要在目标 SDK 上单独编译、运行 并用已知答案验证。</p>
+<p><code>my-atomic-add.cu</code> 的 custom atomic add 是“读取旧值 → <code>atomicCAS</code> 尝试更新 → 失败后重试”的源码事实。<code>atomic-ordering.cu</code> 对比 atomic 与非原子更新： atomic 保证某个更新操作不可被并发更新撕裂，但不保证线程按固定顺序执行，也 不自动等价于完整的内存栅栏。最终计数、输出顺序和竞争下的分布要通过多次设备 运行观察；后端对 <code>atomicCAS</code> 的支持和性能也必须编译/实测确认。</p>
+<h3>Floating-point accuracy、performance 与 FMAD</h3>
+<p><code>floating-point-accuracy.cu</code> 让二进制浮点表示误差可见；误差阈值应随 dtype、 运算次数和输入范围记录。<code>floating-point-perf.cu</code> 分开统计 host→device、 kernel、device→host 的时间，并比较 float/double；计时区间是源码事实，但具体 倍数受设备双精度吞吐、带宽、频率和分配开销影响，仓库不预填通用结论。</p>
+<p><code>fmad.cu</code> 用计算结果展示乘加融合对舍入的影响。是否融合由表达式、优化选项、 编译器和目标架构共同决定；要通过编译器输出或设备结果验证，不能把 <code>-O2</code> 直接解释为 CUDA 与 MUSA 一定采用相同 FMAD 策略。</p>
+<p>建议顺序：<code>checkSmemSquare</code> → <code>constantStencil</code> → <code>reduceInteger</code> → <code>my-atomic-add</code> → <code>floating-point-accuracy</code> → <code>floating-point-perf</code> → <code>fmad</code>， 最后在确认 warp 语义后显式尝试 optional shuffle。把 backend、架构参数、设备、 误差、计时范围和重复次数记录到 <code>notes/week5.md</code>。</p>
+    </article>
+    <nav class="pager" aria-label="材料导航">
+      <a href="../week5.html">← 返回 Week 5</a>
+      <a href="../quiz.html">进入完整自测 →</a>
+    </nav>
+  </main>
+  <footer class="footer"><p>MUSA Learning Notes · 内容以官方文档和仓库实测为准</p></footer>
+</body>
+</html>

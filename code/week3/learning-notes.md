@@ -164,7 +164,7 @@ host 初始化并拷入输入 → 每个 block 的 256 个线程各加载最多�
 
 #### 核心知识点
 
-shuffle 的通信范围是一个 warp/group，不能跨 block，也不能替代多个 warp/group 写 shared 后所需的 `__syncthreads()`。当前源码应视为 SDK 语义探测/教学骨架，而不是可移植的 128-lane 完整归约实现：`0xffffffff` 是 32-bit 的 CUDA 风格 mask，不能表达 128 个 lane；同时 `main` 中 `((threads+127)/128)` 的 shared 大小也带有 MUSA 常见 128-wide 环境的假设。虽然本例用 `warpSize` 计算 offset、lane、warp 编号，但在宣称完整归约正确之前，必须按实际 MUSA SDK 文档验证 mask、width 和 `warpSize` 的语义，并据此修正实现。不要机械套用 CUDA 32-wide 和 32-bit active mask。
+shuffle 的通信范围是一个 warp/group，不能跨 block，也不能替代多个 warp/group 写 shared 后所需的 `__syncthreads()`。当前源码使用 `warpSize` 计算 offset、lane、warp 编号和 shared partial 数量；mask、width 的具体语义仍必须按实际 MUSA SDK 文档确认。不要把某一代设备的 32 或 128 写死为所有 MUSA 设备的宽度。本仓库 S4000/MUSA SDK 3.1.0 实测 `warpSize=32`，旧版 S3000 官方示例则报告 128。
 
 
 #### 执行流程

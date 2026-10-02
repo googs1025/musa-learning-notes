@@ -213,7 +213,7 @@ private:
 
 - [ ] 性能分析:`mprof` 或等价工具怎么看 timeline,把 Week 2 留下的"4 流为啥只快 1.14×"挖出来;
 - [ ] Reduce / Scan:第一次写需要 shared memory + `__syncthreads` 的 kernel;
-- [ ] Occupancy 怎么算:MTT=128 这个 warp size 在 register / shared mem 约束下怎么选 block size;
+- [ ] Occupancy 怎么算：读取目标设备 `warpSize` 后，怎样结合 register / shared memory 约束选择 block size；
 - [ ] 把 LeetGPU 上的 Easy 题继续移植几道(已经在 `code/leetgpu/easy/` 起了头)。
 
 ---

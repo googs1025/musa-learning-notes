@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN" data-page-kind="generated">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="source-sha256" content="ef8d0ca45c1f34a2eefff858fe9c82e7bb9ee61d122a6084bd30d1a8eda3135d">
+  <title>Week 4 完整练习 · MUSA GPU 编程知识库</title>
+  <link rel="stylesheet" href="../assets/knowledge.css">
+  <script src="../assets/knowledge.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <nav class="site-nav" aria-label="主导航">
+      <a class="brand" href="../index.html">MUSA GPU 编程知识库</a>
+      <ul><li><a href="../week4.html">Week 4</a></li><li><a href="../quiz.html">知识自测</a></li></ul>
+    </nav>
+  </header>
+  <main class="page-shell">
+    <article class="article-content generated-content">
+      <p class="eyebrow">Week 4 · 完整练习</p>
+      <h1>Week 4 完整练习</h1>
+      <p>本页由仓库中的规范 Markdown 自动生成。学习记录和性能数字只有在真实设备运行后才会写入。</p>
+      <p><a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week4/exercises.md">查看原始 Markdown</a></p>
+      <h2>E4.1 读写方向与布局</h2>
+<p>分别 dry-run <code>chapter04__readSegment</code>、<code>chapter04__writeSegment</code>、<code>chapter04__simpleMathAoS</code> 和 <code>chapter04__simpleMathSoA</code>，画出线程到地址的映射。若有 CUDA/MUSA 设备，记录同一数据规模下的有效带宽，并注明不能跨设备比较未经实测的结论。</p>
+<h2>E4.2 backend 与 symbol/transpose 差异</h2>
+<p>用 <code>BACKEND=cuda</code> 和 <code>BACKEND=musa MUSA_ARCH=mp_31</code> 检查 <code>chapter04__transpose</code>、<code>chapter04__globalVariable</code> 的命令差异；说明 global symbol、shared tile 和同步语义中哪些来自 CUDA 源码，哪些必须由 MUSA SDK 验证。</p>
+<blockquote><p>把运行数据写入 <code>../../notes/week4.md</code>。</p></blockquote>
+<ol><li>记录 <code>01_saxpy_bandwidth</code> 的 GB/s，与理论带宽比值。</li></ol>
+<p>预计输出 / 预期现象：</p>
+<pre><code class="language-text">   SAXPY ... ms ... GB/s</code></pre>
+<p>GB/s 应明显低于理论峰值，因为 SAXPY 受全局内存带宽、launch 开销和访存效率共同影响。</p>
+<ol><li>扫描 <code>02_offset_access</code> 的 offset 0/1/2/4/8/16/31。</li></ol>
+<p>预计输出 / 预期现象：</p>
+<pre><code class="language-text">   offset= 0 time=... ms
+   offset= 1 time=... ms
+   offset= 2 time=... ms
+   offset= 4 time=... ms
+   offset= 8 time=... ms
+   offset=16 time=... ms
+   offset=31 time=... ms</code></pre>
+<p><code>offset=0</code> 通常最好；非 0 offset 可能破坏对齐和合并访存，耗时上升。</p>
+<ol><li>比较 <code>03_offset_unrolling</code> 是否改善 offset 版本。</li></ol>
+<p>预计输出 / 预期现象：</p>
+<pre><code class="language-text">   offset= 0 unroll4=... ms
+   offset= 1 unroll4=... ms
+   ...</code></pre>
+<p>unroll 可能降低循环和调度开销，但不能从根本上修复非对齐访存；如果瓶颈在内存 transaction，改善会有限。</p>
+<ol><li>对比 AoS 和 SoA，解释哪种更适合 GPU 合并访存。</li></ol>
+<p>预计输出 / 预期现象：</p>
+<pre><code class="language-text">   AoS=... ms SoA=... ms speedup=...x</code></pre>
+<p>SoA 通常更快，因为相邻线程访问相邻字段数组，合并访存更自然；AoS 容易让线程跨结构体取字段，访存跨度更大。</p>
+<ol><li>对比朴素转置和 padded shared 转置。</li></ol>
+<p>预计输出 / 预期现象：</p>
+<pre><code class="language-text">   transpose naive ... ms
+   transpose padded ... ms</code></pre>
+<p>padded shared 版本通常快于朴素转置，因为它把非合并写入转成 shared tile 内重排，并通过 padding 降低 shared memory bank conflict。</p>
+    </article>
+    <nav class="pager" aria-label="材料导航">
+      <a href="../week4.html">← 返回 Week 4</a>
+      <a href="../quiz.html">进入完整自测 →</a>
+    </nav>
+  </main>
+  <footer class="footer"><p>MUSA Learning Notes · 内容以官方文档和仓库实测为准</p></footer>
+</body>
+</html>

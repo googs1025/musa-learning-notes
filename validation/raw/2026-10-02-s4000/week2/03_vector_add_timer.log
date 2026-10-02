@@ -1,0 +1,10 @@
+TARGET=03_vector_add_timer
+WEEK=week2
+START=2026-10-02T10:56:34+08:00
+mcc -O2 -std=c++17 -I/usr/local/musa/include -I../include 03_vector_add_timer.mu -o 03_vector_add_timer -L/usr/local/musa/lib -lmusa -lmusart
+BUILD_EXIT_CODE=0
+[A] CPU clock, NO sync     :   0.2938 ms   (量到的其实是 launch 入队耗时)
+[B] CPU clock + sync       : avg  0.1212  min  0.1186  max  0.1233  (ms)
+[C] GpuTimer (musaEvent)   : avg  0.1243  min  0.1195  max  0.1524  (ms)
+RUN_EXIT_CODE=0
+END=2026-10-02T10:57:08+08:00

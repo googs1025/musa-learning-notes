@@ -5,7 +5,7 @@ const path = require("path");
 
 const root = path.resolve(__dirname, "..");
 const docsRoot = path.join(root, "docs");
-const knowledgePages = [
+const coreKnowledgePages = [
   "docs/index.html",
   "docs/week1.html",
   "docs/week2.html",
@@ -15,7 +15,12 @@ const knowledgePages = [
   "docs/week6.html",
   "docs/gpu-hierarchy.html",
   "docs/quiz.html",
+  "docs/validation.html",
 ];
+const generatedPages = Array.from({ length: 6 }, (_unused, index) => index + 1)
+  .flatMap((week) => ["learning", "exercises", "records"]
+    .map((kind) => `docs/generated/week${week}-${kind}.html`));
+const knowledgePages = [...coreKnowledgePages, ...generatedPages];
 
 function readText(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
@@ -96,7 +101,7 @@ function checkKnowledgePages() {
   const homePath = "docs/index.html";
   const home = requireText(homePath, []);
   requirePageKind(home, "home", homePath);
-  for (const page of knowledgePages.slice(1)) {
+  for (const page of coreKnowledgePages.slice(1)) {
     requireLink(home, path.basename(page), homePath);
   }
 
@@ -139,6 +144,19 @@ function checkKnowledgePages() {
   if (topic.includes("MPE")) throw new Error(`unexpected MPE in ${topicPath}`);
   const quiz = requireText("docs/quiz.html", ["musa-learning-quiz-v1"], true);
   requireLink(staticHtml(quiz), "index.html", "docs/quiz.html");
+  const validation = requireText("docs/validation.html", ["MTT S4000", "ENV_LIMITED"]);
+  requirePageKind(validation, "validation", "docs/validation.html");
+  requireLink(validation, "index.html", "docs/validation.html");
+  requireLink(validation, "quiz.html", "docs/validation.html");
+  for (let week = 1; week <= 6; week += 1) {
+    for (const kind of ["learning", "exercises", "records"]) {
+      const page = `docs/generated/week${week}-${kind}.html`;
+      const generated = requireText(page, ["source-sha256"]);
+      requirePageKind(generated, "generated", page);
+      requireLink(generated, `../week${week}.html`, page);
+      requireLink(generated, "../quiz.html", page);
+    }
+  }
   console.log(`knowledge pages: ${knowledgePages.length}`);
 }
 
@@ -254,7 +272,53 @@ function checkLearningMaterials() {
   console.log("learning materials: ok");
 }
 
+function checkValidationManifest() {
+  const relativePath = "validation/musa-3.1.0-s4000.json";
+  const manifest = JSON.parse(readText(relativePath));
+  const allowedStatuses = new Set(["PASS", "BUILD_FAIL", "RUN_FAIL", "ENV_LIMITED", "NOT_RUN"]);
+  const expectedWeeks = [1, 2, 3, 4, 5, 6];
+  const actualWeeks = manifest.weeks.map((week) => week.week);
+  if (JSON.stringify(actualWeeks) !== JSON.stringify(expectedWeeks)) {
+    throw new Error(`validation weeks must be 1 through 6 in ${relativePath}`);
+  }
+
+  const evidenceRoot = path.resolve(root, "validation", "raw", manifest.runId);
+  const statusCounts = Object.create(null);
+  let targetCount = 0;
+  for (const week of manifest.weeks) {
+    const names = new Set();
+    for (const target of week.targets) {
+      targetCount += 1;
+      if (!target.name || names.has(target.name)) {
+        throw new Error(`missing or duplicate validation target ${target.name || "<unknown>"} in week ${week.week}`);
+      }
+      names.add(target.name);
+      if (!allowedStatuses.has(target.status)) {
+        throw new Error(`unknown validation status ${target.status} for ${target.name}`);
+      }
+      if (target.status !== "PASS" && !target.reason) {
+        throw new Error(`missing validation reason for ${target.name}`);
+      }
+      if (target.status === "PASS" && target.runExitCode !== 0) {
+        throw new Error(`passing target ${target.name} must have runExitCode 0`);
+      }
+      const evidence = path.resolve(root, target.evidence || "");
+      const relativeEvidence = path.relative(evidenceRoot, evidence);
+      if (!target.evidence || relativeEvidence.startsWith("..") || path.isAbsolute(relativeEvidence)) {
+        throw new Error(`validation evidence outside run ${manifest.runId} for ${target.name}`);
+      }
+      if (!fs.existsSync(evidence) || !fs.statSync(evidence).isFile()) {
+        throw new Error(`missing validation evidence ${target.evidence} for ${target.name}`);
+      }
+      statusCounts[target.status] = (statusCounts[target.status] || 0) + 1;
+    }
+  }
+  const orderedCounts = Object.fromEntries(Object.entries(statusCounts).sort(([a], [b]) => a.localeCompare(b)));
+  console.log(`validation targets: ${targetCount} ${JSON.stringify(orderedCounts)}`);
+}
+
 checkQuizData();
 checkLearningMaterials();
+checkValidationManifest();
 checkKnowledgePages();
 checkLocalLinks();

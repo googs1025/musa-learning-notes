@@ -178,8 +178,8 @@ if (x &lt; width &amp;&amp; y &lt; height) {
         </details>
         <details id="w3-q2">
           <summary>MUSA 做 warp-level shuffle/reduce 时，为什么不能照搬 CUDA 的 warp=32 假设？</summary>
-          <p>MUSA warp size 通常按 128 理解，shuffle mask、warp 数量、reduction tree 深度都要重新算。</p>
-          <p>这里的 128 只对应题目采用的示例语境；实际目标的 warp/group 宽度必须向目标设备查询，并结合所用 MUSA SDK 确认。</p>
+          <p>MUSA 设备的 warp size 可能随架构和 SDK 不同；shuffle mask、warp 数量、reduction tree 深度都必须由实际 <code>warpSize</code> 推导。</p>
+          <p>本仓库的 S4000/MUSA SDK 3.1.0 实测为 32；旧版 S3000 官方示例为 128，不能把任一数字推广到所有设备。</p>
           <p>代码语法接近 CUDA，不代表调优参数可以机械照搬。</p>
         </details>
         <details id="w3-q7">
@@ -199,11 +199,25 @@ if (x &lt; width &amp;&amp; y &lt; height) {
         </div>
       </section>
 
+      <section class="card completion-card" aria-labelledby="completion-title">
+        <h2 id="completion-title">本周通关标准</h2>
+        <ul class="completion-list">
+          <li class="completion-item">能独立回答本周核心问题</li>
+          <li class="completion-item">必跑示例通过，或有明确环境限制记录</li>
+          <li class="completion-item">完成基础练习和至少一个边界实验</li>
+          <li class="completion-item">Week 3 题库正确率达到 80%</li>
+          <li class="completion-item">真机记录包含设备、SDK、命令和结果</li>
+        </ul>
+      </section>
+
       <section id="resources">
         <h2>延伸入口</h2>
         <ul>
           <li><a href="https://github.com/googs1025/musa-learning-notes/tree/main/code/week3/">本周源码目录</a></li>
           <li><a href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week3/exercises.md">本周练习</a></li>
+          <li><a href="generated/week3-learning.html">站内完整学习材料</a></li>
+          <li><a href="generated/week3-exercises.html">站内完整练习</a></li>
+          <li><a href="generated/week3-records.html">站内真机记录</a></li>
         </ul>
       </section>
 

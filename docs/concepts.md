@@ -9,14 +9,14 @@
 | | CPU 多线程 | GPU SIMT |
 |---|---|---|
 | 线程数量级 | 几个 ~ 几十 | 几千 ~ 几百万 |
-| 调度单位 | 单个 thread | **warp**(MUSA = 128 线程,NVIDIA = 32) |
+| 调度单位 | 单个 thread | **warp**（宽度由具体 GPU 与 SDK 报告） |
 | 指令视角 | 每个线程跑自己的指令流 | warp 内**锁步执行同一条指令** |
 | 切换代价 | 高(寄存器保存/恢复)| 极低(寄存器都在 SM 里,切换就是改个指针) |
 | 适合任务 | 控制流复杂、分支多 | 数据并行,大量同样的小操作 |
 
 **SIMT** 全称 Single Instruction, Multiple Thread。可以先记住两点：
 
-- 一个 warp 内 128 线程**共享同一条指令的执行**;
+- 一个 warp 内由 `warpSize` 报告的线程**共享同一条指令的执行**;
 - 如果 warp 内的线程走了 `if/else` 不同分支(**warp divergence**),硬件会**串行执行两个分支**(先跑 if 那部分,再跑 else 那部分),其他线程被 mask 掉,等于浪费算力;
 - 写 kernel 时尽量让同一 warp 内的线程走同一条路径。
 
@@ -50,10 +50,12 @@ GPU
 |---|---|
 | `kernel<<<grid, block>>>` | grid 上所有 block 会被分配到各 SM |
 | 一个 `block` | 整个 block 调度到**同一个 SM**(不会跨 SM)|
-| 一个 `warp`(128 thread) | warp scheduler 调度的最小单位 |
+| 一个 `warp`（`warpSize` 个 thread） | warp scheduler 调度的最小单位 |
 | 一个 `thread` | 占用若干 register,在 ALU 上跑一条 SIMT 指令 |
 
 block 是调度边界，warp 是执行边界。
+
+不要把 MUSA 的 warp 宽度写死。应在 host 端读取 `musaDeviceProp.warpSize`，或在 device 代码中使用内置变量 `warpSize`。不同代际设备可能不同：旧版官方 S3000 示例报告 128，本仓库的 S4000/MUSA SDK 3.1.0 实测为 32，官方 S5000 示例也报告 32。
 
 > 这里用 CUDA 常见的 SM 心智模型做快速入门。MUSA 的 `MPC → MPX → MP` 物理层级、CUDA 近似对照和完整执行路径见 [`gpu-hierarchy.md`](gpu-hierarchy.md)。
 

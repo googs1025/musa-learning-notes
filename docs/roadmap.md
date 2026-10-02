@@ -3,7 +3,7 @@
 每周绑定官方[编程指南](https://docs.mthreads.com/musa-sdk/musa-sdk-doc-online/programming_guide/)章节。
 示例颗粒度参考 [Tony-Tan/CUDA_Freshman](https://github.com/Tony-Tan/CUDA_Freshman):一个示例只演示一个点,加 timer / 改数据布局 / 加 unroll 都拆成独立的小例子。
 
-> 完成度图例:✅ 已发布   🧪 写好待跑   ⏳ 计划中
+> 内容状态与硬件验证分开记录：六周教材、练习和 Pages 均已发布；下列实测来自 MTT S4000、MUSA SDK 3.1.0、单卡环境。
 
 ---
 
@@ -21,11 +21,11 @@
 | 05 | `05_error_check.mu` | 同步 vs 异步错误,CHECK 范式 |
 | 06 | `06_async_kernel.mu` | kernel 异步语义 + launch overhead |
 
-**产出**:6 示例 + 10 道习题 + 公众号文章 [`docs/articles/01-first-musa-code.md`](articles/01-first-musa-code.md)
+**产出**:6 示例 + 11 道习题 + 公众号文章 [`docs/articles/01-first-musa-code.md`](articles/01-first-musa-code.md)
 
 ---
 
-## Week 2 · 编程模型 + Stream + Graph(官方 Ch5)🧪
+## Week 2 · 编程模型 + Stream + Graph(官方 Ch5) ✅
 
 - **学**:GPU 程序 7 步骨架 / Pinned vs Pageable / Stream 并发 / Event 计时 / Graph 重放
 - **做**:8 个示例,粒度参考 Freshman 30–38(Stream 系列)
@@ -48,25 +48,25 @@
 
 ---
 
-## Week 3 · 执行模型(官方 Ch5 + Freshman Ch3)⏳
+## Week 3 · 执行模型(官方 Ch5 + Freshman Ch3) ✅
 
 - **学**:Warp Divergence / 循环展开 / Warp Shuffle / 动态并行 / 多维 grid
-- **做**:6 个示例,Reduce 是主线
+- **做**:7 个示例,Reduce 是主线
 
 | # | 文件 | 主题 |
 |---|---|---|
 | 01 | `01_warp_divergence.mu` | 故意制造 if/else 分歧,实测耗时 |
 | 02 | `02_reduce_naive.mu` | 朴素归约(global memory) |
 | 03 | `03_reduce_unrolling.mu` | 循环展开 + 多元素/线程 |
-| 04 | `04_reduce_shfl.mu` | warp shuffle 内归约(MUSA warp = 128) |
+| 04 | `04_reduce_shfl.mu` | warp shuffle 内归约（宽度由目标设备查询） |
 | 05 | `05_nested_hello.mu` | 动态并行:kernel 启动 kernel |
 | 06 | `06_sum_matrix_2d.mu` | 多维 grid,2D 矩阵求和 |
 
-**产出**:6 示例 + Reduce 三阶进化对比表
+**产出**:7 示例 + Reduce 三阶进化对比表
 
 ---
 
-## Week 4 · 全局内存与访存(官方 Ch9 + Freshman Ch4)⏳
+## Week 4 · 全局内存与访存(官方 Ch9 + Freshman Ch4) ✅
 
 - **学**:Coalesced Access / SoA vs AoS / Bank Conflict / Transpose
 - **做**:6 个示例,主题就是"访存模式怎么决定吞吐"
@@ -84,7 +84,7 @@
 
 ---
 
-## Week 5 · Shared / Constant / GEMM(官方 Ch5 + Freshman Ch5)⏳
+## Week 5 · Shared / Constant / GEMM(官方 Ch5 + Freshman Ch5) ✅
 
 - **学**:Shared Memory / Constant Memory / Tiled GEMM / 加速库
 - **做**:7 个示例,用 GEMM 串起整章
@@ -103,14 +103,14 @@
 
 ---
 
-## Week 6 · 多卡 + 调试 + 框架(官方 Ch6 + Ch8 + Ch10)⏳
+## Week 6 · 多卡 + 调试 + 框架(官方 Ch6 + Ch8 + Ch10) ✅
 
 - **学**:MUSA GDB / 错误码 / MCCL 通信 / torch_musa 自定义算子 / 集群视角(KUAE)
 - **做**:5 个示例,MUSA 特色路径(Freshman 这章不覆盖)
 
 | # | 文件 | 主题 |
 |---|---|---|
-| 01 | `01_mccl_allreduce.mu` | 双卡 AllReduce(如有 2 卡环境) |
+| 01 | `01_mccl_allreduce.cpp` | 双卡 AllReduce(如有 2 卡环境) |
 | 02 | `02_musa_gdb_demo.mu` | 故意 illegal address,用 MUSA SDK 调试器单步 |
 | 03 | `03_error_dump.mu` | 解析 MUSA Error Dump 流程 |
 | 04 | `04_torch_musa_minimal.py` | torch_musa 跑 ResNet 推理 |
@@ -123,14 +123,12 @@
 ## 总览
 
 ```
-Week 1 (Ch1-4)   ✅  6 示例  ── 入门
-Week 2 (Ch5)     🧪  8 示例  ── Stream / Graph
-Week 3 (Ch5+9)   ⏳  6 示例  ── Warp / Reduce
-Week 4 (Ch9)     ⏳  6 示例  ── 访存模式
-Week 5 (Ch5+9)   ⏳  7 示例  ── Shared / GEMM
-Week 6 (Ch6+8+10)⏳  5 示例  ── 调试 / 多卡 / 框架
-─────────────────────────────────
-                    38 示例(对标 Freshman 39)
+Week 1 (Ch1-4)    内容 ✅  真机 6/6 PASS
+Week 2 (Ch5)      内容 ✅  真机 8/8 PASS
+Week 3 (Ch5+9)    内容 ✅  真机 6 PASS / 1 NOT_RUN（修复后待复测）
+Week 4 (Ch9)      内容 ✅  真机 6/6 PASS
+Week 5 (Ch5+9)    内容 ✅  真机 6 PASS / 1 ENV_LIMITED
+Week 6 (Ch6+8+10) 内容 ✅  真机 1 PASS / 1 ENV_LIMITED / 2 NOT_RUN / 1 BUILD_FAIL
 ```
 
 > 节奏不强求 6 周完成,有空就推一周。每完成一周补一篇笔记到 `docs/articles/`。

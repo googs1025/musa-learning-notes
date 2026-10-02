@@ -20,7 +20,7 @@
 //  • <cuda_runtime.h>   → <musa_runtime.h>
 //  • cudaDeviceSynchronize → musaDeviceSynchronize
 //  • kernel 体本身 0 改动(没用 warp-level intrinsics)
-//  • MUSA warp = 128(CUDA 32),但本题只跑 elementwise,不受影响
+//  • warpSize 由目标设备报告；本题只跑 elementwise，不依赖固定宽度
 
 #include <musa_runtime.h>
 #include "musa_common.h"

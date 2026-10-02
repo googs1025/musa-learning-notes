@@ -1,0 +1,13 @@
+TARGET=01_hello_world
+WEEK=week1
+START=2026-10-02T10:55:45+08:00
+mcc -O2 -std=c++17 01_hello_world.mu -o 01_hello_world -L/usr/local/musa-3.1.0/lib -lmusa -lmusart
+BUILD_EXIT_CODE=0
+CPU: Hello world!
+GPU: tid=0 Hello world!
+GPU: tid=1 Hello world!
+GPU: tid=2 Hello world!
+GPU: tid=3 Hello world!
+GPU: tid=4 Hello world!
+RUN_EXIT_CODE=0
+END=2026-10-02T10:55:57+08:00

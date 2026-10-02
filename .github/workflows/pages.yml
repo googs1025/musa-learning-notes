@@ -6,12 +6,24 @@ on:
       - main
     paths:
       - docs/**
+      - code/**/*.md
+      - notes/**
+      - validation/**
+      - scripts/build-pages.js
+      - scripts/build-pages.test.js
+      - scripts/page-renderer.js
       - scripts/check-docs.js
       - scripts/check-docs.test.js
       - .github/workflows/pages.yml
   pull_request:
     paths:
       - docs/**
+      - code/**/*.md
+      - notes/**
+      - validation/**
+      - scripts/build-pages.js
+      - scripts/build-pages.test.js
+      - scripts/page-renderer.js
       - scripts/check-docs.js
       - scripts/check-docs.test.js
       - .github/workflows/pages.yml
@@ -30,6 +42,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Check generated Pages freshness
+        run: node scripts/build-pages.js --check
 
       - name: Validate documentation site
         run: |

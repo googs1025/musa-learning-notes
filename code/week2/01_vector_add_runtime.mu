@@ -166,9 +166,9 @@ int main() {
 //  ▸ 预期:
 //      • 改成 1024:每个 block 占的资源多,同时驻留的 block 数下降。在 vectorAdd
 //        这种纯访存 kernel 上耗时差异通常很小(瓶颈在带宽,不在调度)。
-//      • 改成 32:block 数翻 8 倍,调度开销略增。MUSA 的 warp=128,32 个线程
-//        连一个 warp 都填不满,SM 利用率不足。
-//      • 改成 128(= 1 个 warp 整数倍):MUSA 上最自然的选择。
+//      • 改成 32:block 数翻 8 倍,调度开销可能增加；它是否填满一个 warp
+//        取决于当前设备报告的 warpSize。
+//      • 改成 128:是否合适要结合 warpSize、驻留资源和实际测量判断。
 //
 //  ▸ 启示:vectorAdd 这种带宽 bound 的 kernel,blocks/threads 调一两档影响不大,
 //          但要养成"对齐 warp size"的习惯,等到 reduce / GEMM 才看得出差距。

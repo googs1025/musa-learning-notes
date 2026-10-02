@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN" data-page-kind="generated">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="source-sha256" content="cc20688b29aca9096021d452dc0ec82581b92cbdd4ce8de2bc06925a40240687">
+  <title>Week 6 真机记录 · MUSA GPU 编程知识库</title>
+  <link rel="stylesheet" href="../assets/knowledge.css">
+  <script src="../assets/knowledge.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <nav class="site-nav" aria-label="主导航">
+      <a class="brand" href="../index.html">MUSA GPU 编程知识库</a>
+      <ul><li><a href="../week6.html">Week 6</a></li><li><a href="../quiz.html">知识自测</a></li></ul>
+    </nav>
+  </header>
+  <main class="page-shell">
+    <article class="article-content generated-content">
+      <p class="eyebrow">Week 6 · 真机记录</p>
+      <h1>Week 6 真机记录</h1>
+      <p>本页由仓库中的规范 Markdown 自动生成。学习记录和性能数字只有在真实设备运行后才会写入。</p>
+      <p><a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/notes/week6.md">查看原始 Markdown</a></p>
+      <h2>2026-10-02 · MTT S4000 · MUSA SDK 3.1.0</h2>
+<div class="table-wrap"><table><thead><tr><th>目标</th><th>结果</th><th>关键观察</th><th>证据</th></tr></thead><tbody><tr><td><code>01_mccl_allreduce</code></td><td>ENV_LIMITED</td><td>编译成功；单卡环境不具备多 rank collective 验证条件</td><td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week6/01_mccl_allreduce.log">日志</a></td></tr><tr><td><code>02_musa_gdb_demo</code></td><td>NOT_RUN</td><td>编译成功；故障注入未在无人值守批处理中执行</td><td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week6/02_musa_gdb_demo.log">日志</a></td></tr><tr><td><code>03_error_dump</code></td><td>NOT_RUN</td><td>编译成功；需要显式配置 Error Dump 后交互执行</td><td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week6/03_error_dump.log">日志</a></td></tr><tr><td><code>04_torch_musa_minimal</code></td><td>PASS</td><td>PyTorch 2.2.0，MUSA available，sample=0.0</td><td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week6/04_torch_musa_minimal.log">日志</a></td></tr><tr><td><code>05_torch_musa_custom_op</code></td><td>BUILD_FAIL</td><td>Makefile 未提供所需 PyTorch C++ extension 头文件路径</td><td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week6/05_torch_musa_custom_op.log">日志</a></td></tr></tbody></table></div>
+<h2>统一运行记录模板</h2>
+<p>本模板只填写真实执行结果；没有 SDK、编译器或设备时填写“未运行”，不填估计性能。<code>simpleP2P.c</code> 为 source-only，若用 MPI 单独验证，应记录 <code>mpicc</code>、MPI 版本和 <code>mpirun</code> 命令。</p>
+<div class="table-wrap"><table><thead><tr><th>日期</th><th>主机 / 设备</th><th>CUDA Toolkit 或 MUSA SDK</th><th>编译器</th><th>架构</th><th>backend</th><th>target</th><th>输入规模</th><th>正确性</th><th>耗时 / 带宽</th><th>是否真实运行</th></tr></thead><tbody><tr><td>YYYY-MM-DD</td><td>host；GPU 型号；GPU 数</td><td>CUDA x.y / MUSA x.y；或未安装</td><td>nvcc / mcc / mpicc；版本</td><td>sm_XX / mp_XX</td><td>cuda / musa / mpi</td><td><code>chapterXX__name</code> 或 source-only</td><td>消息大小、矩阵、rank 等</td><td>PASS/FAIL/未验证</td><td>实测值；无实测填“未运行”</td><td>是 / 未运行</td></tr></tbody></table></div>
+<p>运行命令：<code>make BACKEND=&lt;cuda|musa&gt; [CUDA_ARCH=sm_XX|MUSA_ARCH=mp_XX] TARGET=&lt;target&gt;</code>；<code>simpleP2P.c</code> 不使用该 Makefile target，需单独记录 MPI 构建与运行命令。</p>
+    </article>
+    <nav class="pager" aria-label="材料导航">
+      <a href="../week6.html">← 返回 Week 6</a>
+      <a href="../quiz.html">进入完整自测 →</a>
+    </nav>
+  </main>
+  <footer class="footer"><p>MUSA Learning Notes · 内容以官方文档和仓库实测为准</p></footer>
+</body>
+</html>

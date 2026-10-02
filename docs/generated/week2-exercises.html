@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="zh-CN" data-page-kind="generated">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="source-sha256" content="5d229f3232db2a359c7a05f95aae15bf4ba55dd2f03848fafe9fefa7d0c53630">
+  <title>Week 2 完整练习 · MUSA GPU 编程知识库</title>
+  <link rel="stylesheet" href="../assets/knowledge.css">
+  <script src="../assets/knowledge.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <nav class="site-nav" aria-label="主导航">
+      <a class="brand" href="../index.html">MUSA GPU 编程知识库</a>
+      <ul><li><a href="../week2.html">Week 2</a></li><li><a href="../quiz.html">知识自测</a></li></ul>
+    </nav>
+  </header>
+  <main class="page-shell">
+    <article class="article-content generated-content">
+      <p class="eyebrow">Week 2 · 完整练习</p>
+      <h1>Week 2 完整练习</h1>
+      <p>本页由仓库中的规范 Markdown 自动生成。学习记录和性能数字只有在真实设备运行后才会写入。</p>
+      <p><a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week2/exercises.md">查看原始 Markdown</a></p>
+      <blockquote><p>完成后把答案 / 截图放到 <code>notes/week2.md</code>。 本周题目都跟&quot;性能数字&quot;挂钩，凡是要填 ms 的请用 <code>03_vector_add_timer</code> 里学到的 <strong>GpuTimer + 多次取平均</strong> 方法，别用裸 CPU 计时。</p></blockquote>
+<h2>E2.1 vectorAdd launch config 扫描（基础）</h2>
+<p>修改 <code>01_vector_add_runtime.mu</code>，固定 <code>N = 1&lt;&lt;20</code>，把 <code>threadsPerBlock</code> 依次改成 <code>32 / 64 / 128 / 256 / 512 / 1024</code>。</p>
+<p>填这张表：</p>
+<div class="table-wrap"><table><thead><tr><th>threadsPerBlock</th><th>blocksPerGrid</th><th>kernel time (ms)</th></tr></thead><tbody><tr><td>32</td><td>?</td><td>?</td></tr><tr><td>64</td><td>?</td><td>?</td></tr><tr><td>...</td><td>...</td><td>...</td></tr><tr><td>1024</td><td>?</td><td>?</td></tr></tbody></table></div>
+<p>回答：</p>
+<ul><li>最快的那档是多少？跟 <code>03_device_info</code> 里 <code>maxThreadsPerBlock / warpSize</code> 有什么关系？</li><li>为什么 32 那档反而慢——画一下 occupancy 怎么算的。</li></ul>
+<p>预计输出 / 预期现象：</p>
+<pre><code class="language-text">vector_add N=1048576  threadsPerBlock=256  blocksPerGrid=4096
+OK ✓
+kernel time = ... ms</code></pre>
+<p><code>blocksPerGrid = ceil(1048576 / threadsPerBlock)</code>，所以应为：</p>
+<div class="table-wrap"><table><thead><tr><th>threadsPerBlock</th><th>blocksPerGrid</th></tr></thead><tbody><tr><td>32</td><td>32768</td></tr><tr><td>64</td><td>16384</td></tr><tr><td>128</td><td>8192</td></tr><tr><td>256</td><td>4096</td></tr><tr><td>512</td><td>2048</td></tr><tr><td>1024</td><td>1024</td></tr></tbody></table></div>
+<p>时间不会严格单调，也不能只根据某个固定 warp 宽度预测快慢。先用 <code>03_device_info</code> 查询目标设备的 <code>warpSize</code>，再比较 block size 是否为其整数倍，并结合实际测量解释结果。</p>
+<h2>E2.2 pinned 收益随 N 的变化（动手）</h2>
+<p>修改 <code>02_vector_add_pinned.mu</code>，把 <code>N</code> 依次设成 <code>1&lt;&lt;16 / 1&lt;&lt;18 / 1&lt;&lt;20 / 1&lt;&lt;22 / 1&lt;&lt;24</code>。</p>
+<div class="table-wrap"><table><thead><tr><th>N</th><th>bytes</th><th>pageable H2D (GB/s)</th><th>pinned H2D (GB/s)</th><th>speedup</th></tr></thead><tbody><tr><td>1&lt;&lt;16</td><td>256 KB</td><td>?</td><td>?</td><td>?</td></tr><tr><td>...</td><td>...</td><td>...</td><td>...</td><td>...</td></tr><tr><td>1&lt;&lt;24</td><td>64 MB</td><td>?</td><td>?</td><td>?</td></tr></tbody></table></div>
+<p>回答：</p>
+<ul><li>pinned 的带宽随 N 怎么变？什么时候才&quot;打满 PCIe&quot;？</li><li>小 N 时 pinned 收益反而不明显，为什么？（提示：固定开销）</li></ul>
+<p>预计输出 / 预期现象：</p>
+<pre><code class="language-text">N=1048576 bytes=4194304
+pageable H2D: ... ms  ... GB/s
+pinned   H2D: ... ms  ... GB/s
+speedup: ...x</code></pre>
+<ul><li>小 N 时固定开销占比高，pageable 和 pinned 差距可能不大。</li><li>N 增大后 pinned 更容易接近稳定带宽，通常明显快于 pageable。</li><li>过大 N 后带宽会进入平台上限，speedup 不再继续线性增加。</li></ul>
+<h2>E2.3 三种计时方式的&quot;陷阱重现&quot;（思考 + 验证）</h2>
+<p>在 <code>03_vector_add_timer.mu</code> 里：</p>
+<ul><li>(a) 把 [A] 的 kernel 换成一个 <strong>几乎不干活的 kernel</strong>（比如只 <code>out[0] = in[0]</code>），再跑一次，[A] 的数字跟 [B][C] 差多少？</li><li>(b) 把 [B] 的 <code>musaDeviceSynchronize</code> 改成 <code>musaStreamSynchronize(0)</code>，结果会变吗？为什么？</li><li>(c) 故意把 GpuTimer 的 <code>stop</code> 事件放在 D2H 拷贝<strong>之后</strong>而不是 kernel 之后，量到的数字怎么变？</li></ul>
+<p>写一段话总结：&quot;什么时候 CPU clock 够用，什么时候必须用 musaEvent&quot;。</p>
+<p>预计输出 / 预期现象：</p>
+<pre><code class="language-text">[A] CPU no sync: ... ms
+[B] CPU sync:    ... ms
+[C] GpuTimer:    ... ms</code></pre>
+<ul><li>几乎不干活的 kernel 中，[A] 主要量到 launch 入队时间，可能和 [B][C] 差很多。</li><li><code>musaStreamSynchronize(0)</code> 对默认流场景通常等价于 <code>musaDeviceSynchronize</code>，但同步范围更窄。</li><li>stop event 放到 D2H 后，量到的是 <code>kernel + D2H</code>，数字会变大。</li></ul>
+<h2>E2.4 Unified Memory 在这台机器的&quot;退化&quot;（边界）</h2>
+<p>在 AutoDL MUSA 3.1.0 上 <code>musaMemPrefetchAsync</code> 不支持，<code>04_vector_add_unified.mu</code> 跑出来是：</p>
+<pre><code>冷启动 1.75 ms → 热启动 1.53 ms （prefetch 分支退化为普通 UM 访问）</code></pre>
+<ul><li>(a) 把 N 加大到 <code>1&lt;&lt;24</code> / <code>1&lt;&lt;26</code>，冷热启动差距会变大还是变小？记录数字。</li><li>(b) 把 <code>musaMallocManaged</code> 改成 <code>musaMalloc</code> + 显式 <code>musaMemcpy</code>，同样 N 下 kernel 时间是多少？UM 比显式拷贝慢多少？</li><li>(c) 解释：为什么 prefetch <strong>缺失</strong> 时，UM 的&quot;第一次 kernel&quot;会更慢？（提示：page fault → host→device migration）</li></ul>
+<p>预计输出 / 预期现象：</p>
+<pre><code class="language-text">musaMemPrefetchAsync not supported, skip prefetch path
+cold run: ... ms
+warm run: ... ms</code></pre>
+<ul><li>N 越大，第一次访问触发的迁移成本越明显，冷启动通常比热启动慢。</li><li>显式 <code>musaMalloc + musaMemcpy</code> 的 kernel 时间通常更干净，因为迁移成本已经在 kernel 前发生。</li><li>UM 版本代码更省，但在 prefetch 缺失时性能更不可控。</li></ul>
+<h2>E2.5 多流到底要开几个（动手）</h2>
+<p>修改 <code>05_multi_stream.mu</code>，把流数 <code>NSTREAMS</code> 依次设成 <code>1 / 2 / 4 / 8 / 16</code>，固定总数据量。</p>
+<div class="table-wrap"><table><thead><tr><th>NSTREAMS</th><th>总耗时 (ms)</th><th>相对单流加速</th></tr></thead><tbody><tr><td>1</td><td>?</td><td>×1</td></tr><tr><td>2</td><td>?</td><td>?</td></tr><tr><td>...</td><td>...</td><td>...</td></tr><tr><td>16</td><td>?</td><td>?</td></tr></tbody></table></div>
+<p>回答：</p>
+<ul><li>加速比在哪个 NSTREAMS 后开始<strong>不再线性</strong>？这跟你机器上有几个 copy engine 有关系吗？</li><li>我们实测 4 流只快 1.14×（5.94 → 5.21 ms），猜一下为什么这么少——是 H2D 没并行，还是 kernel 没并行，还是 D2H 没并行？设计一个最小实验区分这三种可能。</li></ul>
+<p>预计输出 / 预期现象：</p>
+<pre><code class="language-text">single stream: ... ms
+multi stream : ... ms
+speedup      : ...x</code></pre>
+<ul><li><code>NSTREAMS=1</code> 是基线，<code>2/4</code> 可能变快。</li><li><code>8/16</code> 不一定继续变快，可能因为 copy engine、kernel 并发能力、chunk 太小或调度开销达到瓶颈。</li><li>如果只看到 1.1x 左右加速，说明三阶段没有充分重叠，需要 E2.9 的 timeline 验证。</li></ul>
+<h2>E2.6 给跨流 DAG 加一个分支（动手）</h2>
+<p>在 <code>06_stream_event_dep.mu</code> 的基础上，把依赖图从</p>
+<pre><code>streamA: H2D_A → kernel_A
+                    ↓ event
+streamB:           kernel_B(use A&#39;s result)</code></pre>
+<p>扩成：</p>
+<pre><code>streamA: H2D_A → kernel_A ──event1──┐
+streamB: H2D_B → kernel_B ──event2──┤
+                                    ↓
+streamC:                       kernel_C(use A and B)</code></pre>
+<p>写出来，verify 结果正确。回答：</p>
+<ul><li>streamC 上要 <code>musaStreamWaitEvent</code> 几次？</li><li>如果把 event1 / event2 都创建成 <code>musaEventDisableTiming</code>，对性能有影响吗？为什么？</li></ul>
+<p>预计输出 / 预期现象：</p>
+<pre><code class="language-text">A done
+B done
+C done
+verify OK</code></pre>
+<ul><li>streamC 要等待两个输入都 ready，所以需要 <code>musaStreamWaitEvent(streamC, event1, 0)</code> 和 <code>musaStreamWaitEvent(streamC, event2, 0)</code>。</li><li><code>musaEventDisableTiming</code> 会减少 event 计时相关开销；只做依赖同步时推荐使用。</li></ul>
+<h2>E2.7 Graph 为什么反而比 direct launch 慢（思考）</h2>
+<p>我们实测：</p>
+<pre><code>direct launch  25000 次       :  410 ms   (16.4 µs/launch)
+graph  launch  5000 step × 5  :  677 ms   (135 µs/step)</code></pre>
+<ul><li>(a) 把 <code>07_musa_graph.mu</code> 里每个 step 的 op 数从 5 改成 1 / 20 / 100，重新跑，填一张 &quot;ops/step vs graph_us_per_step / direct_us_per_op&quot; 的表。</li><li>(b) 在什么 ops/step 阈值上 graph 才追平 direct launch？这个阈值在 NVIDIA CUDA 上一般是多少（查文档）？</li><li>(c) 写一段话回答：&quot;如果你今天在 MUSA 上做 LLM inference，<strong>该不该</strong>用 Graph？&quot;</li></ul>
+<blockquote><p>不用提 issue，只在 <code>notes/week2.md</code> 里留个观察记录就够了。</p></blockquote>
+<p>预计输出 / 预期现象：</p>
+<pre><code class="language-text">direct launch ... ms (... us/launch)
+graph launch  ... ms (... us/step)</code></pre>
+<ul><li>在当前实测里，Graph 可能继续慢于 direct launch，尤其是每 step 很轻时。</li><li>ops/step 增大后，Graph 的固定成本被摊薄，<code>us/step</code> 可能下降或相对变得可接受。</li><li>结论不要照搬 CUDA 经验；MUSA 上应先实测再决定是否用于 inference 热路径。</li></ul>
+<h2>E2.8 Stream callback 完成顺序（基础）</h2>
+<p><code>08_stream_callback.mu</code> 输出：</p>
+<pre><code>[cb] chunk 0 done
+[cb] chunk 3 done
+[cb] chunk 2 done
+[cb] chunk 1 done</code></pre>
+<ul><li>(a) 解释：为什么 chunk 提交顺序是 0/1/2/3，回调顺序却不是？</li><li>(b) 如果想让 callback 严格按 chunk 编号顺序触发，应该怎么改？（提示：要么 1 个流，要么 callback 里加锁/计数）</li><li>(c) 在 callback 函数里调用 <code>musaMemcpy</code> 会怎样？（提示：文档里说不行，亲自试一下看报什么错）</li></ul>
+<p>预计输出 / 预期现象：</p>
+<pre><code class="language-text">[cb] chunk 0 done
+[cb] chunk 3 done
+[cb] chunk 2 done
+[cb] chunk 1 done</code></pre>
+<ul><li>回调按 GPU 工作实际完成顺序触发，不按提交顺序保证。</li><li>改成单流后，回调顺序通常会按提交顺序。</li><li>callback 内调用 MUSA API 可能报错、死锁或触发未定义行为；记录你 SDK 的具体错误。</li></ul>
+<h2>E2.9 拿数字证明&quot;三阶段重叠&quot;真的发生了（动手）</h2>
+<p><code>05_multi_stream.mu</code> 现在只打印总耗时，看不出 H2D / kernel / D2H 到底有没有 overlap。</p>
+<ul><li>(a) 在每个 stream 上加 <code>musaEventRecord</code>：start / after-H2D / after-kernel / after-D2H 四个点。</li><li>(b) 算每个 stream 的三段耗时，画出来（手画 timeline 或者用 Python 画甘特图都行）。</li><li>(c) 如果发现&quot;H2D 之间是串行的&quot;，说明 copy engine 只有 1 个 / 或者 H2D 没用 pinned host buffer——验证一下是哪种。</li></ul>
+<blockquote><p>这题做出来基本就理解了&quot;为什么实测 4 流只快 1.14×&quot;。</p></blockquote>
+<p>预计输出 / 预期现象：</p>
+<pre><code class="language-text">stream 0: H2D ... ms  kernel ... ms  D2H ... ms
+stream 1: H2D ... ms  kernel ... ms  D2H ... ms
+...</code></pre>
+<p>画 timeline 时应该能看到三种情况之一：</p>
+<ul><li>H2D / kernel / D2H 有交叠：多流 pipeline 生效。</li><li>H2D 段彼此串行：copy engine 或 pinned buffer 使用方式限制了重叠。</li><li>kernel 段彼此串行：kernel 资源占用太高或设备不支持足够并发。</li></ul>
+<h2>E2.10 综合：streamed 累加（综合 / 选做）</h2>
+<h2>E2.11 CUDA reference 内存与异步对照（动手）</h2>
+<p>进入 <code>code/week2/cuda-reference</code>，用 <code>make -n BACKEND=cuda TARGET=chapter04__memTransfer</code> 和 <code>make -n BACKEND=musa MUSA_ARCH=mp_31 TARGET=chapter06__asyncAPI</code> 检查双后端命令。选择 <code>chapter04__pinMemTransfer</code> 与 <code>chapter04__sumMatrixGPUManaged</code>（或 zero-copy），在 <code>notes/week2.md</code> 记录编译器、Toolkit/SDK、架构、结果，并解释 pinned、managed、zero-copy 中至少两种路径的输入/输出和同步边界。再单独标记 <code>chapter06__simpleHyperqBreadth</code> 的 Hyper-Q 和 callback 的 MUSA 限制；无 SDK 时不得声称编译通过。</p>
+<p>写一个新文件 <code>09_streamed_reduce.mu</code>（不进 <code>CMakeLists.txt</code> 也行，先放本地）：</p>
+<ul><li>输入：长度 <code>N = 1&lt;&lt;26</code> 的 float 数组，按 chunk 分成 <code>K = 8</code> 份。</li><li>用 4 个流交替做：H2D chunk_i → reduce_kernel chunk_i → D2H partial_sum_i。</li><li>最后 host 把 8 个 partial_sum 加起来，跟 <code>std::accumulate</code> 对拍。</li></ul>
+<p>要求：</p>
+<ul><li>(a) 跟 &quot;单流串行 + 单次大 H2D + 单 kernel + 单 D2H&quot; 比时间，给出加速比。</li><li>(b) 如果用 <code>musaMallocManaged</code> 替代 pinned host + device 显式拷贝，能省代码吗？性能差多少？（结合 E2.4 的结论）</li><li>(c) 把这个 pipeline 改成用 <code>musaGraph</code> 表达，跑一遍看 graph launch 在&quot;重活&quot;上是不是终于赢过 direct launch（呼应 E2.7）。</li></ul>
+<p>完成后给一句话总结：&quot;Stream / Event / Graph 三者各自的最佳使用场景是什么&quot;。</p>
+<p>预计输出 / 预期现象：</p>
+<pre><code class="language-text">serial reduce:   ... ms  sum=...
+streamed reduce: ... ms  sum=...  speedup=...x
+unified memory:  ... ms  sum=...
+graph pipeline:  ... ms  sum=...
+verify OK</code></pre>
+<ul><li><code>sum</code> 应与 <code>std::accumulate</code> 的结果在 float 误差范围内一致。</li><li>streamed 版本不一定大幅加速；只有 H2D / reduce / D2H 能形成重叠时才明显变快。</li><li>Graph 只有在每次提交包含足够多工作、且 SDK 实现开销可接受时才可能赢。</li></ul>
+    </article>
+    <nav class="pager" aria-label="材料导航">
+      <a href="../week2.html">← 返回 Week 2</a>
+      <a href="../quiz.html">进入完整自测 →</a>
+    </nav>
+  </main>
+  <footer class="footer"><p>MUSA Learning Notes · 内容以官方文档和仓库实测为准</p></footer>
+</body>
+</html>

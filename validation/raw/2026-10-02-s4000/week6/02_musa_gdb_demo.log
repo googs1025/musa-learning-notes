@@ -1,0 +1,7 @@
+TARGET=02_musa_gdb_demo
+WEEK=week6
+START=2026-10-02T11:03:05+08:00
+mcc -O2 -std=c++17 -I/usr/local/musa/include -I../include 02_musa_gdb_demo.mu -o 02_musa_gdb_demo -L/usr/local/musa/lib -lmusa -lmusart
+BUILD_EXIT_CODE=0
+RUN_EXIT_CODE=NOT_RUN
+END=2026-10-02T11:03:09+08:00

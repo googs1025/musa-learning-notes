@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="zh-CN" data-page-kind="generated">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="source-sha256" content="3369309d27eb28352ab7f75ba3ab5fcf37210aaf1a34f25686eb46fc39bf0e78">
+  <title>Week 3 完整学习材料 · MUSA GPU 编程知识库</title>
+  <link rel="stylesheet" href="../assets/knowledge.css">
+  <script src="../assets/knowledge.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <nav class="site-nav" aria-label="主导航">
+      <a class="brand" href="../index.html">MUSA GPU 编程知识库</a>
+      <ul><li><a href="../week3.html">Week 3</a></li><li><a href="../quiz.html">知识自测</a></li></ul>
+    </nav>
+  </header>
+  <main class="page-shell">
+    <article class="article-content generated-content">
+      <p class="eyebrow">Week 3 · 完整学习材料</p>
+      <h1>Week 3 完整学习材料</h1>
+      <p>本页由仓库中的规范 Markdown 自动生成。学习记录和性能数字只有在真实设备运行后才会写入。</p>
+      <p><a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week3/learning-notes.md">查看原始 Markdown</a></p>
+      <h2>CUDA reference 对照课文</h2>
+<p><code>cuda-reference/chapter03/simpleDivergence.cu</code> 把分支位置与执行代价联系起来；<code>reduceInteger.cu</code> 展示从邻近配对、交错寻址到 unroll 的归约基线。<code>sumMatrix.cu</code> 与现有 <code>06_sum_matrix_2d.mu</code> 对照输入、输出和 row-major 索引。</p>
+<p><code>reduceIntegerShfl.cu</code> 和 <code>simpleShfl.cu</code> 用 shuffle 在 warp 内交换寄存器值。CUDA 示例通常按 32-thread warp 和对应 mask 书写；MUSA 的实际 warp size、mask 宽度以及兼容 intrinsic 必须以目标 SDK/设备探测为准，不能把 CUDA 的 <code>warpSize == 32</code> 当作 MUSA 结论。</p>
+<p><code>nestedHelloWorld.cu</code>、<code>nestedReduce.cu</code> 是 device-side dynamic parallelism：kernel 内再次 launch kernel，并依赖额外编译/运行支持，因此默认不纳入 <code>make all</code>。<code>checkSmemSquare.cu</code>、<code>checkSmemRectangle.cu</code> 对比 shared tile 的行列形状、动态 shared 和 padding；重点观察线程到 bank 的映射，而不是只看输出是否正确。</p>
+<p>阅读顺序：<code>simpleDivergence</code> → <code>reduceInteger</code> → <code>reduceIntegerShfl</code> → <code>sumMatrix</code> → <code>checkSmem*</code>；最后再阅读可选的 nested 示例。</p>
+<p>Week 3 的主线是执行模型。Reduce 是最适合入门的实验对象：它既能暴露线程索引、访存、同步和分支问题，又能逐步演进到 unrolling 和 shuffle。</p>
+<h2>阅读顺序</h2>
+<ol><li><code>01_warp_divergence.mu</code>: 先观察分支分化的代价。</li><li><code>02_reduce_naive.mu</code>: 建立 naive reduce 基线。</li><li><code>03_reduce_unrolling.mu</code>: 看每个线程多处理元素如何减少开销。</li><li><code>04_reduce_shfl.mu</code>: 进入 warp-level reduce。</li><li><code>05_nested_hello.mu</code>: 理解 host 编排的两阶段 kernel 调度。</li><li><code>06_sum_matrix_2d.mu</code>: 用二维 grid/二维 block 做矩阵按行求和，并观察 CPU/GPU 结果与两种 GPU 计时。</li><li><code>07_sum_matrix_1d.mu</code>: 用一维线性 grid/block 完成同一问题，再恢复二维坐标并与 06 对比。</li></ol>
+<h2>核心知识点</h2>
+<div class="table-wrap"><table><thead><tr><th>示例</th><th>必须掌握</th><th>常见误区</th></tr></thead><tbody><tr><td><code>01_warp_divergence.mu</code></td><td>同一 warp 内分支不一致会串行化路径</td><td>把 branch 数量等同于性能损失</td></tr><tr><td><code>02_reduce_naive.mu</code></td><td>分块归约、host final reduce</td><td>忽略 block 间不能直接同步</td></tr><tr><td><code>03_reduce_unrolling.mu</code></td><td>每线程多元素、减少 block 数和循环开销</td><td>只看算术操作不看访存模式</td></tr><tr><td><code>04_reduce_shfl.mu</code></td><td>warp shuffle、warp size 差异</td><td>直接照搬 CUDA 的 32-wide 假设</td></tr><tr><td><code>05_nested_hello.mu</code></td><td>host 分两阶段启动 parent/child kernel</td><td>把两个阶段误认为一个普通函数调用</td></tr><tr><td><code>06_sum_matrix_2d.mu</code></td><td>2D grid/2D block、row-major 映射、行求和与 GPU 计时</td><td>混淆 <code>(x,y)</code> 和 <code>row/col</code>，忽略 atomicAdd 与数据传输的计时边界</td></tr><tr><td><code>07_sum_matrix_1d.mu</code></td><td>线性 <code>idx</code>、<code>idx % width</code>/<code>idx / width</code> 恢复坐标、CPU/GPU 误差对比</td><td>误把一维线程布局当成一维数据，或把 kernel-only 当成端到端时间</td></tr></tbody></table></div>
+<h2>代码阅读抓手</h2>
+<p>Reduce 代码重点看三个边界：</p>
+<ul><li>block 内如何同步。</li><li>block 间结果如何汇总。</li><li>最后一段不足一个 block 或一个 warp 时如何处理。</li></ul>
+<p>MUSA 的 warp size 和 CUDA 常见值不同，所有 shuffle 或 warp reduce 都必须先确认设备能力和 SDK intrinsic 行为。</p>
+<h2>高频混淆点</h2>
+<ul><li><strong>block 同步不等于 grid 同步</strong>: <code>__syncthreads()</code> 只管同一个 block。不同 block 的 partial sum 要靠另一个 kernel、host final reduce 或专门的全局同步机制处理。</li><li><strong>分支数量不等于分支代价</strong>: warp divergence 的关键是同一个 warp 内线程是否走不同路径。所有线程都走同一分支时, 分支本身不一定是主要问题。</li><li><strong>reduce 的最后一段最容易错</strong>: N 不是 block size 或 unroll 粒度整数倍时, 尾部元素必须有边界保护。</li><li><strong>shuffle 不是 shared memory 的简单替代</strong>: shuffle 只在 warp/group 内传值, 不能跨 block, 也不能替代需要全 block 协作的同步。</li><li><strong>CUDA 的 32-wide 直觉要重审</strong>: 看到 <code>32</code>、<code>0xffffffff</code>、<code>warpSize</code>、<code>lane</code>、<code>mask</code> 时, 都要问这段逻辑在 MUSA warp size 下是否仍成立。</li></ul>
+<h2>逐示例课文</h2>
+<h3>1. <code>01_warp_divergence.mu</code>：同一 warp 的分支路径</h3>
+<h4>示例目标</h4>
+<p>这个程序把“分支是否发散”变成可测量的对照实验。<code>mode=0</code> 时，同一个 block 内的线程都执行相同的算术路径（虽然用 <code>blockIdx.x</code> 选择路径）；<code>mode=1</code> 时，<code>threadIdx.x</code> 的奇偶性让同一执行组中的线程可能走乘法或除法两条路径，观察两者平均耗时和 slowdown 的差异。这里的重点不是分支语句的数量，而是同一 warp/group 是否需要串行执行不同路径。</p>
+<h4>代码结构</h4>
+<p><code>branch_kernel</code> 计算全局索引 <code>i</code>，越界线程直接返回，再按 <code>mode</code> 选择 coherent 或 divergent 分支并写回 <code>out[i]</code>。<code>run</code> 固定使用 256-thread block，先预热一次，再重复 launch 50 次计时；<code>main</code> 分配 <code>N=1&lt;&lt;24</code> 的 device buffer，分别运行两种模式并打印结果。</p>
+<h4>核心知识点</h4>
+<p>warp divergence 是执行模型问题：若一个 warp 内存在不同分支，硬件通常要分别执行路径并屏蔽不满足条件的 lane，代价取决于路径、占比、访存和编译结果。<code>blockIdx.x</code> 在 block 内一致，所以 mode 0 的选择不会制造 block 内分化；<code>threadIdx.x &amp; 1</code> 则会在通常的多 lane warp/group 中制造交错分化。不要把这里的“warp”默认解释成 CUDA 的 32 个线程；MUSA 的 warp size/group 规则和 mask 语义应以当前设备与 SDK 为准。</p>
+<h4>执行流程</h4>
+<p>host 分配输出 → 启动一次 kernel 预热 → 启动 50 次并用 <code>GpuTimer</code> 求平均 → 先测 mode 0，再测 mode 1 → 打印 <code>coherent</code>、<code>divergent</code> 和比值 → 释放显存。第一次 launch 未计入平均时间，但它仍用于提前暴露 kernel 错误。</p>
+<h4>常见错误与实验</h4>
+<p>把所有分支都叫作 divergence，或认为 slowdown 必然固定；实际上 <code>if (blockIdx.x &amp; 1)</code> 在 block 内是统一路径。可改变 block size、<code>N</code>、重复次数，并把奇偶判断改成按连续区间判断，比较分化比例和测量噪声。还应检查计时同步和 <code>MUSA_CHECK_KERNEL()</code> 的位置，避免把异步 launch 当成已完成。</p>
+<h4>与本周其他示例的关系</h4>
+<p>它先建立“同一执行组内的控制流”这个观察角度；<code>02</code> 的 naive reduce 在折半归约后几轮也会出现活跃线程减少和分支分化，<code>03</code> 通过减少循环/归约规模改善开销，<code>04</code> 则把组内数据交换改为 shuffle。</p>
+<h3>2. <code>02_reduce_naive.mu</code>：shared memory 的分块归约基线</h3>
+<h4>示例目标</h4>
+<p>把 <code>N</code> 个输入值求和，同时展示为什么不能只在一个 kernel 里依靠 <code>__syncthreads()</code> 完成整个 grid 的归约。每个 block 先产生一个 partial sum，跨 block 的最后一步明确放到 host 上完成。</p>
+<h4>代码结构</h4>
+<p><code>reduce_naive</code> 中每个线程加载一个元素到动态 shared memory <code>s</code>，越界填零；随后以 <code>stride = blockDim.x / 2</code> 开始的折半循环让前半线程累加后半线程，并在每轮后同步；线程 0 写出 <code>partial[blockIdx.x]</code>。<code>main</code> 使用 <code>N=1&lt;&lt;22</code>、256 threads，分配输入和 partial buffer，执行 kernel，拷回 partial 后由 host 串行累加。</p>
+<h4>核心知识点</h4>
+<p>shared memory 是 block 内协作的暂存区，<code>__syncthreads()</code> 只保证同一 block 的线程到达同步点，不能让不同 block 互相等待。因此 <code>partial</code> 必须通过第二个 kernel、host final reduce 或其他全局同步机制继续归约。折半归约易读，但每轮活跃线程数减半，条件 <code>tid &lt; stride</code> 也可能造成分化；尾部通过越界填零保证 <code>N</code> 不整除 block size 时仍安全。</p>
+<h4>执行流程</h4>
+<p>host 初始化全 1 → 拷入 device → 以 <code>blocks=(N+threads-1)/threads</code> 启动一次动态 shared-memory kernel → block 内得到 16384 个 partial → 拷回 host → 串行求和并与 <code>N</code> 对照 → 释放资源。kernel 计时只覆盖第一阶段，不包含拷回和 host final reduce。</p>
+<h4>常见错误与实验</h4>
+<p>误以为 <code>__syncthreads()</code> 是 grid barrier；忘记越界填零；在 shared 写入后少一次同步；把 kernel 时间和完整算法时间混为一谈。可把输入改成非 1、故意使用非整除的 <code>N</code>，再增加一个 device-side final kernel 与 host 版本比较；同时观察不同 block size 对 partial 数量和耗时的影响。</p>
+<h4>与本周其他示例的关系</h4>
+<p>这是 <code>03</code>、<code>04</code> 的共同基线：三者都采用“block partial + host final reduce”结构。<code>03</code> 保留 shared 折半阶段，只改变加载粒度；<code>04</code> 把 block 内的归约前半段下沉到 warp/group shuffle。</p>
+<h3>3. <code>03_reduce_unrolling.mu</code>：每线程处理两个元素</h3>
+<h4>示例目标</h4>
+<p>在不改变最终归约结构的前提下，减少 block 数和部分循环开销，演示最小的 unrolling 优化。它用于和 <code>02_reduce_naive.mu</code> 做单变量对比，而不是声称只要展开就一定更快。</p>
+<h4>代码结构</h4>
+<p><code>reduce_unroll2</code> 将起点改为 <code>blockIdx.x * blockDim.x * 2 + tid</code>；每个线程最多读取 <code>i</code> 和 <code>i + blockDim.x</code> 两个位置，在寄存器 <code>v</code> 中先相加，再写入 shared <code>s[tid]</code>。之后仍执行与 naive 相同的 block 内折半归约并由线程 0 写 partial。<code>main</code> 用 <code>blocks=(N+threads*2-1)/(threads*2)</code>，因此本例是 8192 个 partial。</p>
+<h4>核心知识点</h4>
+<p>unrolling2 同时降低了覆盖同样 <code>N</code> 所需的 block 数，并让每个线程在进入 shared 归约前做更多工作；两个连续的 block-sized 区段也通常保持规整的合并访问。优化收益还受寄存器、占用率、内存带宽和尾部边界影响，不能只数加法次数。<code>i</code> 与 <code>i+blockDim.x</code> 都必须独立检查，最后不足两个元素时不能越界。</p>
+<h4>执行流程</h4>
+<p>host 初始化并拷入输入 → 每个 block 的 256 个线程各加载最多两个值 → 同步后在 shared 中折半归约 → 写出 8192 个 partial → 拷回 host 串行汇总 → 打印总和、期望值、kernel 时间和 partial 数。</p>
+<h4>常见错误与实验</h4>
+<p>只检查第一个加载位置；把 unroll 因子改成 4 却忘了同步修改起点、加载边界和 block 计算；只看 kernel 时间却忽略数据传输。可把因子 2 改为 4，比较 <code>N</code> 非整除时的正确性、访存合并、寄存器使用和耗时，并与 <code>02</code> 在同一输入和计时口径下比较。</p>
+<h4>与本周其他示例的关系</h4>
+<p>它是从 <code>02</code> 到更高效 reduce 的中间台阶：先保留 shared 和 host final，隔离出“加载/分块粒度”的影响；<code>04</code> 再隔离出“warp/group 内通信方式”的影响，而 <code>01</code> 提供了理解折半循环分支代价的执行模型背景。</p>
+<h3>4. <code>04_reduce_shfl.mu</code>：warp/group 内寄存器交换</h3>
+<h4>示例目标</h4>
+<p>展示如何用 <code>__shfl_down_sync</code> 在一个 warp/group 内直接交换寄存器值，减少 shared memory 和 block 内同步的使用，同时仍处理一个 block 中多个 warp/group 的结果。</p>
+<h4>代码结构</h4>
+<p><code>warp_reduce_sum</code> 从 <code>warpSize/2</code> 开始按半递减 offset 做 shuffle 累加；kernel 先让每个线程加载一个元素并完成一次 warp/group reduce，<code>lane==0</code> 把各组结果写入 <code>warp_sums</code>，同步后由第一个 warp/group 再归约这些结果，线程 0 写出 block partial。host 仍拷回 partial 做最终串行求和。</p>
+<h4>核心知识点</h4>
+<p>shuffle 的通信范围是一个 warp/group，不能跨 block，也不能替代多个 warp/group 写 shared 后所需的 <code>__syncthreads()</code>。当前源码使用 <code>warpSize</code> 计算 offset、lane、warp 编号和 shared partial 数量；mask、width 的具体语义仍必须按实际 MUSA SDK 文档确认。不要把某一代设备的 32 或 128 写死为所有 MUSA 设备的宽度。本仓库 S4000/MUSA SDK 3.1.0 实测 <code>warpSize=32</code>，旧版 S3000 官方示例则报告 128。</p>
+<h4>执行流程</h4>
+<p>每线程加载一个值（越界为 0）→ 组内 shuffle 归约 → 每组 lane 0 写一个 shared partial → block 同步 → 第一个组加载各组 partial 并再次 shuffle 归约 → 写出 block partial → host 拷回并求和。256 threads 下，组数由运行时 <code>warpSize</code> 决定，不应仅凭 CUDA 经验写死。</p>
+<h4>常见错误与实验</h4>
+<p>把 shuffle 当作跨 block 通信；把 offset 固定成 16 或把 mask 固定成 CUDA 的 32-lane 全掩码；没有给 <code>warp_sums</code> 分配足够空间；最后一个 block 或最后一个 group 的无效 lane 没有置零。可先打印运行时 <code>warpSize</code>，再用不同线程数（尤其不是 warpSize 整数倍的配置）检查 shared 大小、有效 lane 和结果；同时对比 <code>02</code> 的正确性与计时。</p>
+<h4>与本周其他示例的关系</h4>
+<p>它是在 <code>02</code> 的分块归约骨架上替换 block 内通信原语，也是对 <code>03</code> 优化边界的进一步推进。<code>01</code> 解释了为什么减少活跃路径可能重要；<code>05</code> 把关注点从组内同步转向 kernel 的 device-side 调度。</p>
+<h3>5. <code>05_nested_hello.mu</code>：host 编排的两阶段 kernel 调度</h3>
+<h4>示例目标</h4>
+<p>用 host 端连续启动两个 kernel，模拟 parent → child 的两阶段任务关系。这样可以在当前不接受 device-side launch 的 MUSA 编译器上正常编译，同时让读者先理解“阶段之间需要等待”和“启动新的 kernel 不等于调用普通 device 函数”。</p>
+<h4>代码结构</h4>
+<p><code>child_kernel</code> 只让每个 child block 的线程 0 打印 block 编号；<code>parent_kernel</code> 也只让每个 parent block 的线程 0 打印。<code>main</code> 先启动 2 个 parent blocks，调用 <code>MUSA_CHECK_KERNEL()</code> 等待完成，再由 host 启动一个 2-block child grid，因此输出是 2 行 parent 加 2 行 child，两个阶段不会交错。</p>
+<h4>核心知识点</h4>
+<p>这里不再依赖 device-side launch，也不声称演示动态并行；核心是 host 在两个阶段之间显式同步。第一个 <code>MUSA_CHECK_KERNEL()</code> 确认 parent 完成，第二个确认 child 完成。与真正的动态并行相比，这种写法牺牲了由 GPU 自己决定下一阶段启动时机的能力，但更容易观察、调试和编译。</p>
+<h4>执行流程</h4>
+<p>host launch 两个 parent blocks → <code>MUSA_CHECK_KERNEL()</code> 等 parent 完成 → host launch 一个 <code>&lt;&lt;&lt;2,4&gt;&gt;&gt;</code> child grid → child 的两个 block 各由 thread 0 打印 → 再次检查 child 完成。parent 输出在前，child 输出在后；同一阶段内的 block 输出顺序仍不应作为调度保证。</p>
+<h4>常见错误与实验</h4>
+<p>把第二阶段 kernel 当成普通函数；忘记在两个阶段之间同步；以为一个 parent block 的每个线程都会产生一行输出。可把 parent grid 或 child grid 的 block 数改掉，观察每个 block 只有 thread 0 打印；再删除第一阶段的 <code>MUSA_CHECK_KERNEL()</code>，思考为什么 host 可能在 parent 完成前就提交下一阶段。</p>
+<h4>与本周其他示例的关系</h4>
+<p>前四个示例主要研究一个 kernel 内的执行、同步和归约；本例把关注点扩展到 kernel 阶段之间的 host 调度。它与 <code>02</code> 的“跨 block 需要新的阶段”形成对照：新阶段先由 host 显式发起，后续再学习设备支持时再讨论 device-side launch；<code>06</code> 则回到显式二维数据映射。</p>
+<h3>6. <code>06_sum_matrix_2d.mu</code>：二维 grid/block 与 row-major 行求和</h3>
+<h4>示例目标</h4>
+<p>这是一个独立的二维 grid/二维 block 矩阵行求和对比程序：每个线程处理一个二维位置，计算每一行的和，并同时给出 CPU double 参考、GPU 结果、总和与误差。这里 <code>W</code> 表示列数、<code>H</code> 表示行数，因此输入是 <code>H</code> 行 <code>W</code> 列，输出 <code>rows</code> 有 <code>H</code> 个元素。</p>
+<h4>代码结构</h4>
+<p>kernel 用 <code>y = blockIdx.y * blockDim.y + threadIdx.y</code>、<code>x = blockIdx.x * blockDim.x + threadIdx.x</code> 得到矩阵坐标；只有 <code>x &lt; width &amp;&amp; y &lt; height</code> 的线程执行 <code>atomicAdd(&amp;rows[y], m[y * width + x])</code>。<code>main</code> 使用固定的非全 1 输入，先用 CPU double 累加每行，再以 <code>block(16,16)</code> 和 <code>grid(64,64)</code> 执行 GPU 版本。输出包含配置、CPU/GPU 的 row0 和 row_last、CPU/GPU 总和、绝对/相对误差，以及带容差判断的 <code>PASS</code>/<code>FAIL</code>。</p>
+<h4>核心知识点</h4>
+<p>row-major 中第 <code>y</code> 行第 <code>x</code> 列的线性位置是 <code>y * width + x</code>，所以同一行相邻线程通常访问相邻元素；这里的 <code>(x,y)</code> 是列/行坐标，而 <code>rows[y]</code> 明确按行聚合。以 <code>W=H=1024</code> 为例，<code>block(16,16)</code> 产生 <code>grid(64,64)</code>，总共覆盖 1024×1024 个元素。每个 row 有多个线程同时更新，因此需要 <code>atomicAdd</code> 保证累加正确；代价是同一行的原子竞争。CPU 参考在 <code>double</code> 中累加，GPU 输出数组和 <code>atomicAdd</code> 使用 <code>float</code>，所以结果应通过绝对/相对误差和容差判断，而不能要求逐位相同。二维 grid 不改变 block 内同步和跨 block 的限制。</p>
+<h4>执行流程</h4>
+<p>host 分配并初始化连续 row-major 矩阵 → CPU double 计算行和 → 拷入 device、将 <code>rows</code> 清零 → 用 <code>GpuTimer</code> 只测 kernel-only → 拷回 GPU 行和 → 再执行一次并用 wall timer 测 H2D + kernel + 同步 + D2H 的 end-to-end → 计算总和和行误差 → 打印计时、行和、总和与误差 → 释放资源。</p>
+<h4>常见错误与实验</h4>
+<p>把 <code>x</code> 当行、<code>y</code> 当列；地址误写成 <code>x * height + y</code>；只检查一维边界；忘记清零 <code>rows</code>；把 <code>atomicAdd</code> 当成无代价操作；把 kernel-only 与 end-to-end 时间混为一谈。可改成非方阵并使用不能整除 16 的宽高验证边界，填入递增值手算一行；再实现 block 内行归约，比较原子竞争、访存布局、计时口径和结果误差。</p>
+<h4>与本周其他示例的关系</h4>
+<p>它复用 <code>02</code>/<code>03</code> 的“多个线程产生局部贡献、最后汇总”思想，但把一维 partial 换成按 <code>y</code> 索引的行结果，并用 atomic 处理并发写入；它也延续 <code>01</code> 的线程坐标影响执行/访存的视角，与 <code>05</code> 的 kernel 层级调度无直接依赖。<code>07</code> 保持计算目标和输入一致，只改变线程布局，适合比较二维坐标直接映射与线性索引恢复的差异。</p>
+<h3>7. <code>07_sum_matrix_1d.mu</code>：一维线性映射恢复二维坐标</h3>
+<h4>示例目标</h4>
+<p>用一维 grid/一维 block 完成与 <code>06_sum_matrix_2d.mu</code> 相同的矩阵按行求和。这个版本把整个 <code>H × W</code> 矩阵压平成线性空间，用 <code>idx</code> 找到元素，再恢复其二维坐标，帮助区分“线程布局是一维”和“数据本身是一维”这两个概念。</p>
+<h4>代码结构</h4>
+<p>kernel 计算 <code>idx = blockIdx.x * blockDim.x + threadIdx.x</code>，越界线程返回；随后用 <code>x = idx % width</code> 得到列坐标、用 <code>y = idx / width</code> 得到行坐标，并执行 <code>atomicAdd(&amp;rows[y], m[idx])</code>。由于 row-major 存储中 <code>idx == y * width + x</code>，直接访问 <code>m[idx]</code> 与按坐标展开访问等价。<code>main</code> 使用 <code>W=H=1024</code>、256-thread block 和 4096 个 block，输出配置、CPU/GPU 行和、总和及误差。</p>
+<h4>核心知识点</h4>
+<p>线性索引恢复二维坐标的关键是整除和取模：<code>y = idx / width</code>，<code>x = idx % width</code>；反向展开则是 <code>idx = y * width + x</code>。与 <code>06</code> 的 <code>grid(64,64)</code>、<code>block(16,16)</code> 不同，<code>07</code> 的 <code>grid</code> 和 <code>block</code> 都只有 x 维，但覆盖的元素数量与行聚合逻辑相同。多个线程仍会同时更新同一 <code>rows[y]</code>，因此仍需要 <code>atomicAdd</code>。CPU 用 double 累加，GPU 用 float atomic 累加，舍入顺序和精度不同，允许小范围绝对/相对误差。</p>
+<h4>执行流程</h4>
+<p>host 初始化同一份固定输入 → CPU double 计算行和 → H2D 并清零 GPU 行结果 → <code>GpuTimer</code> 测一维 kernel-only → 拷回并记录 GPU 行和 → 清零后重新执行，用 wall timer 测 H2D + kernel + 同步 + D2H 的 end-to-end → 汇总行和、总和和误差 → 打印 <code>[config]</code>、<code>[time]</code>、<code>[rows]</code>、<code>[total]</code>、<code>[error]</code> 各类结果。</p>
+<h4>常见错误与实验</h4>
+<p>把 <code>idx</code> 直接当成行号；把除法和取模中的 <code>width</code> 错写成 <code>height</code>；忘记 <code>idx &gt;= width * height</code> 的边界判断；认为 <code>m[idx]</code> 与二维坐标访问不同；把 CPU double 与 GPU float 的微小差异误判为 kernel 错误；或者拿 kernel-only 时间直接与端到端时间比较。可把矩阵改成非方阵，手算几个 <code>idx</code> 的 <code>(x,y)</code>，再改变 block size 比较两种布局的访存、原子竞争和计时结果。</p>
+<h4>与本周其他示例的关系</h4>
+<p>它与 <code>06</code> 是同一问题的布局对照：<code>06</code> 直接由二维 block/grid 生成 <code>(x,y)</code>，<code>07</code> 先生成线性 <code>idx</code> 再恢复 <code>(x,y)</code>；两者都采用 row-major 和按行 <code>atomicAdd</code>，都输出 CPU/GPU 计时及误差。它把 <code>02</code>/<code>03</code> 的汇总思想延伸到二维数据，并为后续比较线性化数据结构、映射成本和访存模式提供基线。</p>
+<h2>CUDA_Freshman 对照</h2>
+<ul><li><code>8_divergence</code>: 分支分化。</li><li><code>10_reduceInteger</code>、<code>12_reduce_unrolling</code>、<code>29_reduce_shfl</code>: reduce 三阶演进。</li><li><code>28_shfl_test</code>: shuffle API 探测。</li><li><code>13_nested_hello_world</code>: nested kernel / 分阶段调度概念对照。</li></ul>
+<p>完整映射见 <a href="https://github.com/googs1025/musa-learning-notes/blob/main/docs/cuda-example-map.md"><code>../../docs/cuda-example-map.md</code></a>。</p>
+    </article>
+    <nav class="pager" aria-label="材料导航">
+      <a href="../week3.html">← 返回 Week 3</a>
+      <a href="../quiz.html">进入完整自测 →</a>
+    </nav>
+  </main>
+  <footer class="footer"><p>MUSA Learning Notes · 内容以官方文档和仓库实测为准</p></footer>
+</body>
+</html>

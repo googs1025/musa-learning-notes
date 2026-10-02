@@ -9,6 +9,11 @@ on:
       - docs/**
       - code/**/*.md
       - code/**/*.mu
+      - notes/**
+      - validation/**
+      - scripts/build-pages.js
+      - scripts/build-pages.test.js
+      - scripts/page-renderer.js
       - scripts/check-docs.js
       - scripts/check-docs.test.js
       - .github/workflows/docs-check.yml
@@ -18,6 +23,11 @@ on:
       - docs/**
       - code/**/*.md
       - code/**/*.mu
+      - notes/**
+      - validation/**
+      - scripts/build-pages.js
+      - scripts/build-pages.test.js
+      - scripts/page-renderer.js
       - scripts/check-docs.js
       - scripts/check-docs.test.js
       - .github/workflows/docs-check.yml
@@ -45,6 +55,9 @@ jobs:
           else
             git diff --check
           fi
+
+      - name: Check generated Pages freshness
+        run: node scripts/build-pages.js --check
 
       - name: Check docs structure and quiz data
         run: |

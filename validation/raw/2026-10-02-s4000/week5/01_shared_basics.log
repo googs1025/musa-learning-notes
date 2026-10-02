@@ -1,0 +1,8 @@
+TARGET=01_shared_basics
+WEEK=week5
+START=2026-10-02T11:00:45+08:00
+mcc -O2 -std=c++17 -I/usr/local/musa/include -I../include 01_shared_basics.mu -o 01_shared_basics -L/usr/local/musa/lib -lmusa -lmusart
+BUILD_EXIT_CODE=0
+shared basics done
+RUN_EXIT_CODE=0
+END=2026-10-02T11:01:25+08:00
