@@ -170,7 +170,7 @@ function renderDocument({ title, week, kind, sourcePath, source, resolveLink }) 
     </nav>
   </header>
   <main class="page-shell">
-    <article class="content-card generated-content">
+    <article class="article-content generated-content">
       <p class="eyebrow">Week ${week} · ${escapeHtml(kind)}</p>
       <h1>${escapeHtml(title)}</h1>
       <p>本页由仓库中的规范 Markdown 自动生成。学习记录和性能数字只有在真实设备运行后才会写入。</p>

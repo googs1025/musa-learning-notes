@@ -5,7 +5,7 @@ const path = require("path");
 
 const root = path.resolve(__dirname, "..");
 const docsRoot = path.join(root, "docs");
-const knowledgePages = [
+const coreKnowledgePages = [
   "docs/index.html",
   "docs/week1.html",
   "docs/week2.html",
@@ -15,7 +15,12 @@ const knowledgePages = [
   "docs/week6.html",
   "docs/gpu-hierarchy.html",
   "docs/quiz.html",
+  "docs/validation.html",
 ];
+const generatedPages = Array.from({ length: 6 }, (_unused, index) => index + 1)
+  .flatMap((week) => ["learning", "exercises", "records"]
+    .map((kind) => `docs/generated/week${week}-${kind}.html`));
+const knowledgePages = [...coreKnowledgePages, ...generatedPages];
 
 function readText(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
@@ -96,7 +101,7 @@ function checkKnowledgePages() {
   const homePath = "docs/index.html";
   const home = requireText(homePath, []);
   requirePageKind(home, "home", homePath);
-  for (const page of knowledgePages.slice(1)) {
+  for (const page of coreKnowledgePages.slice(1)) {
     requireLink(home, path.basename(page), homePath);
   }
 
@@ -139,6 +144,19 @@ function checkKnowledgePages() {
   if (topic.includes("MPE")) throw new Error(`unexpected MPE in ${topicPath}`);
   const quiz = requireText("docs/quiz.html", ["musa-learning-quiz-v1"], true);
   requireLink(staticHtml(quiz), "index.html", "docs/quiz.html");
+  const validation = requireText("docs/validation.html", ["MTT S4000", "ENV_LIMITED"]);
+  requirePageKind(validation, "validation", "docs/validation.html");
+  requireLink(validation, "index.html", "docs/validation.html");
+  requireLink(validation, "quiz.html", "docs/validation.html");
+  for (let week = 1; week <= 6; week += 1) {
+    for (const kind of ["learning", "exercises", "records"]) {
+      const page = `docs/generated/week${week}-${kind}.html`;
+      const generated = requireText(page, ["source-sha256"]);
+      requirePageKind(generated, "generated", page);
+      requireLink(generated, `../week${week}.html`, page);
+      requireLink(generated, "../quiz.html", page);
+    }
+  }
   console.log(`knowledge pages: ${knowledgePages.length}`);
 }
 

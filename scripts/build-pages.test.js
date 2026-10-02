@@ -37,7 +37,7 @@ test("renders repository markdown without allowing raw HTML", () => {
   assert.match(html, /<pre><code class="language-cpp">if \(x &lt; y\) return;/);
 });
 
-test("generates eighteen deterministic weekly pages and detects stale output", () => {
+test("generates eighteen deterministic weekly pages, validation and detects stale output", () => {
   assert.ok(fs.existsSync(path.join(__dirname, "build-pages.js")), "page generator must exist");
   const { buildPages } = require("./build-pages");
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "musa-pages-"));
@@ -45,7 +45,9 @@ test("generates eighteen deterministic weekly pages and detects stale output", (
   fs.mkdirSync(docsRoot, { recursive: true });
 
   const written = buildPages({ root, docsRoot });
-  assert.equal(written.length, 18);
+  assert.equal(written.length, 19);
+  assert.equal(written.filter((file) => file.includes(`${path.sep}generated${path.sep}`)).length, 18);
+  assert.ok(fs.statSync(path.join(docsRoot, "validation.html")).isFile());
 
   for (let week = 1; week <= 6; week += 1) {
     for (const kind of ["learning", "exercises", "records"]) {
