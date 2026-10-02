@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="zh-CN" data-page-kind="generated">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="source-sha256" content="13afe64328022e1814d69d1a773763e64b5680d511ea84412e1e66e23bfa41aa">
+  <title>Week 4 完整学习材料 · MUSA GPU 编程知识库</title>
+  <link rel="stylesheet" href="../assets/knowledge.css">
+  <script src="../assets/knowledge.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <nav class="site-nav" aria-label="主导航">
+      <a class="brand" href="../index.html">MUSA GPU 编程知识库</a>
+      <ul><li><a href="../week4.html">Week 4</a></li><li><a href="../quiz.html">知识自测</a></li></ul>
+    </nav>
+  </header>
+  <main class="page-shell">
+    <article class="content-card generated-content">
+      <p class="eyebrow">Week 4 · 完整学习材料</p>
+      <h1>Week 4 完整学习材料</h1>
+      <p>本页由仓库中的规范 Markdown 自动生成。学习记录和性能数字只有在真实设备运行后才会写入。</p>
+      <p><a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week4/learning-notes.md">查看原始 Markdown</a></p>
+      <h1>Week 4 学习材料</h1>
+<h2>CUDA reference 对照课文</h2>
+<p><code>readSegment.cu</code> 和 <code>writeSegment.cu</code> 将读方向、写方向与 segment/stride 联系起来；<code>readSegmentUnroll.cu</code> 说明 unroll 只改变每线程工作量，不能自动修复不连续地址。<code>simpleMathAoS.cu</code> 与 <code>simpleMathSoA.cu</code> 对照结构体交错布局和按字段分离布局。</p>
+<p><code>transpose.cu</code> 同时改变读写方向，是检查 coalescing 与 shared tile 价值的核心案例；应分别分析 global read、shared read、global write 和同步边界。<code>globalVariable.cu</code> 用 device/global symbol 展示 host 与 device 变量生命周期，是否能在 MUSA 上映射由 SDK 验证。</p>
+<p>所有带宽或耗时结论都必须记录数据规模、计时范围、设备、架构和 Toolkit/SDK。CUDA 32-thread warp、bank 数量和性能排序不能直接推广为 MUSA 结论。</p>
+<p>Week 4 专注全局内存访问。GPU kernel 的算术经常不是瓶颈，访存地址是否连续、是否合并、数据布局是否适合线程访问，才决定吞吐上限。</p>
+<h2>阅读顺序</h2>
+<ol><li><code>01_saxpy_bandwidth.mu</code>: 建立带宽利用率基线。</li><li><code>02_offset_access.mu</code>: 观察 offset 如何改变起始对齐与事务数量。</li><li><code>03_offset_unrolling.mu</code>: 看展开能否弥补访存损失。</li><li><code>04_aos_vs_soa.mu</code>: 对比 AoS 和 SoA 对连续访问的影响。</li><li><code>05_transpose_naive.mu</code>: 观察转置中的读写方向冲突。</li><li><code>06_transpose_padded.mu</code>: 用 shared tile 和 padding 改善转置。</li></ol>
+<h2>核心知识点</h2>
+<div class="table-wrap"><table><thead><tr><th>示例</th><th>必须掌握</th><th>常见误区</th></tr></thead><tbody><tr><td><code>01_saxpy_bandwidth.mu</code></td><td>effective bandwidth、理论带宽对照</td><td>只看 kernel 时间不算吞吐</td></tr><tr><td><code>02_offset_access.mu</code></td><td>合并访存和 cache line 对齐</td><td>以为 offset 只是多加一个整数</td></tr><tr><td><code>03_offset_unrolling.mu</code></td><td>unroll 与访存模式的交互</td><td>以为 unroll 一定提速</td></tr><tr><td><code>04_aos_vs_soa.mu</code></td><td>数据布局决定线程读到的地址序列</td><td>用 CPU 结构体直觉写 GPU 数据</td></tr><tr><td><code>05_transpose_naive.mu</code></td><td>转置的读连续/写跨步问题</td><td>只检查结果正确不检查带宽</td></tr><tr><td><code>06_transpose_padded.mu</code></td><td>shared tile、padding、bank conflict</td><td>以为 shared memory 自动更快</td></tr></tbody></table></div>
+<h2>逐示例课文</h2>
+<h3>1. <code>01_saxpy_bandwidth.mu</code>：先建立带宽基线</h3>
+<h4>示例目标</h4>
+<p>用最简单的 SAXPY（<code>y[i] = a * x[i] + y[i]</code>）观察一个算术量很小、主要受全局内存吞吐限制的 kernel，并把时间换算成 effective bandwidth。</p>
+<h4>代码结构</h4>
+<p><code>saxpy</code> 采用一维线性索引：线程把 <code>blockIdx.x * blockDim.x + threadIdx.x</code> 映射为元素下标 <code>i</code>，用 <code>if (i &lt; n)</code> 保护尾部线程。主函数分配并清零两个长度为 <code>N</code> 的数组，先 warmup 一次，再连续 launch 50 次，最后用平均毫秒数计算吞吐。</p>
+<h4>核心知识点</h4>
+<p>这里的 effective bandwidth 是“逻辑上约定需要访问的字节数 / kernel 时间”的指标，不等同于设备实际 DRAM 流量。它会受缓存行为、事务实现和测量口径影响，因此不保证严格低于 DRAM 理论峰值，也不能直接当作硬件峰值的宣称。每个元素逻辑上读 <code>x[i]</code>、读旧的 <code>y[i]</code>、写新的 <code>y[i]</code>，代码按 <code>3 * bytes</code> 估算，所以 <code>GB/s = 3 * N * sizeof(float) / (平均毫秒数 / 1000) / 1e9</code>。这个模型适合跨实验比较；测得的数值还会受并发度、时钟和计时开销影响。相邻线程通常分别访问 <code>x[i]</code> 和 <code>y[i]</code> 的相邻 float，因而是一个合并访存的基线。</p>
+<h4>执行流程</h4>
+<p>设备分配和初始化 → 一次 launch 检查 kernel 错误 → timer 包住 50 次异步 launch → <code>musaDeviceSynchronize()</code> 等待完成 → 用总时间除以 50，并按三次数组访问折算 effective bandwidth → 释放内存。计时只围绕 kernel，不应把分配、初始化或释放算进去。</p>
+<h4>常见错误与实验</h4>
+<p>把 <code>N</code> 个元素的时间直接当作带宽，或把 effective bandwidth 当成实际 DRAM 带宽；漏掉 <code>y</code> 的读写之一会使逻辑字节数估算失真。可改变 <code>N</code>、block 大小和重复次数，比较 warmup 前后，并用不同初始化方式检查结果；不要因为一次测得更高就断言某个 block 大小永远更快。</p>
+<h4>与本周其他示例的关系</h4>
+<p>它提供连续、对齐、合并访问的参照值。<code>02</code> 只改变输入起始 offset，<code>03</code> 在此基础上改变每线程工作量，<code>04</code> 改变数据布局，<code>05/06</code> 则把问题推进到二维转置的读写方向。</p>
+<h3>2. <code>02_offset_access.mu</code>：offset 改变起始对齐</h3>
+<h4>示例目标</h4>
+<p>保持每个线程只处理一个输出元素，比较 <code>in[i + offset]</code> 在不同 offset 下的访存时间，分离“地址仍然连续”和“起始地址是否对齐”这两个概念。</p>
+<h4>代码结构</h4>
+<p><code>offset_copy</code> 的线程下标是 <code>i = blockIdx.x * blockDim.x + threadIdx.x</code>，输出始终写 <code>out[i]</code>，输入读 <code>in[i + off]</code>。<code>run</code> 先 warmup，再重复 50 次计时；输入额外分配 64 个 float，使最大 <code>offset=31</code> 时仍不会越界。</p>
+<h4>核心知识点</h4>
+<p>同一条 load 指令中，相邻线程访问的是 <code>in[base+off]、in[base+off+1]...</code>，元素之间的 stride 仍是 1，所以 offset 不会把连续访问变成跨步访问。它改变的是访问区间相对于 cache line/内存事务边界的起点：<code>offset=0</code> 通常更容易满足 alignment（对齐），非对齐 offset 可能让一个线程组覆盖更多事务，降低有效带宽。这里的 stride 是相邻线程地址的步长；offset 是统一加到所有线程地址上的位移，二者不能混为一谈。对齐应按字节和具体硬件事务边界理解，不能简单套用某个固定数字。</p>
+<h4>执行流程</h4>
+<p>为输入和输出分配空间 → 依次取 <code>{0,1,2,4,8,16,31}</code> → 每个 offset 启动一次 warmup → 启动 50 次并同步 → 输出平均毫秒数。分配指针本身的对齐与 <code>off * sizeof(float)</code> 共同决定实际起始地址。</p>
+<h4>常见错误与实验</h4>
+<p>看到 <code>i+offset</code> 就说“线程间 stride 变成了 offset”；忘记给输入留尾部空间；只跑一次就根据噪声排序。可把 offset 换成更宽范围，记录 effective bandwidth，并改变 block 大小、数组起始位置或数据类型观察事务边界的影响。结果可能因缓存、分配器和设备实现而不单调，实验结论应描述趋势和测量条件。</p>
+<h4>与本周其他示例的关系</h4>
+<p>这是 <code>01</code> 连续访问基线的对齐扰动版，也为 <code>03</code> 提供相同 offset 集合。它帮助读者在阅读 <code>05/06</code> 时区分“连续但未对齐”和真正的“stride 很大”。</p>
+<h3>3. <code>03_offset_unrolling.mu</code>：展开改变工作分配，不修复地址问题</h3>
+<h4>示例目标</h4>
+<p>观察每线程连续处理四个元素时，循环展开对 offset 访问的影响，理解减少循环控制开销与改善全局内存事务是两个不同问题。</p>
+<h4>代码结构</h4>
+<p>线程先计算 <code>i = global_thread_id * 4</code>，再用 <code>#pragma unroll</code> 展开 <code>k=0..3</code>，分别执行 <code>out[i+k] = in[i+k+off]</code>，每次仍检查边界。因为一个线程覆盖四个元素，grid 按 <code>N/1024</code>（256 线程 × 4）向上取整；主函数对四种 offset 各 warmup 并重复 50 次计时。</p>
+<h4>核心知识点</h4>
+<p>展开通常能减少循环分支、计数和部分调度开销，但“每线程连续访问 4 个元素”不等于“同一条指令下线程访问连续”。令线程编号为 <code>t</code>，固定 <code>k</code> 时相邻线程访问 <code>4*t+k+off</code> 与 <code>4*(t+1)+k+off</code>，线程间 stride 是 4 个 float；因此 offset 引起的起始对齐问题也没有消失。四次访问还可能增加寄存器占用、改变活跃线程数或让尾部控制更复杂。编译器是否已经自动展开、kernel 是否真的受循环控制限制，都需要测量，不能把 <code>unroll</code> 当作一定加速的开关。</p>
+<h4>执行流程</h4>
+<p>每个线程取得四元素片段 → 编译器按 pragma 尝试展开四次 load/store → 对 <code>i+k&lt;n</code> 的有效元素执行拷贝 → 不同 offset 分组计时并打印。最后一个逻辑片段可能只有部分元素有效，不能因为线程负责四个位置就取消边界检查。</p>
+<h4>常见错误与实验</h4>
+<p>把展开误解为让一个线程访问四个相邻地址就必然合并；把 <code>grid</code> 仍按 <code>N/256</code> 配置而导致大量重复工作；删掉边界判断造成越界。可与 <code>02</code> 对相同 offset 直接比较，改变展开因子为 2/8，检查寄存器和 occupancy，并同时看时间与有效带宽；展开可能无收益、收益很小，甚至因资源压力变慢。</p>
+<h4>与本周其他示例的关系</h4>
+<p>它是 <code>02</code> 的控制流/每线程工作量变体，而不是新的合并访存方案。后面的 <code>04</code> 说明布局如何直接改变线程地址序列，<code>05/06</code> 说明仅靠展开无法解决二维转置中的跨步写。</p>
+<h3>4. <code>04_aos_vs_soa.mu</code>：字段布局决定地址序列</h3>
+<h4>示例目标</h4>
+<p>比较同一计算 <code>x+y</code> 在 AoS 和 SoA 两种布局下的全局内存访问，练习从“相邻线程访问了什么地址”而不是从 CPU 结构体语义判断性能。</p>
+<h4>代码结构</h4>
+<p>AoS 用 <code>Particle{float x,y,z,w}</code>，线程 <code>i</code> 读取 <code>p[i].x</code> 和 <code>p[i].y</code>；SoA 分别传入连续的 <code>x[i]</code>、<code>y[i]</code> 数组。两种 kernel 都使用一维 256-thread block、相同规模和各自 30 次计时，打印两者毫秒数及 <code>ta/ts</code>。</p>
+<h4>核心知识点</h4>
+<p>AoS 中相邻对象间距是 16 字节，同一字段的相邻线程地址相隔 16 字节；本 kernel 只计算 <code>x+y</code>，<code>z/w</code> 不参与计算，但读取结构体时其他字段可能与所需字段一起带入 cache 或内存事务。SoA 中相邻线程读 <code>x[i]</code> 或 <code>y[i]</code> 的地址间隔是 4 字节，更容易形成合并访问。SoA 并非一定更快：如果算法经常消费一个对象的全部字段，AoS 的局部性可能更合适；转换成本、缓存命中、对齐、寄存器和具体硬件也会改变结果。输出的 speedup 只是本次布局、规模和设备的测量值。</p>
+<h4>执行流程</h4>
+<p>分别分配 Particle、x、y 和 out → 启动 AoS warmup 并重复计时 → 启动 SoA warmup 并重复计时 → 计算时间比。示例没有初始化或校验数据，重点是访问模式与测量框架；实际实验应补充初始化和结果校验。</p>
+<h4>常见错误与实验</h4>
+<p>只比较结构体大小而不画出字段地址；看到 SoA 的单次结果更快就推广为普遍规律；忽视两种版本的工作量、重复次数或 cache 状态。可改变结构体字段数、只读取一个字段或全部字段，改变 N 与字段对齐，并用 profiler/有效带宽验证“少搬了哪些字节”。</p>
+<h4>与本周其他示例的关系</h4>
+<p>它把 <code>02</code> 的地址连续性问题从统一 offset 扩展到固定字段 stride；它也为转置示例提供布局视角：优化目标始终是让同一批线程的 load/store 地址尽量连续。</p>
+<h3>5. <code>05_transpose_naive.mu</code>：转置同时拥有两个方向</h3>
+<h4>示例目标</h4>
+<p>建立二维转置 baseline，明确一个结果正确的转置仍可能因为写方向跨步而浪费全局内存事务。</p>
+<h4>代码结构</h4>
+<p>二维线程坐标为 <code>x = blockIdx.x*blockDim.x+threadIdx.x</code>、<code>y = blockIdx.y*blockDim.y+threadIdx.y</code>；输入坐标是 <code>(column=x, row=y)</code>，按 row-major 的 <code>in[y*w+x]</code> 读取。转置后的输出坐标是 <code>(column=y, row=x)</code>，按 row-major 写作 <code>out[x*h+y]</code>，因此输入为 H×W 时，输出行列形状为 W×H。16×16 block 覆盖 2048×2048 矩阵，warmup 后重复 20 次计时。</p>
+<h4>核心知识点</h4>
+<p>在同一输入行 <code>row=y</code> 的线程中，输入坐标是 <code>(column=x, row=y)</code>，所以 <code>in[y*w+x]</code> 随 <code>threadIdx.x</code> 增加 1 个 float，读是连续的；转置后输出坐标变为 <code>(column=y, row=x)</code>，<code>out[x*h+y]</code> 中第一维 row-major 下标是输出行 <code>x</code>、第二维是输出列 <code>y</code>。对固定输入行 <code>y</code> 的相邻线程，输出行 <code>x</code> 变化而输出列 <code>y</code> 相同，所以写地址随 <code>x</code> 增加 <code>h</code> 个 float，是 stride=<code>h</code> 的跨步访问；沿另一方向的输出列地址才相邻。输入为 H×W 时，输出行列形状为 W×H。硬件一次内存指令关注的是同一批线程的地址集合，因此 naive 版本通常读合并、写不合并。转置的优化不能只检查数值结果，必须分别检查 load 和 store 的方向及有效带宽。</p>
+<h4>执行流程</h4>
+<p>每个线程读取输入坐标 <code>(column=x, row=y)</code> → 按源码 <code>out[x*h+y]</code> 写入输出坐标 <code>(column=y, row=x)</code> → block 边界线程退出 → 用多次 launch 的平均时间作为 baseline。由于 <code>W=H=2048</code>，当前示例的输出分配和索引都匹配；推广到非方阵时仍要牢记输出行列形状为 W×H。</p>
+<h4>常见错误与实验</h4>
+<p>把 <code>out[x*h+y]</code> 写成 <code>out[y*w+x]</code> 而变成复制；把“读连续”误说成“整个 kernel 合并”；混淆 <code>w</code>（输入行宽）和 <code>h</code>（输出行宽）。可改变 W/H、block 形状并与 <code>06</code> 对比，检查转置结果和两方向的地址公式；仅看到结果正确不能证明带宽合理。</p>
+<h4>与本周其他示例的关系</h4>
+<p>这是 <code>01</code> 连续访问基线在二维坐标和转置写入下的反例，也把 <code>04</code> 的 stride 影响具体化。<code>06</code> 保留同样的数学转置，只重排数据经过 shared memory 的路径。</p>
+<h3>6. <code>06_transpose_padded.mu</code>：shared tile 与 bank mapping</h3>
+<h4>示例目标</h4>
+<p>用 shared tile 把全局内存的跨步写改造成两次更规整的全局访问，并通过 padding 改善 tile 转置时的 shared-memory bank 冲突。</p>
+<h4>代码结构</h4>
+<p>每个 32×32 block 先以 <code>(threadIdx.x, threadIdx.y)</code> 从全局内存连续读入 <code>tile[ty][tx]</code>，同步后交换 block 坐标和 tile 下标，以 <code>tile[tx][ty]</code> 写出转置结果。声明为 <code>tile[32][33]</code>，第二维多出的 1 个 float 是 padding；主函数用 32×32 block、20 次计时，与 <code>05</code> 的 naive baseline 对照。</p>
+<h4>核心知识点</h4>
+<p>第一阶段同一批线程读 <code>in[y*w+x]</code>，全局读连续；同步保证所有线程完成 tile 填充后，第二阶段才能安全地从 shared tile 读取并写全局。若 shared tile 是 <code>[32][32]</code>，row-major 下同一列的地址间隔为 32 个 float；在典型 32-bank、4-byte bank 的模型中，<code>bank=(row*32+col) mod 32</code>，一列访问会映射到同一个 bank。改成 33 列后，<code>bank=(row*33+col) mod 32=(row+col) mod 32</code>，不同 row 会错开，因而缓解转置读取的 bank conflict。padding 只改变 shared 布局，不改变矩阵逻辑，也不等于 shared memory 自动更快：同步、额外搬运、占用 shared memory、边界处理和设备实现都可能让收益很小或为负。</p>
+<h4>执行流程</h4>
+<p>计算输入坐标并有界写入 tile → <code>__syncthreads()</code> 建立 block 内可见性 → 交换 x/y 后有界读取 tile 的转置位置 → 有界写出 <code>out[y*h+x]</code> → 重复 launch 计时。当前 W/H 都是 TILE 的整数倍，因此每个 tile 都被完整填充；若改成非整倍数尺寸，边界线程不能简单跳过填充后仍参与第二阶段，否则可能读取未初始化的 shared 元素，需要额外的零填充或更严密的条件设计。</p>
+<h4>常见错误与实验</h4>
+<p>漏掉同步导致读到未完成的数据；把 padding 写成第一维加 1 或错误修改索引；只凭“shared + padding”断言一定加速；忽略非整倍数尺寸的 tile 边界。可比较 <code>[32][32]</code> 与 <code>[32][33]</code>、不同 TILE/block 形状和非方阵输入，结合结果校验、时间和 profiler 观察 bank mapping、全局事务与 occupancy 的共同影响。</p>
+<h4>与本周其他示例的关系</h4>
+<p>它是 <code>05</code> 的同一转置公式的 tiled 版本，综合了 <code>02</code> 的对齐/事务意识、<code>03</code> 的“优化不保证加速”原则和 <code>04</code> 的布局重排思想，形成本周从地址序列到 shared-memory 映射的收束。</p>
+<h2>代码阅读抓手</h2>
+<p>每个 kernel 都问同一个问题：相邻线程访问的地址是否相邻。</p>
+<p>如果相邻线程访问的是 <code>a[i]</code>、<code>a[i+1]</code>、<code>a[i+2]</code>，通常更容易合并；如果访问的是 <code>a[i * stride]</code> 或结构体中的分散字段，就要警惕吞吐下降。</p>
+<h2>高频混淆点</h2>
+<ul><li><strong>结果正确不代表性能正确</strong>: offset、stride、AoS 代码可能结果完全正确, 但相邻线程访问地址不连续, 带宽会明显下降。</li><li><strong>合并访存看的是线程组访问序列</strong>: 不要只看单个线程访问了什么, 要看相邻线程在同一条 load/store 指令上访问的地址是否相邻。</li><li><strong>AoS 是 CPU 友好, 不一定 GPU 友好</strong>: GPU 上一组线程常常只读同一个字段, SoA 更容易让地址连续。</li><li><strong>转置有读写两个方向</strong>: naive transpose 往往读连续但写跨步, 或反过来。优化时要分别看 load 和 store。</li><li><strong>unroll 不是万能加速</strong>: unroll 能减少循环/调度开销, 但如果访存模式差或寄存器压力变大, 可能收益很小甚至变慢。</li></ul>
+<h2>CUDA_Freshman 对照</h2>
+<ul><li><code>18_sum_array_offset</code>: offset 访问。</li><li><code>19_AoS</code>、<code>20_SoA</code>: 数据布局。</li><li><code>21_sum_array_offset_unrolling</code>: offset + unrolling。</li><li><code>22_transform_matrix2D</code>: matrix transpose。</li></ul>
+<p>完整映射见 <a href="https://github.com/googs1025/musa-learning-notes/blob/main/docs/cuda-example-map.md"><code>../../docs/cuda-example-map.md</code></a>。</p>
+    </article>
+    <nav class="pager" aria-label="材料导航">
+      <a href="../week4.html">← 返回 Week 4</a>
+      <a href="../quiz.html">进入完整自测 →</a>
+    </nav>
+  </main>
+  <footer class="footer"><p>MUSA Learning Notes · 内容以官方文档和仓库实测为准</p></footer>
+</body>
+</html>

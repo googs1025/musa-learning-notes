@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN" data-page-kind="generated">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="source-sha256" content="b781e40fd998db3dc642b85f95c7ae8b553bc5ca1724616cb3981a04785dafcc">
+  <title>Week 3 真机记录 · MUSA GPU 编程知识库</title>
+  <link rel="stylesheet" href="../assets/knowledge.css">
+  <script src="../assets/knowledge.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <nav class="site-nav" aria-label="主导航">
+      <a class="brand" href="../index.html">MUSA GPU 编程知识库</a>
+      <ul><li><a href="../week3.html">Week 3</a></li><li><a href="../quiz.html">知识自测</a></li></ul>
+    </nav>
+  </header>
+  <main class="page-shell">
+    <article class="content-card generated-content">
+      <p class="eyebrow">Week 3 · 真机记录</p>
+      <h1>Week 3 真机记录</h1>
+      <p>本页由仓库中的规范 Markdown 自动生成。学习记录和性能数字只有在真实设备运行后才会写入。</p>
+      <p><a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/notes/week3.md">查看原始 Markdown</a></p>
+      <h1>Week 3 记录</h1>
+<blockquote><p>真实结果在 MUSA 环境运行后填写。</p></blockquote>
+<div class="table-wrap"><table><thead><tr><th>示例</th><th>时间</th><th>正确性</th><th>观察</th></tr></thead><tbody><tr><td>warp divergence</td><td></td><td></td><td></td></tr><tr><td>reduce naive</td><td></td><td></td><td></td></tr><tr><td>reduce unrolling</td><td></td><td></td><td></td></tr><tr><td>reduce shfl</td><td></td><td></td><td></td></tr><tr><td>nested hello</td><td></td><td></td><td></td></tr><tr><td>sum matrix 2d</td><td></td><td></td><td>矩阵按行求和对比；实际数字依设备实测</td></tr><tr><td>sum matrix 1d</td><td></td><td></td><td>与 06_sum_matrix_2d 都是矩阵按行求和对比；实际数字依设备实测</td></tr></tbody></table></div>
+<h2>统一运行记录模板</h2>
+<p>本模板只填写真实执行结果；没有 SDK、编译器或设备时填写“未运行”，不填估计性能。</p>
+<div class="table-wrap"><table><thead><tr><th>日期</th><th>主机 / 设备</th><th>CUDA Toolkit 或 MUSA SDK</th><th>编译器</th><th>架构</th><th>backend</th><th>target</th><th>输入规模</th><th>正确性</th><th>耗时 / 带宽</th><th>是否真实运行</th></tr></thead><tbody><tr><td>YYYY-MM-DD</td><td>host；GPU 型号</td><td>CUDA x.y / MUSA x.y；或未安装</td><td>nvcc / mcc；版本</td><td>sm_XX / mp_XX</td><td>cuda / musa</td><td><code>chapterXX__name</code></td><td>N、grid/block、warp 等</td><td>PASS/FAIL/未验证</td><td>实测值；无实测填“未运行”</td><td>是 / 未运行</td></tr></tbody></table></div>
+<p>运行命令：<code>make BACKEND=&lt;cuda|musa&gt; [CUDA_ARCH=sm_XX|MUSA_ARCH=mp_XX] TARGET=&lt;target&gt;</code>，随后记录 <code>./build/&lt;target&gt;</code> 的完整输出。</p>
+    </article>
+    <nav class="pager" aria-label="材料导航">
+      <a href="../week3.html">← 返回 Week 3</a>
+      <a href="../quiz.html">进入完整自测 →</a>
+    </nav>
+  </main>
+  <footer class="footer"><p>MUSA Learning Notes · 内容以官方文档和仓库实测为准</p></footer>
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN" data-page-kind="generated">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="source-sha256" content="c3aff34288f53eb432b884c64e4590d51a5d871077b2d690f2c8783869ec136c">
+  <title>Week 3 完整练习 · MUSA GPU 编程知识库</title>
+  <link rel="stylesheet" href="../assets/knowledge.css">
+  <script src="../assets/knowledge.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <nav class="site-nav" aria-label="主导航">
+      <a class="brand" href="../index.html">MUSA GPU 编程知识库</a>
+      <ul><li><a href="../week3.html">Week 3</a></li><li><a href="../quiz.html">知识自测</a></li></ul>
+    </nav>
+  </header>
+  <main class="page-shell">
+    <article class="content-card generated-content">
+      <p class="eyebrow">Week 3 · 完整练习</p>
+      <h1>Week 3 完整练习</h1>
+      <p>本页由仓库中的规范 Markdown 自动生成。学习记录和性能数字只有在真实设备运行后才会写入。</p>
+      <p><a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week3/exercises.md">查看原始 Markdown</a></p>
+      <h1>Week 3 习题</h1>
+<h2>E3.1 双后端与 warp 差异实验</h2>
+<p>在 <code>code/week3/cuda-reference</code> 分别执行 <code>make -n BACKEND=cuda TARGET=chapter03__reduceIntegerShfl</code> 与 <code>make -n BACKEND=musa MUSA_ARCH=mp_31 TARGET=chapter03__reduceIntegerShfl</code>，记录编译器、架构参数和源码中的 <code>warpSize</code>/mask 假设。若有设备，再分别运行 <code>simpleShfl</code>，不要把 CUDA 32-lane 输出直接当作 MUSA 正确性证明。</p>
+<h2>E3.2 默认 all 与可选目标</h2>
+<p>解释为什么动态并行和旧 shuffle 目标不应默认执行；分别显式构建 <code>chapter03__nestedHelloWorld</code>，记录失败位置、SDK 版本和替代的 host-side 两阶段实现。</p>
+<blockquote><p>把运行数据写入 <code>../../notes/week3.md</code>，不要填伪造性能数字。</p></blockquote>
+<ol><li>对比 <code>01_warp_divergence</code> 中 coherent / divergent 的耗时。</li></ol>
+<p>预计输出 / 预期现象：</p>
+<pre><code class="language-text">   coherent=... ms divergent=... ms slowdown=...x</code></pre>
+<p><code>divergent</code> 通常慢于 <code>coherent</code>，因为同一 warp 内不同分支需要被拆开执行。具体 slowdown 取决于数据规模、编译优化和硬件调度。</p>
+<ol><li>比较 <code>02_reduce_naive</code> 与 <code>03_reduce_unrolling</code> 的带宽和耗时。</li></ol>
+<p>预计输出 / 预期现象：</p>
+<pre><code class="language-text">   sum=4194304 expected=4194304 kernel=... ms partial_blocks=...</code></pre>
+<p>两个版本的 <code>sum</code> 都应等于 <code>expected</code>；unrolling 版本通常更快，因为每个线程处理更多元素，减少 block 数和部分全局内存访问开销。</p>
+<ol><li>确认 <code>04_reduce_shfl</code> 在当前 SDK 下的 shuffle mask 写法。</li></ol>
+<p>预计输出 / 预期现象：</p>
+<pre><code class="language-text">   sum=1048576 expected=1048576 warpSize=128</code></pre>
+<p>正确时 <code>sum == expected</code>。如果 mask 或 warp size 假设不匹配，可能编译失败，或运行结果小于 expected。</p>
+<ol><li>运行 <code>05_nested_hello</code>，记录当前 SDK 是否支持动态并行。</li></ol>
+<p>预计输出 / 预期现象：</p>
+<pre><code class="language-text">   parent launches child from block=0
+   child block=0
+   child block=1
+   ...
+   If this fails to compile or launch, dynamic parallelism is not enabled in this SDK/config.</code></pre>
+<p>如果 SDK / 编译选项不支持动态并行，可能在编译、链接或 kernel launch 阶段失败；把具体错误记录下来。</p>
+<ol><li>修改 <code>06_sum_matrix_2d</code> 的 block 形状，观察 16x16 与 32x8 的差异。</li></ol>
+<p>预计输出 / 预期现象：</p>
+<pre><code class="language-text">   row0=... expected=... row_last=...</code></pre>
+<p>正确时 <code>row0</code> 和 <code>row_last</code> 都应等于 <code>expected</code>。<code>16x16</code> 与 <code>32x8</code> 总线程数相同，但访存形状和调度细节不同，耗时可能略有差异。</p>
+    </article>
+    <nav class="pager" aria-label="材料导航">
+      <a href="../week3.html">← 返回 Week 3</a>
+      <a href="../quiz.html">进入完整自测 →</a>
+    </nav>
+  </main>
+  <footer class="footer"><p>MUSA Learning Notes · 内容以官方文档和仓库实测为准</p></footer>
+</body>
+</html>
