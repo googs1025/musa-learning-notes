@@ -21,8 +21,7 @@
       <h1>Week 1 真机记录</h1>
       <p>本页由仓库中的规范 Markdown 自动生成。学习记录和性能数字只有在真实设备运行后才会写入。</p>
       <p><a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/notes/week1.md">查看原始 Markdown</a></p>
-      <h1>Week 1 运行记录</h1>
-<p>本文件只记录真实执行结果。没有对应 SDK、编译器或设备时，明确填写“未运行”，不要填写估计性能。</p>
+      <p>本文件只记录真实执行结果。没有对应 SDK、编译器或设备时，明确填写“未运行”，不要填写估计性能。</p>
 <h2>2026-10-02 · MTT S4000 · MUSA SDK 3.1.0</h2>
 <div class="table-wrap"><table><thead><tr><th>目标</th><th>结果</th><th>关键观察</th><th>证据</th></tr></thead><tbody><tr><td><code>01_hello_world</code></td><td>PASS</td><td>CPU 与 5 个 GPU 线程均正常输出</td><td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week1/01_hello_world.log">日志</a></td></tr><tr><td><code>02_thread_index</code></td><td>PASS</td><td>两个 block 得到全局索引 0–7</td><td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week1/02_thread_index.log">日志</a></td></tr><tr><td><code>03_device_info</code></td><td>PASS</td><td>识别 MTT S4000；本机 <code>warpSize=32</code></td><td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week1/03_device_info.log">日志</a></td></tr><tr><td><code>04_memory_basics</code></td><td>PASS</td><td>显存分配、kernel 和回传校验通过</td><td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week1/04_memory_basics.log">日志</a></td></tr><tr><td><code>05_error_check</code></td><td>PASS</td><td>错误检查演示按预期完成</td><td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week1/05_error_check.log">日志</a></td></tr><tr><td><code>06_async_kernel</code></td><td>PASS</td><td>异步提交与同步等待均完成</td><td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week1/06_async_kernel.log">日志</a></td></tr></tbody></table></div>
 <h2>统一运行记录模板</h2>

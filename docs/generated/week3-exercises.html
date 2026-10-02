@@ -21,8 +21,7 @@
       <h1>Week 3 完整练习</h1>
       <p>本页由仓库中的规范 Markdown 自动生成。学习记录和性能数字只有在真实设备运行后才会写入。</p>
       <p><a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week3/exercises.md">查看原始 Markdown</a></p>
-      <h1>Week 3 习题</h1>
-<h2>E3.1 双后端与 warp 差异实验</h2>
+      <h2>E3.1 双后端与 warp 差异实验</h2>
 <p>在 <code>code/week3/cuda-reference</code> 分别执行 <code>make -n BACKEND=cuda TARGET=chapter03__reduceIntegerShfl</code> 与 <code>make -n BACKEND=musa MUSA_ARCH=mp_31 TARGET=chapter03__reduceIntegerShfl</code>，记录编译器、架构参数和源码中的 <code>warpSize</code>/mask 假设。若有设备，再分别运行 <code>simpleShfl</code>，不要把 CUDA 32-lane 输出直接当作 MUSA 正确性证明。</p>
 <h2>E3.2 默认 all 与可选目标</h2>
 <p>解释为什么动态并行和旧 shuffle 目标不应默认执行；分别显式构建 <code>chapter03__nestedHelloWorld</code>，记录失败位置、SDK 版本和替代的 host-side 两阶段实现。</p>

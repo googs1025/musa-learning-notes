@@ -21,8 +21,7 @@
       <h1>Week 5 完整学习材料</h1>
       <p>本页由仓库中的规范 Markdown 自动生成。学习记录和性能数字只有在真实设备运行后才会写入。</p>
       <p><a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week5/learning-notes.md">查看原始 Markdown</a></p>
-      <h1>Week 5 学习材料</h1>
-<p>Week 5 进入片上内存和 GEMM。主线是从 global memory 直接访问，逐步引入 shared memory、constant memory 和 tiled GEMM，再用 muBLAS 建立库函数性能基准。</p>
+      <p>Week 5 进入片上内存和 GEMM。主线是从 global memory 直接访问，逐步引入 shared memory、constant memory 和 tiled GEMM，再用 muBLAS 建立库函数性能基准。</p>
 <h2>阅读顺序</h2>
 <ol><li><code>01_shared_basics.mu</code>: 先学 static/dynamic shared memory 写法。</li><li><code>02_reduce_shared.mu</code>: 用 shared memory 改写 reduce。</li><li><code>03_transpose_shared.mu</code>: 用 shared tile 处理 transpose。</li><li><code>04_stencil_constant.mu</code>: 用 constant memory 放小型只读参数。</li><li><code>05_naive_gemm.mu</code>: 建立 GEMM 正确性和性能基线。</li><li><code>06_tiled_gemm.mu</code>: 用 shared tile 降低 global memory 访问。</li><li><code>07_mublas_sgemm.mu</code>: 和库实现对照。</li></ol>
 <h2>核心知识点</h2>

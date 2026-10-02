@@ -55,6 +55,7 @@ test("generates eighteen deterministic weekly pages, validation and detects stal
       assert.ok(fs.statSync(output).isFile());
       const html = fs.readFileSync(output, "utf8");
       assert.match(html, /data-page-kind="generated"/);
+      assert.equal((html.match(/<h1>/g) || []).length, 1, `${output} must have one h1`);
       assert.match(html, new RegExp(`href="\.\./week${week}\\.html"`));
       assert.match(html, /href="\.\.\/quiz\.html"/);
       const source = kind === "learning"

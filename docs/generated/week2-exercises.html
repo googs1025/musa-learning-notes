@@ -21,8 +21,7 @@
       <h1>Week 2 完整练习</h1>
       <p>本页由仓库中的规范 Markdown 自动生成。学习记录和性能数字只有在真实设备运行后才会写入。</p>
       <p><a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week2/exercises.md">查看原始 Markdown</a></p>
-      <h1>Week 2 习题</h1>
-<blockquote><p>完成后把答案 / 截图放到 <code>notes/week2.md</code>。 本周题目都跟&quot;性能数字&quot;挂钩，凡是要填 ms 的请用 <code>03_vector_add_timer</code> 里学到的 <strong>GpuTimer + 多次取平均</strong> 方法，别用裸 CPU 计时。</p></blockquote>
+      <blockquote><p>完成后把答案 / 截图放到 <code>notes/week2.md</code>。 本周题目都跟&quot;性能数字&quot;挂钩，凡是要填 ms 的请用 <code>03_vector_add_timer</code> 里学到的 <strong>GpuTimer + 多次取平均</strong> 方法，别用裸 CPU 计时。</p></blockquote>
 <h2>E2.1 vectorAdd launch config 扫描（基础）</h2>
 <p>修改 <code>01_vector_add_runtime.mu</code>，固定 <code>N = 1&lt;&lt;20</code>，把 <code>threadsPerBlock</code> 依次改成 <code>32 / 64 / 128 / 256 / 512 / 1024</code>。</p>
 <p>填这张表：</p>

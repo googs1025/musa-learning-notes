@@ -21,8 +21,7 @@
       <h1>Week 4 完整练习</h1>
       <p>本页由仓库中的规范 Markdown 自动生成。学习记录和性能数字只有在真实设备运行后才会写入。</p>
       <p><a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/code/week4/exercises.md">查看原始 Markdown</a></p>
-      <h1>Week 4 习题</h1>
-<h2>E4.1 读写方向与布局</h2>
+      <h2>E4.1 读写方向与布局</h2>
 <p>分别 dry-run <code>chapter04__readSegment</code>、<code>chapter04__writeSegment</code>、<code>chapter04__simpleMathAoS</code> 和 <code>chapter04__simpleMathSoA</code>，画出线程到地址的映射。若有 CUDA/MUSA 设备，记录同一数据规模下的有效带宽，并注明不能跨设备比较未经实测的结论。</p>
 <h2>E4.2 backend 与 symbol/transpose 差异</h2>
 <p>用 <code>BACKEND=cuda</code> 和 <code>BACKEND=musa MUSA_ARCH=mp_31</code> 检查 <code>chapter04__transpose</code>、<code>chapter04__globalVariable</code> 的命令差异；说明 global symbol、shared tile 和同步语义中哪些来自 CUDA 源码，哪些必须由 MUSA SDK 验证。</p>

@@ -152,6 +152,7 @@ function renderMarkdown(markdown, options = {}) {
 function renderDocument({ title, week, kind, sourcePath, source, resolveLink }) {
   const hash = crypto.createHash("sha256").update(source).digest("hex");
   const sourceUrl = `https://github.com/googs1025/musa-learning-notes/blob/main/${sourcePath}`;
+  const sourceBody = source.replace(/^#\s+[^\n]+\n+/, "");
   return `<!doctype html>
 <html lang="zh-CN" data-page-kind="generated">
 <head>
@@ -175,7 +176,7 @@ function renderDocument({ title, week, kind, sourcePath, source, resolveLink }) 
       <h1>${escapeHtml(title)}</h1>
       <p>本页由仓库中的规范 Markdown 自动生成。学习记录和性能数字只有在真实设备运行后才会写入。</p>
       <p><a class="source-link" href="${sourceUrl}">查看原始 Markdown</a></p>
-      ${renderMarkdown(source, { resolveLink })}
+      ${renderMarkdown(sourceBody, { resolveLink })}
     </article>
     <nav class="pager" aria-label="材料导航">
       <a href="../week${week}.html">← 返回 Week ${week}</a>

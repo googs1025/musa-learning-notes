@@ -21,8 +21,7 @@
       <h1>Week 6 真机记录</h1>
       <p>本页由仓库中的规范 Markdown 自动生成。学习记录和性能数字只有在真实设备运行后才会写入。</p>
       <p><a class="source-link" href="https://github.com/googs1025/musa-learning-notes/blob/main/notes/week6.md">查看原始 Markdown</a></p>
-      <h1>Week 6 记录</h1>
-<h2>2026-10-02 · MTT S4000 · MUSA SDK 3.1.0</h2>
+      <h2>2026-10-02 · MTT S4000 · MUSA SDK 3.1.0</h2>
 <div class="table-wrap"><table><thead><tr><th>目标</th><th>结果</th><th>关键观察</th><th>证据</th></tr></thead><tbody><tr><td><code>01_mccl_allreduce</code></td><td>ENV_LIMITED</td><td>编译成功；单卡环境不具备多 rank collective 验证条件</td><td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week6/01_mccl_allreduce.log">日志</a></td></tr><tr><td><code>02_musa_gdb_demo</code></td><td>NOT_RUN</td><td>编译成功；故障注入未在无人值守批处理中执行</td><td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week6/02_musa_gdb_demo.log">日志</a></td></tr><tr><td><code>03_error_dump</code></td><td>NOT_RUN</td><td>编译成功；需要显式配置 Error Dump 后交互执行</td><td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week6/03_error_dump.log">日志</a></td></tr><tr><td><code>04_torch_musa_minimal</code></td><td>PASS</td><td>PyTorch 2.2.0，MUSA available，sample=0.0</td><td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week6/04_torch_musa_minimal.log">日志</a></td></tr><tr><td><code>05_torch_musa_custom_op</code></td><td>BUILD_FAIL</td><td>Makefile 未提供所需 PyTorch C++ extension 头文件路径</td><td><a href="https://github.com/googs1025/musa-learning-notes/blob/main/validation/raw/2026-10-02-s4000/week6/05_torch_musa_custom_op.log">日志</a></td></tr></tbody></table></div>
 <h2>统一运行记录模板</h2>
 <p>本模板只填写真实执行结果；没有 SDK、编译器或设备时填写“未运行”，不填估计性能。<code>simpleP2P.c</code> 为 source-only，若用 MPI 单独验证，应记录 <code>mpicc</code>、MPI 版本和 <code>mpirun</code> 命令。</p>
